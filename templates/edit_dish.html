@@ -3,7 +3,60 @@
 <h2>Gerecht Bewerken: {{ gerecht.naam }}</h2>
 <p>Categorie: {{ gerecht.categorie }}</p>
 <p>Verkoopprijs: {{ gerecht.verkoopprijs if gerecht.verkoopprijs else 'n.v.t.' }}</p>
-<p>Beschrijving: {{ gerecht.beschrijving if gerecht.beschrijving else 'Geen beschrijving' }}</p>
+
+<!-- Formulier om de naam bij te werken -->
+<h3>Naam bijwerken</h3>
+<form method="POST" action="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
+    <input type="hidden" name="nameForm" value="1">
+    <input type="text" id="naam" name="naam" value="{{ gerecht.naam }}" required><br><br>
+    <button type="submit">Naam bijwerken</button>
+</form>
+
+<hr>
+
+<!-- Formulier om de beschrijving bij te werken -->
+<h3>Beschrijving bijwerken</h3>
+<form method="POST" action="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
+    <input type="hidden" name="descriptionForm" value="1">
+    <textarea id="beschrijving" name="beschrijving" rows="4" cols="50" required>{{ gerecht.beschrijving if gerecht.beschrijving else '' }}</textarea><br><br>
+    <button type="submit">Beschrijving bijwerken</button>
+</form>
+
+<hr>
+
+<!-- Formulier om de verkoopprijs bij te werken -->
+<h3>Verkoopprijs bijwerken</h3>
+<form method="POST" action="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
+    <input type="hidden" name="priceForm" value="1">
+    <input type="number" step="0.01" id="verkoopprijs" name="verkoopprijs" value="{{ gerecht.verkoopprijs }}" required><br><br>
+    <button type="submit">Verkoopprijs bijwerken</button>
+</form>
+
+<hr>
+
+<!-- Formulier om de categorie bij te werken -->
+<h3>Categorie bijwerken</h3>
+<form method="POST" action="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
+    <input type="hidden" name="categoryForm" value="1">
+    <select id="gerecht_categorie" name="gerecht_categorie" required>
+        <option value="Amuse-bouche" {% if gerecht.categorie == 'Amuse-bouche' %}selected{% endif %}>Amuse-bouche (optioneel)</option>
+        <option value="Hors-d'œuvre" {% if gerecht.categorie == "Hors-d'œuvre" %}selected{% endif %}>Hors-d'œuvre (koud voorgerecht)</option>
+        <option value="Potage" {% if gerecht.categorie == 'Potage' %}selected{% endif %}>Potage (soep)</option>
+        <option value="Poisson" {% if gerecht.categorie == 'Poisson' %}selected{% endif %}>Poisson (visgerecht)</option>
+        <option value="Entrée" {% if gerecht.categorie == 'Entrée' %}selected{% endif %}>Entrée (warm voorgerecht / tussengerecht)</option>
+        <option value="Sorbet" {% if gerecht.categorie == 'Sorbet' %}selected{% endif %}>Sorbet (verfrissende gang)</option>
+        <option value="Relevé of Rôti" {% if gerecht.categorie == 'Relevé of Rôti' %}selected{% endif %}>Relevé of Rôti (hoofdgerecht/vleesgerecht)</option>
+        <option value="Légumes / Groentegerecht" {% if gerecht.categorie == 'Légumes / Groentegerecht' %}selected{% endif %}>Légumes / Groentegerecht (optioneel apart geserveerd)</option>
+        <option value="Salade" {% if gerecht.categorie == 'Salade' %}selected{% endif %}>Salade (optioneel apart)</option>
+        <option value="Fromage" {% if gerecht.categorie == 'Fromage' %}selected{% endif %}>Fromage (kaas)</option>
+        <option value="Entremets" {% if gerecht.categorie == 'Entremets' %}selected{% endif %}>Entremets (zoet nagerecht)</option>
+        <option value="Café / Mignardises" {% if gerecht.categorie == 'Café / Mignardises' %}selected{% endif %}>Café / Mignardises</option>
+        <option value="Digestief" {% if gerecht.categorie == 'Digestief' %}selected{% endif %}>Digestief (optioneel)</option>
+    </select><br><br>
+    <button type="submit">Categorie bijwerken</button>
+</form>
+
+<hr>
 
 <h3>Ingrediënten toevoegen</h3>
 <form method="POST" action="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}" style="display: flex; align-items: center;">

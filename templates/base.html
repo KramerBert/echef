@@ -28,18 +28,17 @@
     <div class="container">
         <header>
             <nav>
-                <!-- Eenvoudige navigatie -->
-                <ul>
-                    <li><a href="{{ url_for('home') }}">Home</a></li>
-                    {% if session.get('chef_id') %}
-                        <li><a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}">Dashboard</a></li>
-                        <li><a href="{{ url_for('all_dishes') }}">Alle Gerechten</a></li>
-                        <li><a href="{{ url_for('logout') }}">Uitloggen</a></li>
-                    {% else %}
-                        <li><a href="{{ url_for('register') }}">Registreren</a></li>
-                        <li><a href="{{ url_for('login') }}">Inloggen</a></li>
-                    {% endif %}
-                </ul>
+            <!-- Eenvoudige navigatie -->
+            <ul style="display: flex; list-style: none; padding: 0;"></ul>
+                <li style="margin-right: 15px;"><a href="{{ url_for('home') }}">Home</a></li>
+                {% if session.get('chef_id') %}
+                <li style="margin-right: 15px;"><a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}">Dashboard</a></li>
+                <li><a href="{{ url_for('logout') }}">Uitloggen</a></li>
+                {% else %}
+                <li style="margin-right: 15px;"><a href="{{ url_for('register') }}">Registreren</a></li>
+                <li><a href="{{ url_for('login') }}">Inloggen</a></li>
+                {% endif %}
+            </ul>
             </nav>
         </header>
 

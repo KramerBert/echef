@@ -6,7 +6,8 @@
 <!-- Knoppen om naar andere secties te gaan -->
 <p>
     <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}">Ingrediënten Beheren</a> | 
-    <a href="{{ url_for('manage_dishes', chef_naam=chef_naam) }}">Gerechten Samenstellen</a>
+    <a href="{{ url_for('manage_dishes', chef_naam=chef_naam) }}">Gerechten Samenstellen</a> | 
+    <a href="{{ url_for('all_dishes') }}">Alle Gerechten</a>
 </p>
 
 {% endblock %}
