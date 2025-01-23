@@ -1,13 +1,13 @@
 Table: allergenen
-  id int
+  id int PRIMARY KEY
   naam varchar(50)
 
 Table: categories
-  id int
+  id int PRIMARY KEY
   naam varchar(50)
 
 Table: chefs
-  id int
+  id int PRIMARY KEY
   naam varchar(255)
   email varchar(255)
   password varchar(255)
@@ -16,15 +16,15 @@ Table: chefs
   telefoonnummer varchar(14)
 
 Table: dieeten
-  id int
+  id int PRIMARY KEY
   naam varchar(100)
 
 Table: gerecht
-  id int
+  id int PRIMARY KEY
   naam varchar(255)
   beschrijving text
   prijs decimal(10,2)
-  menu enum('Amuse-bouche','Hors d''oeuvre (koud voorgerecht)','Potage (soep)','Poisson (visgerecht)','Entrée (warme voorgerecht)','Sorbet (spoom)','Plat principal (hoofdgerecht)','Fromage (kaasplankje)','Dessert','Mignardises')
+  menu enum('Amuse-bouche','Hors d''oeuvre (koud voorgerecht)','Potage (soep)','Poisson (visgerecht)','EntrÃ©e (warm voorgerecht)','Sorbet (spoom)','Plat principal (hoofdgerecht)','Fromage (kaasplankje)','Dessert','Mignardises')
   chef_id int
 
 Table: gerecht_ingredient
@@ -34,13 +34,13 @@ Table: gerecht_ingredient
   chef_id int
 
 Table: ingredient
-  id int
+  id int PRIMARY KEY
   naam varchar(255)
   eenheid varchar(50)
   prijs decimal(10,2)
   categorie varchar(50)
 
 Table: units
-  id int
+  id int PRIMARY KEY
   naam varchar(50)
 

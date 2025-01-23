@@ -1,511 +1,475 @@
-from flask import Flask, jsonify, request, render_template, session, redirect, url_for
+import os
+from flask import Flask, request, redirect, url_for, render_template, session, flash, send_file
+from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import Error
-from dotenv import load_dotenv
-import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from werkzeug.security import generate_password_hash, check_password_hash
-import webbrowser
+from docx import Document
+import io
 
-# Laad omgevingsvariabelen uit .env
-load_dotenv()
+load_dotenv()  # Load the values from .env
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY")
+app.secret_key = os.getenv("SECRET_KEY")  # Needed for session management
 
-if not app.secret_key:
-    raise RuntimeError("The SECRET_KEY environment variable is not set. Please set it in the .env file.")
+# Database configuration from .env
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
 
-# Databaseconfiguratie uit .env
-db_config = {
-    "host": os.getenv("MYSQL_HOST"),
-    "user": os.getenv("MYSQL_USER"),
-    "password": os.getenv("MYSQL_PASSWORD"),
-    "database": os.getenv("MYSQL_DB"),
-    "port": int(os.getenv("MYSQL_PORT"))
-}
-
-# Emailconfiguratie uit .env
-email_config = {
-    "smtp_server": os.getenv("SMTP_SERVER"),
-    "smtp_port": os.getenv("SMTP_PORT"),
-    "smtp_user": os.getenv("SMTP_USER"),
-    "smtp_password": os.getenv("SMTP_PASSWORD"),
-    "from_email": os.getenv("FROM_EMAIL")
-}
-
-# Test databaseverbinding
-try:
-    connection = mysql.connector.connect(**db_config)
-    if connection.is_connected():
-        print("Succesvol verbonden met MySQL!")
-except Error as e:
-    print("Fout bij verbinden met MySQL:", e)
-
-def send_email(to_email, subject, body):
-    msg = MIMEMultipart()
-    msg['From'] = email_config['from_email']
-    msg['To'] = to_email
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain'))
-    
+def get_db_connection():
+    """
+    Creates a new database connection using the details from .env
+    """
     try:
-        server = smtplib.SMTP(email_config['smtp_server'], email_config['smtp_port'])
-        server.starttls()
-        server.login(email_config['smtp_user'], email_config['smtp_password'])
-        text = msg.as_string()
-        server.sendmail(email_config['from_email'], to_email, text)
-        server.quit()
-        print("Email sent successfully")
-    except Exception as e:
-        print("Failed to send email:", e)
+        conn = mysql.connector.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT
+        )
+        if conn.is_connected():
+            return conn
+    except Error as e:
+        print(f"Error connecting to the database: {e}")
+        return None
 
-@app.route("/")
-def home():
-    return render_template("index.html")
-
-@app.route("/chefs", methods=["GET"])
-def get_chefs():
-    cursor = connection.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM chefs")
-    chefs = cursor.fetchall()
-    return jsonify(chefs)
-
-@app.route("/chefs", methods=["POST"])
-def add_chef():
-    data = request.get_json()
-    cursor = connection.cursor()
-    query = "INSERT INTO chefs (name, email, telefoonnummer) VALUES (%s, %s, %s)"
-    values = (data['name'], data['email'], data['telefoonnummer'])
-    cursor.execute(query, values)
-    connection.commit()
-    return jsonify({"message": "Chef added successfully"}), 201
-
-@app.route("/aanmelden", methods=["GET"])
-def aanmelden_form():
-    return render_template("aanmelden.html")
-
-@app.route("/aanmelden", methods=["POST"])
-def aanmelden():
-    data = request.get_json()
-    cursor = connection.cursor()
-    hashed_password = generate_password_hash(data['password'])
-    query = "INSERT INTO chefs (name, email, telefoonnummer, password) VALUES (%s, %s, %s, %s)"
-    values = (data['name'], data['email'], data['telefoonnummer'], hashed_password)
-    cursor.execute(query, values)
-    connection.commit()
-    
-    # Send email notification
-    admin_email = "admin@example.com"  # Replace with actual admin email
-    subject = "Nieuwe aanmelding"
-    body = f"Er is een nieuwe aanmelding van chef {data['name']} met email {data['email']} en telefoonnummer {data['telefoonnummer']}."
-    send_email(admin_email, subject, body)
-    
-    # Send verification email to chef
-    verification_link = f"http://example.com/verify?email={data['email']}"  # Replace with actual verification link
-    subject = "Verificatie van uw account"
-    body = f"Beste {data['name']},\n\nKlik op de volgende link om uw account te verifiëren: {verification_link}"
-    send_email(data['email'], subject, body)
-    
-    return jsonify({"message": "Chef account created successfully"}), 201
-
-@app.route("/register", methods=["GET"])
-def register_form():
-    return render_template("register.html")
-
-@app.route("/register", methods=["POST"])
-def register():
-    naam = request.form['naam']
-    email = request.form['email']
-    telefoonnummer = request.form['telefoonnummer']
-    password = request.form['password']
-    linkedin = request.form.get('linkedin', '')
-
-    hashed_password = generate_password_hash(password)
-    
-    cursor = connection.cursor()
-    query = "INSERT INTO chefs (naam, email, telefoonnummer, password, linkedin) VALUES (%s, %s, %s, %s, %s)"
-    values = (naam, email, telefoonnummer, hashed_password, linkedin)
-    cursor.execute(query, values)
-    connection.commit()
-    
-    return redirect(url_for('home'))
-
+# -----------------------------------------------------------
+#  Homepage (index)
+# -----------------------------------------------------------
 @app.route('/')
-def index():
-    cursor = connection.cursor()
-    cursor.execute("SELECT * FROM ingredient")
-    ingredients = cursor.fetchall()
-    return render_template('index.html', ingredients=ingredients)
+def home():
+    """
+    Toon de homepage, met bijvoorbeeld een link naar inloggen/registreren.
+    """
+    return render_template('home.html')  # Zorg voor een home.html template
 
-@app.route('/add_gerecht', methods=['POST'])
-def add_gerecht():
-    naam = request.form['naam']
-    beschrijving = request.form['beschrijving']
-    prijs = request.form['prijs']
-    menu = request.form['menu']
-    chef_id = request.form['chef_id']
-    
-    cursor = connection.cursor()
-    cursor.execute("INSERT INTO gerecht (naam, beschrijving, prijs, menu, chef_id) VALUES (%s, %s, %s, %s, %s)", (naam, beschrijving, prijs, menu, chef_id))
-    connection.commit()
-    
-    gerecht_id = cursor.lastrowid
-    ingredienten = request.form.getlist('ingredient')
-    hoeveelheden = request.form.getlist('hoeveelheid')
-    
-    for ingredient_id, hoeveelheid in zip(ingredienten, hoeveelheden):
-        cursor.execute("INSERT INTO gerecht_ingredient (gerecht_id, ingredient_id, hoeveelheid, chef_id) VALUES (%s, %s, %s, %s)", (gerecht_id, ingredient_id, hoeveelheid, chef_id))
-    
-    connection.commit()
-    return redirect(url_for('gerechten', chef_id=chef_id))
+# -----------------------------------------------------------
+#  Registreren
+# -----------------------------------------------------------
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        naam = request.form.get('naam')
+        email = request.form.get('email')
+        wachtwoord = request.form.get('wachtwoord')
 
-@app.route("/add_ingredient", methods=["GET"])
-def add_ingredient_form():
-    cursor = connection.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM units")
-    units = cursor.fetchall()
-    cursor.execute("SELECT * FROM categories")
-    categories = cursor.fetchall()
-    return render_template("add_ingredient.html", units=units, categories=categories)
+        # Wachtwoord hashen
+        hashed_pw = generate_password_hash(wachtwoord)
 
-@app.route("/add_ingredient", methods=["POST"])
-def add_ingredient():
-    naam = request.form['naam']
-    eenheid = request.form['eenheid']
-    prijs = request.form['prijs']
-    categorie = request.form['categorie']
-    
-    cursor = connection.cursor()
-    cursor.execute("INSERT INTO ingredient (naam, eenheid, prijs, categorie) VALUES (%s, %s, %s, %s)", (naam, eenheid, prijs, categorie))
-    connection.commit()
-    
-    return redirect(url_for('inventory'))
+        # Opslaan in DB
+        conn = get_db_connection()
+        if conn is None:
+            flash("Database connection error.", "danger")
+            return redirect(url_for('register'))
 
-@app.route("/manage_ingredients", methods=["GET"])
-def manage_ingredients():
-    cursor = connection.cursor()
-    cursor.execute("SELECT * FROM ingredient")
-    ingredients = cursor.fetchall()
-    return render_template("manage_ingredients.html", ingredients=ingredients)
+        cur = conn.cursor()
+        try:
+            cur.execute("""
+                INSERT INTO chefs (naam, email, wachtwoord)
+                VALUES (%s, %s, %s)
+            """, (naam, email, hashed_pw))
+            conn.commit()
+            flash("Registratie succesvol! Log nu in.", "success")
+        except Exception as e:
+            conn.rollback()
+            flash(f"Fout bij registreren: {str(e)}", "danger")
+        finally:
+            cur.close()
+            conn.close()
 
-@app.route("/gerecht_aanmaken", methods=["GET", "POST"])
-def gerecht_aanmaken():
-    if 'chef_id' not in session:
         return redirect(url_for('login'))
 
-    cursor = connection.cursor(dictionary=True)
-    
-    if request.method == "POST":
-        naam = request.form['naam']
-        beschrijving = request.form['beschrijving']
-        prijs = request.form['prijs']
-        menu = request.form['menu']
-        chef_id = session['chef_id']
-        
-        cursor.execute(
-            "INSERT INTO gerecht (naam, beschrijving, prijs, menu, chef_id) VALUES (%s, %s, %s, %s, %s)",
-            (naam, beschrijving, prijs, menu, chef_id)
-        )
-        connection.commit()
-        
-        gerecht_id = cursor.lastrowid
-        ingredienten = request.form.getlist('ingredient')
-        hoeveelheden = request.form.getlist('hoeveelheid')
-        
-        for ingredient_id, hoeveelheid in zip(ingredienten, hoeveelheden):
-            cursor.execute(
-                "INSERT INTO gerecht_ingredient (gerecht_id, ingredient_id, hoeveelheid, chef_id) "
-                "VALUES (%s, %s, %s, %s)",
-                (gerecht_id, ingredient_id, hoeveelheid, chef_id)
-            )
-        connection.commit()
-        return redirect(url_for('gerechten', chef_id=chef_id))
+    return render_template('register.html')
 
-    cursor.execute("SELECT * FROM ingredient")
-    ingredients = cursor.fetchall()
-
-    return render_template("gerecht_aanmaken.html", ingredients=ingredients)
-
-@app.route("/dashboard", methods=["GET"])
-def dashboard():
-    return render_template("dashboard.html")
-
-@app.route("/login", methods=["GET", "POST"])
+# -----------------------------------------------------------
+#  Inloggen
+# -----------------------------------------------------------
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == "POST":
-        email = request.form['email']
-        password = request.form['password']
-        
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM chefs WHERE email = %s", (email,))
-        chef = cursor.fetchone()
-        
-        if chef and check_password_hash(chef['password'], password):
-            session['chef_id'] = chef['id']
-            session['chef_naam'] = chef['naam']
-            return redirect(url_for('personal_dashboard', chef_id=chef['id']))
-        else:
-            return "Ongeldige inloggegevens", 401
-    
-    return render_template("login.html")
+    if request.method == 'POST':
+        email = request.form.get('email')
+        wachtwoord = request.form.get('wachtwoord')
 
-@app.route("/logout")
+        # Ophalen gebruiker
+        conn = get_db_connection()
+        if conn is None:
+            flash("Database connection error.", "danger")
+            return redirect(url_for('login'))
+
+        cur = conn.cursor(dictionary=True)
+        cur.execute("SELECT * FROM chefs WHERE email = %s", (email,))
+        chef = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if chef is not None:
+            stored_hash = chef['wachtwoord']
+            # Vergelijk wachtwoorden
+            if check_password_hash(stored_hash, wachtwoord):
+                # Inloggen geslaagd
+                session['chef_id'] = chef['chef_id']
+                session['chef_naam'] = chef['naam']
+                flash("Succesvol ingelogd!", "success")
+                return redirect(url_for('dashboard', chef_naam=chef['naam']))
+            else:
+                flash("Onjuist wachtwoord.", "danger")
+        else:
+            flash("Onbekend e-mailadres.", "danger")
+
+    return render_template('login.html')
+
+# -----------------------------------------------------------
+#  Uitloggen
+# -----------------------------------------------------------
+@app.route('/logout')
 def logout():
     session.clear()
+    flash("Je bent uitgelogd.", "info")
     return redirect(url_for('home'))
 
-@app.route("/dashboard/<int:chef_id>")
-def personal_dashboard(chef_id):
-    if 'chef_id' not in session or session['chef_id'] != chef_id:
-        return redirect(url_for('login'))
-    
-    naam = session.get('chef_naam')
-    
-    cursor = connection.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM gerecht WHERE chef_id = %s", (chef_id,))
-    gerechten = cursor.fetchall()
-    
-    return render_template("personal_dashboard.html", naam=naam, gerechten=gerechten)
-
-@app.route("/forgot_password", methods=["GET", "POST"])
-def forgot_password():
-    if request.method == "POST":
-        email = request.form['email']
-        
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM chefs WHERE email = %s", (email,))
-        chef = cursor.fetchone()
-        
-        if chef:
-            # Generate a password reset link (this is a placeholder, implement actual logic)
-            reset_link = f"http://example.com/reset_password?email={email}"
-            subject = "Wachtwoord Herstellen"
-            body = f"Beste {chef['naam']},\n\nKlik op de volgende link om uw wachtwoord te herstellen: {reset_link}"
-            send_email(email, subject, body)
-            return "Een e-mail met instructies om uw wachtwoord te herstellen is verzonden."
-        else:
-            return "Geen account gevonden met dit e-mailadres.", 404
-    
-    return render_template("forgot_password.html")
-
-@app.route("/inventory", methods=["GET"])
-def inventory():
-    categorie = request.args.get('categorie', '')
-    cursor = connection.cursor(dictionary=True)
-    
-    cursor.execute("SELECT * FROM categories")
-    categories = cursor.fetchall()
-    
-    if categorie:
-        cursor.execute("SELECT id, naam, eenheid, prijs, categorie FROM ingredient WHERE categorie = %s", (categorie,))
-    else:
-        cursor.execute("SELECT id, naam, eenheid, prijs, categorie FROM ingredient")
-    
-    ingredients = cursor.fetchall()
-    return render_template("inventory.html", ingredients=ingredients, categories=categories)
-
-@app.route("/edit_ingredient", methods=["POST"])
-def edit_ingredient():
-    id = request.form['id']
-    naam = request.form['naam']
-    eenheid = request.form['eenheid']
-    prijs = request.form['prijs']
-    categorie = request.form['categorie']
-    
-    cursor = connection.cursor()
-    cursor.execute("""
-        UPDATE ingredient
-        SET naam = %s, eenheid = %s, prijs = %s, categorie = %s
-        WHERE id = %s
-    """, (naam, eenheid, prijs, categorie, id))
-    connection.commit()
-    
-    return redirect(url_for('inventory'))
-
-@app.route("/delete_ingredient", methods=["POST"])
-def delete_ingredient():
-    id = request.form['id']
-    
-    cursor = connection.cursor()
-    cursor.execute("DELETE FROM ingredient WHERE id = %s", (id,))
-    connection.commit()
-    
-    return redirect(url_for('inventory'))
-
-@app.route("/gerechten/<int:chef_id>", methods=["GET"])
-def gerechten(chef_id):
-    if 'chef_id' not in session or session['chef_id'] != chef_id:
-        return redirect(url_for('login'))
-    
-    cursor = connection.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM gerecht WHERE chef_id = %s", (chef_id,))
-    gerechten = cursor.fetchall()
-    
-    return render_template("gerechten.html", gerechten=gerechten)
-
-@app.route("/edit_gerecht/<int:id>", methods=["GET", "POST"])
-def edit_gerecht(id):
-    cursor = connection.cursor(dictionary=True)
-    
-    if request.method == "POST":
-        naam = request.form['naam']
-        beschrijving = request.form['beschrijving']
-        prijs = request.form['prijs']
-        menu = request.form['menu']
-        
-        cursor.execute("""
-            UPDATE gerecht
-            SET naam = %s, beschrijving = %s, prijs = %s, menu = %s
-            WHERE id = %s
-        """, (naam, beschrijving, prijs, menu, id))
-        connection.commit()
-        
-        # Update ingredients
-        ingredienten = request.form.getlist('ingredient')
-        hoeveelheden = request.form.getlist('hoeveelheid')
-        
-        existing_ingredients = {ingredient['ingredient_id']: ingredient['hoeveelheid'] for ingredient in cursor.execute("SELECT ingredient_id, hoeveelheid FROM gerecht_ingredient WHERE gerecht_id = %s", (id,)).fetchall()}
-        
-        for ingredient_id, hoeveelheid in zip(ingredienten, hoeveelheden):
-            if ingredient_id in existing_ingredients:
-                cursor.execute("""
-                    UPDATE gerecht_ingredient
-                    SET hoeveelheid = %s
-                    WHERE gerecht_id = %s AND ingredient_id = %s
-                """, (hoeveelheid, id, ingredient_id))
-            else:
-                cursor.execute("""
-                    INSERT INTO gerecht_ingredient (gerecht_id, ingredient_id, hoeveelheid, chef_id)
-                    VALUES (%s, %s, %s, %s)
-                """, (id, ingredient_id, hoeveelheid, session['chef_id']))
-        
-        connection.commit()
-        
-        return redirect(url_for('gerechten', chef_id=session['chef_id']))
-    
-    cursor.execute("SELECT * FROM gerecht WHERE id = %s", (id,))
-    gerecht = cursor.fetchone()
-    
-    cursor.execute("SELECT gi.ingredient_id, gi.hoeveelheid, i.naam, i.prijs FROM gerecht_ingredient gi JOIN ingredient i ON gi.ingredient_id = i.id WHERE gi.gerecht_id = %s", (id,))
-    gerecht_ingredienten = cursor.fetchall()
-    
-    cursor.execute("SELECT * FROM ingredient")
-    ingredients = cursor.fetchall()
-    
-    return render_template("edit_gerecht.html", gerecht=gerecht, gerecht_ingredienten=gerecht_ingredienten, ingredients=ingredients)
-
-@app.route("/view_gerecht/<int:id>", methods=["GET"])
-def view_gerecht(id):
-    cursor = connection.cursor(dictionary=True)
-    
-    cursor.execute("SELECT * FROM gerecht WHERE id = %s", (id,))
-    gerecht = cursor.fetchone()
-    
-    cursor.execute("SELECT gi.ingredient_id, gi.hoeveelheid, i.naam, i.prijs FROM gerecht_ingredient gi JOIN ingredient i ON gi.ingredient_id = i.id WHERE gi.gerecht_id = %s", (id,))
-    gerecht_ingredienten = cursor.fetchall()
-    
-    return render_template("view_gerecht.html", gerecht=gerecht, gerecht_ingredienten=gerecht_ingredienten)
-
-@app.route("/manage_gerecht_ingredients/<int:chef_id>", methods=["GET", "POST"])
-def manage_gerecht_ingredients(chef_id):
-    if 'chef_id' not in session or session['chef_id'] != chef_id:
+# -----------------------------------------------------------
+#  Persoonlijk Dashboard
+# -----------------------------------------------------------
+@app.route('/dashboard/<chef_naam>')
+def dashboard(chef_naam):
+    """
+    Eenvoudig dashboard waarop de chef na inloggen belandt.
+    We controleren of de ingelogde chef overeenkomt met de URL.
+    """
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        flash("Ongeldige sessie. Log opnieuw in.", "warning")
         return redirect(url_for('login'))
 
-    cursor = connection.cursor(dictionary=True)
-    
-    if request.method == "POST":
-        action = request.form.get('action')
-        gerecht_id = request.form.get('gerecht_id')
-        ingredient_id = request.form.get('ingredient_id')
-        hoeveelheid = request.form.get('hoeveelheid')
+    # Eventueel stats/overzicht tonen
+    return render_template('dashboard.html', chef_naam=chef_naam)
 
-        if action == "add":
-            cursor.execute(
-                "INSERT INTO gerecht_ingredient (gerecht_id, ingredient_id, hoeveelheid, chef_id) "
-                "VALUES (%s, %s, %s, %s)",
-                (gerecht_id, ingredient_id, hoeveelheid, chef_id)
-            )
-        elif action == "remove":
-            cursor.execute(
-                "DELETE FROM gerecht_ingredient WHERE gerecht_id = %s AND ingredient_id = %s",
-                (gerecht_id, ingredient_id)
-            )
-        connection.commit()
-
-    cursor.execute("SELECT * FROM gerecht WHERE chef_id = %s", (chef_id,))
-    gerechten = cursor.fetchall()
-
-    # Haal voor elk gerecht de gekoppelde ingrediënten op
-    gerecht_ingredients = {}
-    for g in gerechten:
-        cursor.execute(
-            "SELECT gi.ingredient_id, gi.hoeveelheid, i.naam "
-            "FROM gerecht_ingredient gi JOIN ingredient i ON gi.ingredient_id = i.id "
-            "WHERE gi.gerecht_id = %s", (g['id'],)
-        )
-        gerecht_ingredients[g['id']] = cursor.fetchall()
-
-    cursor.execute("SELECT * FROM ingredient")
-    all_ingredients = cursor.fetchall()
-
-    return render_template(
-        "manage_gerecht_ingredients.html",
-        gerechten=gerechten,
-        gerecht_ingredients=gerecht_ingredients,
-        all_ingredients=all_ingredients
-    )
-
-@app.route("/delete_gerecht/<int:id>", methods=["POST"])
-def delete_gerecht(id):
-    cursor = connection.cursor()
-    cursor.execute("DELETE FROM gerecht WHERE id = %s", (id,))
-    cursor.execute("DELETE FROM gerecht_ingredient WHERE gerecht_id = %s", (id,))
-    connection.commit()
-    return redirect(url_for('gerechten', chef_id=session['chef_id']))
-
-@app.route("/test_gerecht_ingredient", methods=["GET", "POST"])
-def test_gerecht_ingredient():
-    if 'chef_id' not in session:
+# -----------------------------------------------------------
+#  Ingrediënten Beheren
+# -----------------------------------------------------------
+@app.route('/dashboard/<chef_naam>/ingredients', methods=['GET', 'POST'])
+def manage_ingredients(chef_naam):
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
 
-    cursor = connection.cursor(dictionary=True)
-    
-    if request.method == "POST":
-        gerecht_id = request.form.get('gerecht_id')
-        ingredient_id = request.form.get('ingredient_id')
-        hoeveelheid = request.form.get('hoeveelheid')
-        
-        cursor.execute(
-            "INSERT INTO gerecht_ingredient (gerecht_id, ingredient_id, hoeveelheid, chef_id) "
-            "VALUES (%s, %s, %s, %s)",
-            (gerecht_id, ingredient_id, hoeveelheid, session['chef_id'])
-        )
-        connection.commit()
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
+    cur = conn.cursor(dictionary=True)
 
-    cursor.execute("SELECT * FROM gerecht WHERE chef_id = %s", (session['chef_id'],))
-    gerechten = cursor.fetchall()
+    if request.method == 'POST':
+        naam = request.form.get('naam')
+        categorie = request.form.get('categorie')
+        eenheid = request.form.get('eenheid')
+        prijs_per_eenheid = request.form.get('prijs_per_eenheid')
 
-    cursor.execute("SELECT * FROM ingredient")
-    ingredients = cursor.fetchall()
+        try:
+            # Voeg hier chef_id toe, zodat het ingrediënt exclusief is voor de ingelogde chef
+            cur.execute("""
+                INSERT INTO ingredients (chef_id, naam, categorie, eenheid, prijs_per_eenheid)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (session['chef_id'], naam, categorie, eenheid, prijs_per_eenheid))
+            conn.commit()
+            flash("Ingrediënt toegevoegd!", "success")
+        except Exception as e:
+            conn.rollback()
+            flash(f"Fout bij toevoegen ingrediënt: {str(e)}", "danger")
 
-    cursor.execute("""
-        SELECT gi.gerecht_id, g.naam AS gerecht_naam, gi.ingredient_id, i.naam AS ingredient_naam, gi.hoeveelheid
-        FROM gerecht_ingredient gi
-        JOIN gerecht g ON gi.gerecht_id = g.id
-        JOIN ingredient i ON gi.ingredient_id = i.id
-        WHERE g.chef_id = %s
+    # Haal alleen de ingrediënten van de ingelogde chef op
+    cur.execute("""
+        SELECT * 
+        FROM ingredients 
+        WHERE chef_id = %s
+        ORDER BY ingredient_id DESC
     """, (session['chef_id'],))
-    gerecht_ingredienten = cursor.fetchall()
+    alle_ingredienten = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template('manage_ingredients.html',
+                           chef_naam=chef_naam,
+                           ingredienten=alle_ingredienten)
+
+# -----------------------------------------------------------
+#  Gerechten Samenstellen
+# -----------------------------------------------------------
+@app.route('/dashboard/<chef_naam>/dishes', methods=['GET', 'POST'])
+def manage_dishes(chef_naam):
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('manage_dishes', chef_naam=chef_naam))
+    cur = conn.cursor(dictionary=True)
+
+    # Opslaan van nieuw gerecht
+    if request.method == 'POST' and 'gerechtForm' in request.form:
+        naam = request.form.get('naam')
+        beschrijving = request.form.get('beschrijving')
+        verkoopprijs = request.form.get('verkoopprijs')
+        gerecht_categorie = request.form.get('gerecht_categorie')
+
+        try:
+            cur.execute("""
+                INSERT INTO dishes (chef_id, naam, beschrijving, verkoopprijs, categorie)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (session['chef_id'], naam, beschrijving, verkoopprijs, gerecht_categorie))
+            new_dish_id = cur.lastrowid
+            conn.commit()
+            flash("Gerecht toegevoegd!", "success")
+            return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=new_dish_id))
+        except Exception as e:
+            conn.rollback()
+            flash(f"Fout bij toevoegen gerecht: {str(e)}", "danger")
+
+    # Haal alle gerechten van deze chef op
+    cur.execute("""
+        SELECT * FROM dishes
+        WHERE chef_id = %s
+        ORDER BY dish_id DESC
+    """, (session['chef_id'],))
+    alle_gerechten = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template('manage_dishes.html',
+                           chef_naam=chef_naam,
+                           gerechten=alle_gerechten)
+
+# -----------------------------------------------------------
+#  Gerecht Bewerken (Ingrediënten toevoegen)
+# -----------------------------------------------------------
+@app.route('/dashboard/<chef_naam>/dishes/<int:dish_id>', methods=['GET', 'POST'])
+def edit_dish(chef_naam, dish_id):
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('manage_dishes', chef_naam=chef_naam))
+    cur = conn.cursor(dictionary=True)
+
+    # Haal info over het gerecht op (check of het bij deze chef hoort)
+    cur.execute("SELECT * FROM dishes WHERE dish_id = %s AND chef_id = %s",
+                (dish_id, session['chef_id']))
+    gerecht = cur.fetchone()
+    if not gerecht:
+        cur.close()
+        conn.close()
+        flash("Gerecht niet gevonden of je hebt geen toestemming.", "danger")
+        return redirect(url_for('manage_dishes', chef_naam=chef_naam))
+
+    # Opslaan van nieuw ingrediënt voor dit gerecht
+    if request.method == 'POST' and 'ingredientForm' in request.form:
+        ingredient_id = request.form.get('ingredient_id')
+        hoeveelheid = request.form.get('hoeveelheid')
+
+        # Bepaal prijs_totaal (hoeveelheid * prijs_per_eenheid)
+        cur.execute("""
+            SELECT prijs_per_eenheid 
+            FROM ingredients 
+            WHERE ingredient_id = %s 
+              AND chef_id = %s
+        """, (ingredient_id, session['chef_id']))
+        ingredient_info = cur.fetchone()
+        if ingredient_info:
+            prijs_per_eenheid = ingredient_info['prijs_per_eenheid']
+            prijs_totaal = float(hoeveelheid) * float(prijs_per_eenheid)
+
+            try:
+                cur.execute("""
+                    INSERT INTO dish_ingredients (dish_id, ingredient_id, hoeveelheid, prijs_totaal)
+                    VALUES (%s, %s, %s, %s)
+                """, (dish_id, ingredient_id, hoeveelheid, prijs_totaal))
+                conn.commit()
+                flash("Ingrediënt toegevoegd aan het gerecht!", "success")
+            except Exception as e:
+                conn.rollback()
+                flash(f"Fout bij toevoegen van ingrediënt: {str(e)}", "danger")
+        else:
+            flash("Ongeldig ingrediënt of geen toegang.", "danger")
+
+    # Haal alle beschikbare ingrediënten van deze chef op
+    cur.execute("""
+        SELECT * 
+        FROM ingredients 
+        WHERE chef_id = %s
+        ORDER BY naam ASC
+    """, (session['chef_id'],))
+    alle_ingredienten = cur.fetchall()
+
+    # Haal de gekoppelde ingrediënten voor dit gerecht op
+    cur.execute("""
+        SELECT di.*, i.naam AS ingredient_naam, i.eenheid
+        FROM dish_ingredients di
+        JOIN ingredients i ON di.ingredient_id = i.ingredient_id
+        WHERE di.dish_id = %s
+    """, (dish_id,))
+    gerecht_ingredienten = cur.fetchall()
+
+    # Eventuele totale kostprijs (op basis van dish_ingredients.prijs_totaal)
+    totaal_ingredient_prijs = sum([gi['prijs_totaal'] for gi in gerecht_ingredienten])
+
+    cur.close()
+    conn.close()
 
     return render_template(
-        "test_gerecht_ingredient.html",
-        gerechten=gerechten,
-        ingredients=ingredients,
-        gerecht_ingredienten=gerecht_ingredienten
+        'edit_dish.html',
+        chef_naam=chef_naam,
+        gerecht=gerecht,
+        alle_ingredienten=alle_ingredienten,
+        gerecht_ingredienten=gerecht_ingredienten,
+        totaal_ingredient_prijs=totaal_ingredient_prijs
     )
 
+# -----------------------------------------------------------
+#  Alle Gerechten Beheren
+# -----------------------------------------------------------
+@app.route('/all_dishes')
+def all_dishes():
+    """
+    Pagina om alle gerechten te beheren.
+    """
+    if 'chef_id' not in session:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('home'))
+    cur = conn.cursor(dictionary=True)
+
+    # Haal alle gerechten op en bereken de totale ingredient-kostprijs
+    cur.execute("""
+        SELECT d.*, c.naam as chef_naam, 
+               (SELECT SUM(di.prijs_totaal) 
+                FROM dish_ingredients di 
+                WHERE di.dish_id = d.dish_id) as totaal_ingredient_prijs
+        FROM dishes d
+        JOIN chefs c ON d.chef_id = c.chef_id
+        ORDER BY d.dish_id DESC
+    """)
+    alle_gerechten = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template('all_dishes.html', gerechten=alle_gerechten)
+
+# -----------------------------------------------------------
+#  Verkoopprijs Bijwerken
+# -----------------------------------------------------------
+@app.route('/update_price/<int:dish_id>', methods=['POST'])
+def update_price(dish_id):
+    """
+    Update the verkoopprijs of a dish.
+    """
+    if 'chef_id' not in session:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('login'))
+
+    new_price = request.form.get('new_price')
+    if not new_price:
+        flash("Geen prijs opgegeven.", "danger")
+        return redirect(url_for('all_dishes'))
+
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('all_dishes'))
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""
+            UPDATE dishes
+            SET verkoopprijs = %s
+            WHERE dish_id = %s
+        """, (new_price, dish_id))
+        conn.commit()
+        flash("Verkoopprijs bijgewerkt!", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Fout bij bijwerken verkoopprijs: {str(e)}", "danger")
+    finally:
+        cur.close()
+        conn.close()
+
+    return redirect(url_for('all_dishes'))
+
+# -----------------------------------------------------------
+#  Export Dishes to MS Word
+# -----------------------------------------------------------
+@app.route('/export_dishes', methods=['POST'])
+def export_dishes():
+    """
+    Export selected dishes to a Microsoft Word document.
+    """
+    if 'chef_id' not in session:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('login'))
+
+    selected_dish_ids = request.form.getlist('selected_dishes')
+    if not selected_dish_ids:
+        flash("Geen gerechten geselecteerd.", "danger")
+        return redirect(url_for('all_dishes'))
+
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('all_dishes'))
+    cur = conn.cursor(dictionary=True)
+
+    # Haal de geselecteerde gerechten op
+    format_strings = ','.join(['%s'] * len(selected_dish_ids))
+    cur.execute(f"""
+        SELECT d.*, c.naam as chef_naam, 
+               (SELECT SUM(di.prijs_totaal) 
+                FROM dish_ingredients di 
+                WHERE di.dish_id = d.dish_id) as totaal_ingredient_prijs
+        FROM dishes d
+        JOIN chefs c ON d.chef_id = c.chef_id
+        WHERE d.dish_id IN ({format_strings})
+    """, tuple(selected_dish_ids))
+    selected_dishes = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    # Maak een Word-document aan
+    doc = Document()
+    doc.add_heading('Geselecteerde Gerechten', 0)
+
+    for dish in selected_dishes:
+        doc.add_heading(dish['naam'], level=1)
+        doc.add_paragraph(f"Chef: {dish['chef_naam']}")
+        doc.add_paragraph(f"Categorie: {dish['categorie']}")
+        doc.add_paragraph(f"Verkoopprijs: {dish['verkoopprijs']}")
+        doc.add_paragraph(f"Totaal ingredient-kostprijs: {dish['totaal_ingredient_prijs'] if dish['totaal_ingredient_prijs'] else 'n.v.t.'}")
+        doc.add_paragraph(f"Beschrijving: {dish['beschrijving'] if dish['beschrijving'] else 'Geen beschrijving'}")
+        doc.add_paragraph("\n")
+
+    # Sla het document op in een in-memory buffer
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+
+    return send_file(buffer, as_attachment=True, download_name='gerechten.docx', mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+
+# -----------------------------------------------------------
+# Start de server
+# -----------------------------------------------------------
 if __name__ == '__main__':
     app.run(debug=True)
