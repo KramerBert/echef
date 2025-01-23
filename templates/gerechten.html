@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mijn Gerechten</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        table {
+            border-collapse: collapse;
+            width: 80%;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .button-container {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mijn Gerechten</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Naam</th>
+                <th>Beschrijving</th>
+                <th>Prijs</th>
+                <th>Menu</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for gerecht in gerechten %}
+            <tr>
+                <td><a href="{{ url_for('view_gerecht', id=gerecht['id']) }}">{{ gerecht['naam'] }}</a></td>
+                <td>{{ gerecht['beschrijving'] }}</td>
+                <td>{{ gerecht['prijs'] }}</td>
+                <td>{{ gerecht['menu'] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="button-container">
+        <a href="/gerecht_aanmaken"><button>Gerecht Aanmaken</button></a>
+        <a href="/dashboard/{{ session['chef_id'] }}"><button>Terug naar Persoonlijk Dashboard</button></a>
+    </div>
+</body>
+</html>

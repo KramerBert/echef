@@ -1,0 +1,87 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Manage Gerecht Ingredients</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        h1, h2 {
+            margin: 10px 0;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            margin: 5px 0;
+        }
+        form {
+            display: inline;
+        }
+        label {
+            margin-right: 5px;
+        }
+        select, input {
+            margin-right: 10px;
+        }
+        button {
+            padding: 5px 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        hr {
+            width: 80%;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Beheer Ingrediënten voor uw Gerechten</h1>
+    {% for gerecht in gerechten %}
+        <h2>{{ gerecht['naam'] }}</h2>
+        <ul>
+            {% for gi in gerecht_ingredients[gerecht['id']] %}
+            <li>
+                {{ gi['naam'] }} - {{ gi['hoeveelheid'] }}
+                <form method="post" style="display:inline;">
+                    <input type="hidden" name="action" value="remove" />
+                    <input type="hidden" name="gerecht_id" value="{{ gerecht['id'] }}" />
+                    <input type="hidden" name="ingredient_id" value="{{ gi['ingredient_id'] }}" />
+                    <button type="submit">Verwijderen</button>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+        <form method="post">
+            <input type="hidden" name="action" value="add" />
+            <input type="hidden" name="gerecht_id" value="{{ gerecht['id'] }}" />
+            <label for="ingredient_id">Ingrediënt:</label>
+            <select name="ingredient_id">
+                {% for ing in all_ingredients %}
+                <option value="{{ ing['id'] }}">{{ ing['naam'] }}</option>
+                {% endfor %}
+            </select>
+            <label for="hoeveelheid">Hoeveelheid:</label>
+            <input type="text" name="hoeveelheid" required />
+            <button type="submit">Toevoegen</button>
+        </form>
+        <hr/>
+    {% endfor %}
+    <a href="/dashboard/{{ session['chef_id'] }}">Terug naar Dashboard</a>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Persoonlijk Dashboard</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welkom, {{ naam }}</h1>
+    <p>Dit is uw persoonlijke dashboard.</p>
+    <div class="button-container">
+        <a href="/inventory"><button>Voorraad</button></a>
+        <a href="/gerecht_aanmaken"><button>Gerecht Aanmaken</button></a>
+        <a href="/gerechten/{{ session['chef_id'] }}"><button>Gerechten</button></a>
+        <a href="/test_gerecht_ingredient"><button>Maak Gerecht</button></a>
+        <a href="/logout"><button>Uitloggen</button></a>
+    </div>
+</body>
+</html>
