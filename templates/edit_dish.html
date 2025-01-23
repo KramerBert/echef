@@ -64,6 +64,7 @@
 
     <label for="ingredient_id">Ingrediënt:</label>
     <select id="ingredient_id" name="ingredient_id" required>
+        <option value="" disabled selected>Selecteer Ingrediënt</option>
         {% for ingr in alle_ingredienten %}
         <option value="{{ ingr.ingredient_id }}">{{ ingr.naam }} ({{ ingr.eenheid }})</option>
         {% endfor %}
@@ -78,7 +79,7 @@
 <hr>
 
 <!-- Lijst van ingrediënten die al zijn gekoppeld aan dit gerecht -->
-<h3>Huidige Ingrediënten voor dit gerecht</h3>
+<h3>Kostprijsberekening:</h3>
 {% if gerecht_ingredienten %}
 <table border="1" cellpadding="5" cellspacing="0">
     <tr>
@@ -96,7 +97,7 @@
     </tr>
     {% endfor %}
 </table>
-<p><strong>Totaal ingredient-kostprijs:</strong> {{ totaal_ingredient_prijs }}</p>
+<p><strong>Totaal kostprijs: € {{ totaal_ingredient_prijs }}</strong></p>
 {% else %}
 <p>Er zijn nog geen ingrediënten aan dit gerecht toegevoegd.</p>
 {% endif %}

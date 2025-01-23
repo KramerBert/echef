@@ -169,25 +169,52 @@ def manage_ingredients(chef_naam):
         eenheid = request.form.get('eenheid')
         prijs_per_eenheid = request.form.get('prijs_per_eenheid')
 
-        try:
-            # Voeg hier chef_id toe, zodat het ingrediënt exclusief is voor de ingelogde chef
-            cur.execute("""
-                INSERT INTO ingredients (chef_id, naam, categorie, eenheid, prijs_per_eenheid)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (session['chef_id'], naam, categorie, eenheid, prijs_per_eenheid))
-            conn.commit()
-            flash("Ingrediënt toegevoegd!", "success")
-        except Exception as e:
-            conn.rollback()
-            flash(f"Fout bij toevoegen ingrediënt: {str(e)}", "danger")
+        # Check for duplicate ingredient
+        cur.execute("""
+            SELECT * FROM ingredients 
+            WHERE chef_id = %s AND naam = %s AND categorie = %s
+        """, (session['chef_id'], naam, categorie))
+        existing_ingredient = cur.fetchone()
 
-    # Haal alleen de ingrediënten van de ingelogde chef op
+        if existing_ingredient:
+            flash("Ingrediënt bestaat al.", "danger")
+        else:
+            try:
+                # Voeg hier chef_id toe, zodat het ingrediënt exclusief is voor de ingelogde chef
+                cur.execute("""
+                    INSERT INTO ingredients (chef_id, naam, categorie, eenheid, prijs_per_eenheid)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (session['chef_id'], naam, categorie, eenheid, prijs_per_eenheid))
+                conn.commit()
+                flash("Ingrediënt toegevoegd!", "success")
+            except Exception as e:
+                conn.rollback()
+                flash(f"Fout bij toevoegen ingrediënt: {str(e)}", "danger")
+
+    # Haal unieke categorieën op
     cur.execute("""
-        SELECT * 
+        SELECT DISTINCT categorie 
         FROM ingredients 
         WHERE chef_id = %s
-        ORDER BY ingredient_id DESC
     """, (session['chef_id'],))
+    unieke_categorieen = [row['categorie'] for row in cur.fetchall()]
+
+    # Haal alleen de ingrediënten van de ingelogde chef op
+    filter_categorie = request.args.get('filter_categorie')
+    if filter_categorie:
+        cur.execute("""
+            SELECT * 
+            FROM ingredients 
+            WHERE chef_id = %s AND categorie = %s
+            ORDER BY ingredient_id DESC
+        """, (session['chef_id'], filter_categorie))
+    else:
+        cur.execute("""
+            SELECT * 
+            FROM ingredients 
+            WHERE chef_id = %s
+            ORDER BY ingredient_id DESC
+        """, (session['chef_id'],))
     alle_ingredienten = cur.fetchall()
 
     cur.close()
@@ -195,7 +222,9 @@ def manage_ingredients(chef_naam):
 
     return render_template('manage_ingredients.html',
                            chef_naam=chef_naam,
-                           ingredienten=alle_ingredienten)
+                           ingredienten=alle_ingredienten,
+                           unieke_categorieen=unieke_categorieen,
+                           filter_categorie=filter_categorie)
 
 # -----------------------------------------------------------
 #  Gerechten Samenstellen

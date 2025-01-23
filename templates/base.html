@@ -22,21 +22,44 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             background-color: #fff;
         }
-    </style>
-</head>
-<body>
-    <div class="container">
+        nav ul {
+            justify-content: flex-end;
+        }
+        </style>
+    </head>
+    <body>
+        <div class="container">
         <header>
             <nav>
             <!-- Eenvoudige navigatie -->
-            <ul style="display: flex; list-style: none; padding: 0;"></ul>
-                <li style="margin-right: 15px;"><a href="{{ url_for('home') }}">Home</a></li>
-                {% if session.get('chef_id') %}
-                <li style="margin-right: 15px;"><a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}">Dashboard</a></li>
-                <li><a href="{{ url_for('logout') }}">Uitloggen</a></li>
+            <ul style="display: flex; list-style: none; padding: 0;">
+            <li style="margin-right: 15px;">
+                <a href="{{ url_for('home') }}">
+                <button style="padding: 10px 20px; border: none; background-color: #007bff; color: white; cursor: pointer;">Home</button>
+                </a>
+            </li>
+            {% if session.get('chef_id') %}
+            <li style="margin-right: 15px;">
+                <a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}">
+                <button style="padding: 10px 20px; border: none; background-color: #007bff; color: white; cursor: pointer;">Dashboard</button>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('logout') }}">
+                <button style="padding: 10px 20px; border: none; background-color: #007bff; color: white; cursor: pointer;">Uitloggen</button>
+                </a>
+            </li>
                 {% else %}
-                <li style="margin-right: 15px;"><a href="{{ url_for('register') }}">Registreren</a></li>
-                <li><a href="{{ url_for('login') }}">Inloggen</a></li>
+                <li style="margin-right: 15px;">
+                    <a href="{{ url_for('register') }}">
+                        <button style="padding: 10px 20px; border: none; background-color: #007bff; color: white; cursor: pointer;">Registreren</button>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('login') }}">
+                        <button style="padding: 10px 20px; border: none; background-color: #007bff; color: white; cursor: pointer;">Inloggen</button>
+                    </a>
+                </li>
                 {% endif %}
             </ul>
             </nav>
@@ -61,7 +84,7 @@
 
         <footer style="margin-top:30px;">
             <hr>
-            <p>&copy; 2025 Echef - Menu Engeneering</p>
+            <p>&copy; 2025 E-chef - Menu Engeneering</p>
         </footer>
     </div>
 
