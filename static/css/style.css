@@ -33,6 +33,10 @@ nav ul li a button {
     cursor: pointer;
 }
 
+nav ul li a button.active {
+    background-color: #0056b3;
+}
+
 .flash-message {
     border: 1px solid #ccc;
     padding: 5px;

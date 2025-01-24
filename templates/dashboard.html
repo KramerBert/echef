@@ -6,8 +6,8 @@
 <!-- Knoppen om naar andere secties te gaan -->
 <div class="button-group"></div>
     <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}">Ingrediënten Beheren</a> | 
-    <a href="{{ url_for('manage_dishes', chef_naam=chef_naam) }}">Gerechten Samenstellen</a> | 
-    <a href="{{ url_for('all_dishes') }}">Alle Gerechten</a>
+    <a href="{{ url_for('manage_dishes', chef_naam=chef_naam) }}">Nieuw Gerecht Samenstellen</a> | 
+    <a href="{{ url_for('all_dishes') }}">Gerechten beheren</a>
 </p>
 
 {% endblock %}

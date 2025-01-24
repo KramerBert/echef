@@ -25,6 +25,12 @@
         nav ul {
             justify-content: flex-end;
         }
+        .flash-message {
+            border: 1px solid #ccc;
+            padding: 5px;
+            margin-bottom: 5px;
+            background-color: #f8f8f8;
+        }
         </style>
     </head>
     <body>
@@ -35,13 +41,13 @@
             <ul style="display: flex; list-style: none; padding: 0;">
             <li style="margin-right: 15px;">
                 <a href="{{ url_for('home') }}">
-                <button style="padding: 10px 20px; border: none; background-color: #007bff; color: white; cursor: pointer;">Home</button>
+                <button class="{{ 'active' if request.path == url_for('home') else '' }}" style="padding: 10px 20px; border: none; background-color: #007bff; color: white; cursor: pointer;">Home</button>
                 </a>
             </li>
             {% if session.get('chef_id') %}
             <li style="margin-right: 15px;">
                 <a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}">
-                <button style="padding: 10px 20px; border: none; background-color: #007bff; color: white; cursor: pointer;">Dashboard</button>
+                <button class="{{ 'active' if request.path.startswith(url_for('dashboard', chef_naam=session.get('chef_naam'))) else '' }}" style="padding: 10px 20px; border: none; background-color: #007bff; color: white; cursor: pointer;">Dashboard</button>
                 </a>
             </li>
             <li>
@@ -52,12 +58,12 @@
                 {% else %}
                 <li style="margin-right: 15px;">
                     <a href="{{ url_for('register') }}">
-                        <button style="padding: 10px 20px; border: none; background-color: #007bff; color: white; cursor: pointer;">Registreren</button>
+                        <button class="{{ 'active' if request.path == url_for('register') else '' }}" style="padding: 10px 20px; border: none; background-color: #007bff; color: white; cursor: pointer;">Registreren</button>
                     </a>
                 </li>
                 <li>
                     <a href="{{ url_for('login') }}">
-                        <button style="padding: 10px 20px; border: none; background-color: #007bff; color: white; cursor: pointer;">Inloggen</button>
+                        <button class="{{ 'active' if request.path == url_for('login') else '' }}" style="padding: 10px 20px; border: none; background-color: #007bff; color: white; cursor: pointer;">Inloggen</button>
                     </a>
                 </li>
                 {% endif %}
@@ -70,7 +76,7 @@
           {% if messages %}
             <div>
               {% for category, message in messages %}
-                <div style="border:1px solid #ccc; padding:5px; margin-bottom:5px; background-color:#f8f8f8;">
+                <div class="flash-message">
                   <strong>{{ category.capitalize() }}:</strong> {{ message }}
                 </div>
               {% endfor %}

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Gerechten Samenstellen</h2>
-<p>Voeg hier nieuwe gerechten toe.</p>
+<p>Voeg hier nieuwe gerechten toe of bekijk de lijst van bestaande gerechten.</p>
 
 <!-- Formulier om een nieuw gerecht toe te voegen -->
 <form method="POST" action="{{ url_for('manage_dishes', chef_naam=chef_naam) }}">
@@ -10,10 +10,10 @@
     <input type="text" id="naam" name="naam" required><br><br>
 
     <label for="beschrijving">Beschrijving:</label><br>
-    <textarea id="beschrijving" name="beschrijving" rows="4" cols="50"></textarea><br><br>
+    <textarea id="beschrijving" name="beschrijving" rows="4" cols="50" required></textarea><br><br>
 
-    <label for="verkoopprijs">Verkoopprijs:</label><br>
-    <input type="number" step="0.01" id="verkoopprijs" name="verkoopprijs"><br><br>
+    <label for="verkoopprijs">Verkoopprijs (€):</label><br>
+    <input type="number" step="0.01" id="verkoopprijs" name="verkoopprijs" required><br><br>
 
     <label for="gerecht_categorie">Categorie:</label><br>
     <select id="gerecht_categorie" name="gerecht_categorie" required>
@@ -32,10 +32,13 @@
         <option value="Digestief">Digestief (optioneel)</option>
     </select><br><br>
 
-    <button type="submit">Opslaan</button>
-</form>
+    <label for="bereidingswijze">Bereidingswijze:</label><br>
+    <textarea id="bereidingswijze" name="bereidingswijze" rows="6" cols="50" required></textarea><br><br>
 
-<hr>
+    <button type="submit">Opslaan</button>
+</form
+
+  
 
 
 {% endblock %}
