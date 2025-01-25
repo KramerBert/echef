@@ -384,7 +384,7 @@ def manage_dishes(chef_naam):
     if request.method == 'POST' and 'gerechtForm' in request.form:
         naam = request.form.get('naam')
         beschrijving = request.form.get('beschrijving')
-        verkoopprijs = request.form.get('verkoopprijs')
+        verkoopprijs = request.form.get('verkoopprijs') or None  # Allow None if empty
         gerecht_categorie = request.form.get('gerecht_categorie')
         bereidingswijze = request.form.get('bereidingswijze')
 
