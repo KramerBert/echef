@@ -4,15 +4,62 @@ from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import Error
 from werkzeug.security import generate_password_hash, check_password_hash
-from docx import Document
+from werkzeug.utils import secure_filename
+from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.local import LocalProxy
+from werkzeug.exceptions import HTTPException, InternalServerError
+from urllib.parse import quote, urlparse
+import logging
 import io
+from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import csv
 
 load_dotenv()  # Load the values from .env
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app)
 app.secret_key = os.getenv("SECRET_KEY")  # Needed for session management
+
+# Configure session handling
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=1800  # 30 minutes
+)
+
+# Configure debug mode properly
+if app.debug:
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
+# Improved error handlers
+@app.errorhandler(404)
+def not_found_error(error):
+    logger.error(f'Page not found: {request.url}')
+    return render_template('error.html', error=error), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    logger.error(f'Server Error: {error}')
+    db = get_db_connection()
+    if db is not None:
+        db.close()
+    return render_template('error.html', error=error), 500
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    logger.error(f'Unhandled exception: {str(e)}')
+    if isinstance(e, HTTPException):
+        return render_template('error.html', error=e), e.code
+    
+    error = InternalServerError()
+    return render_template('error.html', error=error), 500
 
 # Database configuration from .env
 DB_NAME = os.getenv("DB_NAME")
@@ -69,35 +116,40 @@ def privacy():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        naam = request.form.get('naam')
-        email = request.form.get('email')
-        wachtwoord = request.form.get('wachtwoord')
-
-        # Wachtwoord hashen
-        hashed_pw = generate_password_hash(wachtwoord)
-
-        # Opslaan in DB
-        conn = get_db_connection()
-        if conn is None:
-            flash("Database connection error.", "danger")
-            return redirect(url_for('register'))
-
-        cur = conn.cursor()
         try:
-            cur.execute("""
-                INSERT INTO chefs (naam, email, wachtwoord)
-                VALUES (%s, %s, %s)
-            """, (naam, email, hashed_pw))
-            conn.commit()
-            flash("Registratie succesvol! Log nu in.", "success")
-        except Exception as e:
-            conn.rollback()
-            flash(f"Fout bij registreren: {str(e)}", "danger")
-        finally:
-            cur.close()
-            conn.close()
+            naam = secure_filename(request.form['naam'])
+            email = request.form['email']
+            wachtwoord = request.form['wachtwoord']
 
-        return redirect(url_for('login'))
+            if not all([naam, email, wachtwoord]):
+                flash("Vul alle velden in.", "danger")
+                return render_template('register.html')
+
+            hashed_pw = generate_password_hash(wachtwoord, method='pbkdf2:sha256')
+
+            conn = get_db_connection()
+            if conn is None:
+                raise Exception("Database connection error")
+
+            cur = conn.cursor()
+            try:
+                cur.execute("""
+                    INSERT INTO chefs (naam, email, wachtwoord)
+                    VALUES (%s, %s, %s)
+                """, (naam, email, hashed_pw))
+                conn.commit()
+                flash("Registratie succesvol! Log nu in.", "success")
+                return redirect(url_for('login'))
+            except Exception as e:
+                conn.rollback()
+                logger.error(f'Registration error: {str(e)}')
+                flash("Er is een fout opgetreden bij registratie.", "danger")
+            finally:
+                cur.close()
+                conn.close()
+        except Exception as e:
+            logger.error(f'Registration error: {str(e)}')
+            flash("Er is een fout opgetreden.", "danger")
 
     return render_template('register.html')
 
@@ -107,34 +159,38 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form.get('email')
-        wachtwoord = request.form.get('wachtwoord')
+        try:
+            email = request.form['email']
+            wachtwoord = request.form['wachtwoord']
 
-        # Ophalen gebruiker
-        conn = get_db_connection()
-        if conn is None:
-            flash("Database connection error.", "danger")
-            return redirect(url_for('login'))
+            if not email or not wachtwoord:
+                flash("Vul alle velden in.", "danger")
+                return render_template('login.html')
 
-        cur = conn.cursor(dictionary=True)
-        cur.execute("SELECT * FROM chefs WHERE email = %s", (email,))
-        chef = cur.fetchone()
-        cur.close()
-        conn.close()
+            conn = get_db_connection()
+            if conn is None:
+                raise Exception("Database connection error")
 
-        if chef is not None:
-            stored_hash = chef['wachtwoord']
-            # Vergelijk wachtwoorden
-            if check_password_hash(stored_hash, wachtwoord):
-                # Inloggen geslaagd
-                session['chef_id'] = chef['chef_id']
-                session['chef_naam'] = chef['naam']
-                flash("Succesvol ingelogd!", "success")
-                return redirect(url_for('dashboard', chef_naam=chef['naam']))
-            else:
-                flash("Onjuist wachtwoord.", "danger")
-        else:
-            flash("Onbekend e-mailadres.", "danger")
+            cur = conn.cursor(dictionary=True)
+            try:
+                cur.execute("SELECT * FROM chefs WHERE email = %s", (email,))
+                chef = cur.fetchone()
+                
+                if chef and check_password_hash(chef['wachtwoord'], wachtwoord):
+                    session.clear()
+                    session['chef_id'] = chef['chef_id']
+                    session['chef_naam'] = chef['naam']
+                    session.permanent = True
+                    flash("Succesvol ingelogd!", "success")
+                    return redirect(url_for('dashboard', chef_naam=chef['naam']))
+                else:
+                    flash("Ongeldige inloggegevens.", "danger")
+            finally:
+                cur.close()
+                conn.close()
+        except Exception as e:
+            logger.error(f'Login error: {str(e)}')
+            flash("Er is een fout opgetreden bij inloggen.", "danger")
 
     return render_template('login.html')
 
@@ -252,7 +308,8 @@ def bulk_add_ingredients(chef_naam):
         return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
 
     file = request.files['csv_file']
-    if file.filename == '':
+    filename = secure_filename(file.filename)
+    if filename == '':
         flash("Geen bestand geselecteerd.", "danger")
         return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
 
@@ -613,9 +670,11 @@ def export_dishes():
     doc = Document()
     doc.add_heading('Menukaart', 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
 
+    # Voeg veiligheidscontroles toe voor alle velden
     for dish in selected_dishes:
         verkoopprijs = dish['verkoopprijs'] if dish['verkoopprijs'] else 'n.v.t.'
-        heading = doc.add_heading(f"{dish['naam']} - €{verkoopprijs}", level=1)
+        naam = dish['naam'] if dish['naam'] else 'Onbekend gerecht'
+        heading = doc.add_heading(f"{naam} - €{verkoopprijs}", level=1)
         heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
         description_text = dish['beschrijving'] if dish['beschrijving'] else 'Geen beschrijving'
@@ -629,7 +688,13 @@ def export_dishes():
     doc.save(buffer)
     buffer.seek(0)
 
-    return send_file(buffer, as_attachment=True, download_name='Menukaart.docx', mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    safe_filename = quote('Menukaart.docx', safe='')
+    return send_file(
+        buffer, 
+        as_attachment=True, 
+        download_name=safe_filename,
+        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
 
 # -----------------------------------------------------------
 #  Export Cookbook to MS Word
@@ -688,9 +753,11 @@ def export_cookbook():
 
     doc.add_page_break()
 
+    # Voeg veiligheidscontroles toe voor alle velden
     for dish in all_dishes:
         verkoopprijs = dish['verkoopprijs'] if dish['verkoopprijs'] else 'n.v.t.'
-        heading = doc.add_heading(f"{dish['naam']} - €{verkoopprijs}", level=1)
+        naam = dish['naam'] if dish['naam'] else 'Onbekend gerecht'
+        heading = doc.add_heading(f"{naam} - €{verkoopprijs}", level=1)
         heading.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
         description_text = dish['beschrijving'] if dish['beschrijving'] else 'Geen beschrijving'
@@ -727,7 +794,13 @@ def export_cookbook():
     doc.save(buffer)
     buffer.seek(0)
 
-    return send_file(buffer, as_attachment=True, download_name='Kookboek.docx', mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    safe_filename = quote('Kookboek.docx', safe='')
+    return send_file(
+        buffer,
+        as_attachment=True, 
+        download_name=safe_filename,
+        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
 
 # -----------------------------------------------------------
 #  Verwijder Gerecht
@@ -872,9 +945,10 @@ def export_dish(chef_naam, dish_id):
     conn.close()
     document = Document()
     
-    document.add_heading(gerecht.naam, level=1)
-    document.add_paragraph(f"Beschrijving: {gerecht.beschrijving}")
-    document.add_paragraph(f"Bereidingswijze: {gerecht.bereidingswijze}")
+    # Veilig toegang tot gerecht attributen
+    document.add_heading(gerecht['naam'] if gerecht['naam'] else 'Onbekend gerecht', level=1)
+    document.add_paragraph(f"Beschrijving: {gerecht['beschrijving'] if gerecht['beschrijving'] else 'Geen beschrijving'}")
+    document.add_paragraph(f"Bereidingswijze: {gerecht['bereidingswijze'] if gerecht['bereidingswijze'] else 'Geen bereidingswijze'}")
     
     document.add_heading('Ingrediënten', level=2)
     table = document.add_table(rows=1, cols=3)
@@ -894,7 +968,9 @@ def export_dish(chef_naam, dish_id):
     document.save(f)
     f.seek(0)
     
-    return send_file(f, as_attachment=True, download_name=f"{gerecht.naam}.docx")
+    # Veilige bestandsnaam
+    safe_filename = quote(f"{gerecht['naam'] if gerecht['naam'] else 'gerecht'}.docx", safe='')
+    return send_file(f, as_attachment=True, download_name=safe_filename)
 
 # -----------------------------------------------------------
 #  Werkinstructie
@@ -902,6 +978,12 @@ def export_dish(chef_naam, dish_id):
 @app.route('/instructions')
 def instructions():
     return render_template('instructions.html')
+
+# -----------------------------------------------------------
+# Voeg error handler toe voor Werkzeug exceptions
+@app.errorhandler(HTTPException)
+def handle_exception(e):
+    return render_template('error.html', error=e), e.code
 
 # -----------------------------------------------------------
 # Start de server

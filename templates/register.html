@@ -7,22 +7,20 @@
             <h2>Registreren</h2>
             <form method="POST" action="{{ url_for('register') }}" aria-label="Registration form">
                 <div class="mb-3">
-                    <label for="username" class="form-label">Gebruikersnaam</label>
-                    <input type="text" class="form-control" id="username" name="username" required>
+                    <label for="naam" class="form-label">Naam</label>
+                    <input type="text" class="form-control" id="naam" name="naam" required>
                 </div>
                 <div class="mb-3">
                     <label for="email" class="form-label">E-mail</label>
                     <input type="email" class="form-control" id="email" name="email" required>
                 </div>
                 <div class="mb-3">
-                    <label for="password" class="form-label">Wachtwoord</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
+                    <label for="wachtwoord" class="form-label">Wachtwoord</label>
+                    <input type="password" class="form-control" id="wachtwoord" name="wachtwoord" required>
                 </div>
-                <div class="mb-3">
-                    <label for="confirm_password" class="form-label">Bevestig Wachtwoord</label>
-                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
-                </div>
-                <button type="submit" class="btn btn-primary" aria-label="Register"><i class="fas fa-user-plus"></i> Registreren</button>
+                <button type="submit" class="btn btn-primary" aria-label="Register">
+                    <i class="fas fa-user-plus"></i> Registreren
+                </button>
             </form>
         </div>
     </div>

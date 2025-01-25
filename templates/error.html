@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Error - E-chef{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="alert alert-danger">
+                <h4 class="alert-heading">Error {{ error.code }}</h4>
+                <p>{{ error.description }}</p>
+                <hr>
+                <p class="mb-0">
+                    <a href="{{ url_for('home') }}" class="btn btn-primary">
+                        <i class="fas fa-home"></i> Terug naar Home
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
