@@ -50,6 +50,20 @@ def home():
     return render_template('home.html')  # Zorg voor een home.html template
 
 # -----------------------------------------------------------
+#  Over e-Chef
+# -----------------------------------------------------------
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
+# -----------------------------------------------------------
+#  AVG Privacy Verklaring
+# -----------------------------------------------------------
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
+
+# -----------------------------------------------------------
 #  Registreren
 # -----------------------------------------------------------
 @app.route('/register', methods=['GET', 'POST'])
@@ -881,6 +895,13 @@ def export_dish(chef_naam, dish_id):
     f.seek(0)
     
     return send_file(f, as_attachment=True, download_name=f"{gerecht.naam}.docx")
+
+# -----------------------------------------------------------
+#  Werkinstructie
+# -----------------------------------------------------------
+@app.route('/instructions')
+def instructions():
+    return render_template('instructions.html')
 
 # -----------------------------------------------------------
 # Start de server

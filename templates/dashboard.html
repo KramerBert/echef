@@ -1,19 +1,58 @@
 {% extends "base.html" %}
+{% block title %}Dashboard - E-chef{% endblock %}
 {% block content %}
-<h1>Dashboard van {{ chef_naam }}</h1>
-<p>Welkom op je persoonlijke dashboard!</p>
-
-<!-- Knoppen om naar andere secties te gaan -->
-<div class="button-group"></div>
-    <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}">Ingrediënten Beheren</a> | 
-    <a href="{{ url_for('manage_dishes', chef_naam=chef_naam) }}">Nieuw Gerecht Samenstellen</a> | 
-    <a href="{{ url_for('all_dishes') }}">Gerechten beheren</a>
-</p>
-
-<h3>Export Kookboek</h3>
-<form method="POST" action="{{ url_for('export_cookbook') }}">
-    <input type="hidden" name="exportForm" value="1">
-    <button type="submit">Exporteren naar Kookboek</button>
-</form>
-
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-12">
+            <h1>Dashboard van {{ chef_naam }}</h1>
+            <p>Welkom op je persoonlijke dashboard!</p>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="btn-group" role="group" aria-label="Dashboard actions">
+                <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}" class="btn btn-secondary" aria-label="Manage ingredients"><i class="fas fa-carrot"></i> Ingrediënten Beheren</a>
+                <a href="{{ url_for('manage_dishes', chef_naam=chef_naam) }}" class="btn btn-secondary" aria-label="Create new dish"><i class="fas fa-utensils"></i> Nieuw Gerecht Samenstellen</a>
+                <a href="{{ url_for('all_dishes') }}" class="btn btn-secondary" aria-label="Manage dishes"><i class="fas fa-list"></i> Gerechten beheren</a>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-12">
+            <h3>Export Kookboek</h3>
+            <form method="POST" action="{{ url_for('export_cookbook') }}" aria-label="Export cookbook form">
+                <input type="hidden" name="exportForm" value="1">
+                <button type="submit" class="btn btn-primary" aria-label="Export to cookbook"><i class="fas fa-file-export"></i> Exporteren naar Kookboek</button>
+            </form>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <h2>Dashboard</h2>
+            <table class="table table-striped table-hover" aria-label="Dashboard table">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Naam</th>
+                        <th scope="col">Beschrijving</th>
+                        <th scope="col">Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Example row -->
+                    <tr>
+                        <th scope="row">1</th>
+                        <td>Voorbeeld Naam</td>
+                        <td>Voorbeeld Beschrijving</td>
+                        <td>
+                            <a href="#" class="btn btn-primary btn-sm" aria-label="Edit"><i class="fas fa-edit"></i> Bewerken</a>
+                            <a href="#" class="btn btn-danger btn-sm" aria-label="Delete"><i class="fas fa-trash-alt"></i> Verwijderen</a>
+                        </td>
+                    </tr>
+                    <!-- ...other rows... -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 {% endblock %}

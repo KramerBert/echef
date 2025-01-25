@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Recepten - E-chef{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-12">
+            <h2>Recepten</h2>
+            <table class="table table-striped table-hover" aria-label="Recipes table">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Naam</th>
+                        <th scope="col">Ingrediënten</th>
+                        <th scope="col">Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Example row -->
+                    <tr>
+                        <th scope="row">1</th>
+                        <td>Voorbeeld Recept</td>
+                        <td>Voorbeeld Ingrediënten</td>
+                        <td>
+                            <a href="#" class="btn btn-primary btn-sm" aria-label="Edit"><i class="fas fa-edit"></i> Bewerken</a>
+                            <a href="#" class="btn btn-danger btn-sm" aria-label="Delete"><i class="fas fa-trash-alt"></i> Verwijderen</a>
+                        </td>
+                    </tr>
+                    <!-- ...other rows... -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

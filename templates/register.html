@@ -1,16 +1,30 @@
 {% extends "base.html" %}
+{% block title %}Registreren - E-chef{% endblock %}
 {% block content %}
-<h2>Registreren</h2>
-<form method="POST" action="{{ url_for('register') }}">
-    <label for="naam">Naam:</label><br>
-    <input type="text" id="naam" name="naam" required><br><br>
-
-    <label for="email">E-mailadres:</label><br>
-    <input type="email" id="email" name="email" required><br><br>
-
-    <label for="wachtwoord">Wachtwoord:</label><br>
-    <input type="password" id="wachtwoord" name="wachtwoord" required><br><br>
-
-    <button type="submit">Registreren</button>
-</form>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h2>Registreren</h2>
+            <form method="POST" action="{{ url_for('register') }}" aria-label="Registration form">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Gebruikersnaam</label>
+                    <input type="text" class="form-control" id="username" name="username" required>
+                </div>
+                <div class="mb-3">
+                    <label for="email" class="form-label">E-mail</label>
+                    <input type="email" class="form-control" id="email" name="email" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Wachtwoord</label>
+                    <input type="password" class="form-control" id="password" name="password" required>
+                </div>
+                <div class="mb-3">
+                    <label for="confirm_password" class="form-label">Bevestig Wachtwoord</label>
+                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                </div>
+                <button type="submit" class="btn btn-primary" aria-label="Register"><i class="fas fa-user-plus"></i> Registreren</button>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}

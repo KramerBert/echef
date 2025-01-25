@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="color: #ffffff; background-color: #002b36; padding: 20px;">
+    <!DOCTYPE html>
+    <html lang="nl">
+    <head>
+        <meta charset="UTF-8">
+        <title>Werkinstructie voor Chefs - e-Chef Platform</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                margin: 20px;
+                max-width: 800px;
+            }
+            h1, h2, h3 {
+                color: #2c3e50;
+            }
+            ul {
+                margin-left: 20px;
+            }
+            code {
+                background-color: #f4f4f4;
+                padding: 2px 4px;
+                border-radius: 4px;
+            }
+            .tip {
+                background-color: #e8f8f5;
+                border-left: 6px solid #1abc9c;
+                padding: 10px;
+                margin: 10px 0;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Werkinstructie voor Chefs</h1>
+        <p>Welkom bij het e-Chef platform! Deze gids helpt je stap voor stap door de verschillende functionaliteiten van het platform, zodat je efficiënt je ingrediënten en gerechten kunt beheren, menu’s kunt samenstellen en je kookboek kunt exporteren.</p>
+        
+        <h2>Inhoud</h2>
+        <ol>
+            <li><a href="#1-registreren">1. Registreren</a></li>
+            <li><a href="#2-inloggen">2. Inloggen</a></li>
+            <li><a href="#3-dashboard">3. Dashboard</a></li>
+            <li><a href="#4-ingrediënten-beheren">4. Ingrediënten Beheren</a></li>
+            <li><a href="#5-gerechten-samenstellen">5. Gerechten Samenstellen</a></li>
+            <li><a href="#6-exporteren">6. Exporteren naar Word</a></li>
+            <li><a href="#7-over-e-chef">7. Over e-Chef</a></li>
+            <li><a href="#8-privacyverklaring">8. Privacyverklaring</a></li>
+            <li><a href="#9-uitloggen">9. Uitloggen</a></li>
+            <li><a href="#10-vragen-en-tips">10. Veelgestelde Vragen & Tips</a></li>
+        </ol>
+    
+        <hr>
+    
+        <h2 id="1-registreren">1. Registreren</h2>
+        <ol>
+            <li><strong>Navigeer</strong> in je browser naar de startpagina van e-Chef (bijvoorbeeld <code>http://localhost:5000/</code>).</li>
+            <li><strong>Klik</strong> op de link *“Registreren”* of ga direct naar <code>http://localhost:5000/register</code>.</li>
+            <li><strong>Vul</strong> het registratieformulier in:
+                <ul>
+                    <li><strong>Naam:</strong> Jouw volledige (chef-)naam.</li>
+                    <li><strong>E-mailadres:</strong> Een geldig en uniek e-mailadres.</li>
+                    <li><strong>Wachtwoord:</strong> Kies een sterk wachtwoord.</li>
+                </ul>
+            </li>
+            <li><strong>Klik</strong> op de knop *“Registreren”*.</li>
+            <li><strong>Bevestiging:</strong> Na succesvolle registratie ontvang je een melding dat je kunt inloggen.</li>
+        </ol>
+        <div class="tip">
+            <strong>Tip:</strong> Gebruik een wachtwoordmanager om je wachtwoord veilig op te slaan.
+        </div>
+    
+        <h2 id="2-inloggen">2. Inloggen</h2>
+        <ol>
+            <li><strong>Navigeer</strong> naar de inlogpagina via de link *“Inloggen”* of direct via <code>http://localhost:5000/login</code>.</li>
+            <li><strong>Vul</strong> je e-mailadres en wachtwoord in.</li>
+            <li><strong>Klik</strong> op de knop *“Inloggen”*.</li>
+            <li><strong>Succes:</strong> Bij een succesvolle login kom je op je persoonlijke <strong>Dashboard</strong> terecht en krijg je de melding *“Succesvol ingelogd!”*.</li>
+            <li><strong>Foutmeldingen:</strong> Bij onjuiste inloggegevens ontvang je een foutmelding. Controleer je gegevens en probeer het opnieuw.</li>
+        </ol>
+        <div class="tip">
+            <strong>Tip:</strong> Zorg ervoor dat je je wachtwoord goed onthoudt of gebruik een wachtwoordmanager.
+        </div>
+    
+        <h2 id="3-dashboard">3. Dashboard</h2>
+        <p>Na het inloggen beland je op je <strong>Persoonlijk Dashboard</strong>, bereikbaar via de URL <code>http://localhost:5000/dashboard/&lt;jouw_chef_naam&gt;</code>. Hier vind je de belangrijkste functies:</p>
+        <ul>
+            <li><strong>Ingrediënten Beheren:</strong> Beheer je eigen ingrediënten, voeg nieuwe toe of bewerk bestaande.</li>
+            <li><strong>Gerechten Samenstellen:</strong> Maak nieuwe gerechten aan, voeg ingrediënten toe en beheer je menu’s.</li>
+            <li><strong>Exporteren:</strong> Exporteer je menu’s of kookboek naar een Word-document.</li>
+            <li><strong>Over e-Chef:</strong> Lees meer over het platform.</li>
+            <li><strong>Privacyverklaring:</strong> Bekijk onze privacyverklaring.</li>
+            <li><strong>Uitloggen:</strong> Log veilig uit van het platform.</li>
+        </ul>
+    
+        <h2 id="4-ingrediënten-beheren">4. Ingrediënten Beheren</h2>
+        <ol>
+            <li><strong>Klik</strong> op *“Ingrediënten Beheren”* vanuit je dashboard of ga direct naar <code>http://localhost:5000/dashboard/&lt;chef_naam&gt;/ingredients</code>.</li>
+            <li><strong>Voeg een nieuw ingrediënt toe:</strong>
+                <ul>
+                    <li><strong>Naam:</strong> Bijvoorbeeld “Tomaat”, “Kipfilet”, “Pasta”.</li>
+                    <li><strong>Categorie:</strong> Bijvoorbeeld “Groente”, “Vlees”, “Graanproduct”.</li>
+                    <li><strong>Eenheid:</strong> Bijvoorbeeld “gram”, “ml”, “stuk”.</li>
+                    <li><strong>Prijs per eenheid:</strong> In euro’s (DECIMAL), bijvoorbeeld “0.50” (per 100 gram) of “2.00” (per stuk).</li>
+                </ul>
+            </li>
+            <li><strong>Klik</strong> op *“Ingrediënt toevoegen”*.</li>
+            <li><strong>Bekijk:</strong> De nieuwe ingrediënt verschijnt in de lijst onderaan. Alle ingrediënten zijn exclusief voor jouw account.</li>
+            <li><strong>Bulk toevoegen via CSV:</strong>
+                <ul>
+                    <li><strong>Download de template:</strong> Klik op de link *“Download CSV-template”* om een voorbeeldbestand te downloaden.</li>
+                    <li><strong>Vul de CSV in:</strong> Open het gedownloade bestand en vul je ingrediënten in volgens het format: <code>naam, categorie, eenheid, prijs_per_eenheid</code>.</li>
+                    <li><strong>Upload de CSV:</strong> Ga terug naar *“Ingrediënten Beheren”* en upload je ingevulde CSV via het formulier.</li>
+                    <li><strong>Klik</strong> op *“CSV Uploaden”* om alle ingrediënten in één keer toe te voegen.</li>
+                    <li><strong>Bevestiging:</strong> Je krijgt een melding dat de ingrediënten succesvol zijn toegevoegd.</li>
+                </ul>
+            </li>
+            <li><strong>Filteren op categorie:</strong> Gebruik het filter om alleen ingrediënten van een specifieke categorie te bekijken.</li>
+            <li><strong>Bewerken of verwijderen:</strong> In de basisapp kun je alleen ingrediënten toevoegen en bekijken. Om ingrediënten te bewerken of verwijderen, gebruik je de respectievelijke links naast elk ingrediënt in de lijst.</li>
+        </ol>
+        <div class="tip">
+            <strong>Tip:</strong> Zorg ervoor dat je geen dubbele ingrediënten toevoegt. Het systeem controleert op duplicaten op basis van naam en categorie.
+        </div>
+    
+        <h2 id="5-gerechten-samenstellen">5. Gerechten Samenstellen</h2>
+        <ol>
+            <li><strong>Klik</strong> op *“Gerechten Samenstellen”* vanuit je dashboard of ga direct naar <code>http://localhost:5000/dashboard/&lt;chef_naam&gt;/dishes</code>.</li>
+            <li><strong>Voeg een nieuw gerecht toe:</strong>
+                <ul>
+                    <li><strong>Naam:</strong> Bijvoorbeeld “Spaghetti Bolognese”.</li>
+                    <li><strong>Beschrijving:</strong> Een korte omschrijving van het gerecht.</li>
+                    <li><strong>Verkoopprijs:</strong> De prijs die je hanteert voor het gerecht.</li>
+                    <li><strong>Categorie:</strong> Selecteer een categorie zoals “Voorgerecht”, “Hoofdgerecht”, “Nagerecht” of “Dessert”.</li>
+                    <li><strong>Bereidingswijze:</strong> Een uitgebreide beschrijving van de bereidingswijze (rich tekstveld).</li>
+                </ul>
+            </li>
+            <li><strong>Klik</strong> op *“Gerecht toevoegen”*.</li>
+            <li><strong>Bevestiging:</strong> Je krijgt een melding dat het gerecht succesvol is toegevoegd.</li>
+            <li><strong>Ingrediënten toevoegen aan het gerecht:</strong>
+                <ul>
+                    <li><strong>Klik</strong> op de link *“Ingrediënten toevoegen”* naast het aangemaakte gerecht in de lijst.</li>
+                    <li><strong>Selecteer een ingrediënt:</strong> Kies een ingrediënt uit de dropdownlijst die exclusief voor jouw account is.</li>
+                    <li><strong>Hoeveelheid:</strong> Voer de benodigde hoeveelheid in voor het gerecht.</li>
+                    <li><strong>Klik</strong> op *“Ingrediënt toevoegen”* om het ingrediënt aan het gerecht toe te voegen.</li>
+                    <li><strong>Bekijk:</strong> De toegevoegde ingrediënten worden weergegeven in een tabel onderaan, samen met de totale kostprijs.</li>
+                </ul>
+            </li>
+        </ol>
+        <div class="tip">
+            <strong>Tip:</strong> Zorg ervoor dat je voldoende ingrediënten hebt toegevoegd voordat je gerechten samenstelt om fouten te voorkomen.
+        </div>
+    
+        <h2 id="6-exporteren">6. Exporteren naar Word</h2>
+        <p>Met e-Chef kun je eenvoudig je menu’s en kookboek exporteren naar Microsoft Word-documenten. Hieronder leg ik uit hoe je dit kunt doen.</p>
+    
+        <h3>6.1 Exporteren van Menu’s (Menukaart)</h3>
+        <ol>
+            <li><strong>Navigeren</strong> naar de pagina *“Alle Gerechten Beheren”* via <code>http://localhost:5000/all_dishes</code>.</li>
+            <li><strong>Selecteer</strong> de gerechten die je wilt exporteren door de bijbehorende checkboxen aan te vinken.</li>
+            <li><strong>Klik</strong> op de knop *“Exporteer naar Menukaart”* onderaan de lijst.</li>
+            <li><strong>Download:</strong> Er wordt een Word-document genaamd <code>Menukaart.docx</code> gedownload, waarin de geselecteerde gerechten zijn opgenomen.</li>
+        </ol>
+        <div class="tip">
+            <strong>Tip:</strong> Zorg ervoor dat je gerechten hebt gevuld met beschrijvingen en bereidingswijzen om een compleet menu te exporteren.
+        </div>
+    
+        <h3>6.2 Exporteren van Kookboek</h3>
+        <ol>
+            <li><strong>Navigeren</strong> naar de pagina *“Alle Gerechten Beheren”* via <code>http://localhost:5000/all_dishes</code>.</li>
+            <li><strong>Selecteer</strong> de gerechten die je wilt opnemen in het kookboek door de bijbehorende checkboxen aan te vinken.</li>
+            <li><strong>Klik</strong> op de knop *“Exporteer naar Kookboek”* onderaan de lijst.</li>
+            <li><strong>Download:</strong> Er wordt een Word-document genaamd <code>Kookboek.docx</code> gedownload, waarin alle geselecteerde gerechten zijn opgenomen, compleet met ingrediënten en bereidingswijzen.</li>
+        </ol>
+        <div class="tip">
+            <strong>Tip:</strong> Voeg alle gewenste gerechten toe aan je selectie voordat je exporteert om een volledig kookboek te creëren.
+        </div>
+    
+        <h2 id="7-over-e-chef">7. Over e-Chef</h2>
+        <p>Bezoek onze <a href="/about">Over e-Chef</a> pagina om meer te lezen over ons platform, onze missie en visie, en hoe we jou als chef ondersteunen in je culinaire reis.</p>
+    
+        <h2 id="8-privacyverklaring">8. Privacyverklaring</h2>
+        <p>Je privacy is belangrijk voor ons. Lees onze <a href="/privacy">Privacyverklaring</a> om te begrijpen hoe we jouw gegevens verzamelen, gebruiken en beschermen.</p>
+    
+        <h2 id="9-uitloggen">9. Uitloggen</h2>
+        <ol>
+            <li><strong>Klik</strong> op de link *“Uitloggen”* in het navigatiemenu.</li>
+            <li><strong>Bevestiging:</strong> Je krijgt een melding dat je succesvol bent uitgelogd en wordt teruggeleid naar de homepage.</li>
+        </ol>
+        <div class="tip">
+            <strong>Tip:</strong> Vergeet niet uit te loggen na het gebruik van het platform, vooral als je op een gedeelde computer werkt.
+        </div>
+    
+        <h2 id="10-vragen-en-tips">10. Veelgestelde Vragen & Tips</h2>
+        <h3>10.1 Kan ik een ingrediënt of gerecht verwijderen?</h3>
+        <p>Ja, je kunt ingrediënten en gerechten verwijderen via de respectievelijke beheerpagina's:</p>
+        <ul>
+            <li><strong>Ingrediënt verwijderen:</strong> Ga naar *“Ingrediënten Beheren”*, klik op de delete-knop naast het gewenste ingrediënt.</li>
+            <li><strong>Gerecht verwijderen:</strong> Ga naar *“Alle Gerechten Beheren”*, klik op de delete-knop naast het gewenste gerecht.</li>
+        </ul>
+    
+        <h3>10.2 Kan ik de prijs van een ingrediënt of gerecht aanpassen?</h3>
+        <p>Ja, je kunt de prijs aanpassen door het ingrediënt of gerecht te bewerken:</p>
+        <ul>
+            <li><strong>Ingrediënt bewerken:</strong> Ga naar *“Ingrediënten Beheren”*, klik op de bewerk-knop naast het gewenste ingrediënt, pas de prijs aan en sla op.</li>
+            <li><strong>Gerecht bewerken:</strong> Ga naar *“Alle Gerechten Beheren”*, klik op de bewerk-knop naast het gewenste gerecht, pas de prijs aan en sla op.</li>
+        </ul>
+    
+        <h3>10.3 Wat als ik mijn wachtwoord ben vergeten?</h3>
+        <p>Op dit moment biedt e-Chef geen automatische wachtwoordhersteloptie. Neem contact op met de beheerder via <code>privacy@e-chef.nl</code> om je wachtwoord te resetten.</p>
+    
+        <h3>10.4 Kan ik de app openbaar maken?</h3>
+        <p>Ja, je kunt de app hosten op een server met behulp van tools zoals Gunicorn en NGINX, of via een Platform-as-a-Service zoals Heroku. Zorg ervoor dat je beveiligingsmaatregelen zoals HTTPS implementeert en je database veilig configureert.</p>
+    
+        <h3>10.5 Hoe voeg ik subgerechten toe aan een hoofdgerecht?</h3>
+        <p>Momenteel ondersteunt e-Chef geen subgerechten. Dit kan in de toekomst worden toegevoegd door een zelf-referentiële tabel in de database te implementeren.</p>
+        <div class="tip">
+            <strong>Tip:</strong> Houd je ingrediënten en gerechten goed georganiseerd om efficiënt menu’s samen te stellen en kosten te beheersen.
+        </div>
+    
+        <h2>Samenvatting</h2>
+        <ol>
+            <li><strong>Registreren</strong> en <strong>inloggen</strong> om toegang te krijgen tot je persoonlijke dashboard.</li>
+            <li><strong>Ingrediënten beheren:</strong> Voeg nieuwe ingrediënten toe, importeer via CSV, filteren en bewerken.</li>
+            <li><strong>Gerechten samenstellen:</strong> Maak nieuwe gerechten aan, voeg ingrediënten toe en beheer je menu’s.</li>
+            <li><strong>Exporteren:</strong> Exporteer je menu’s en kookboek naar Word-documenten.</li>
+            <li><strong>Over e-Chef en Privacyverklaring:</strong> Lees meer over ons platform en hoe we jouw gegevens beschermen.</li>
+            <li><strong>Uitloggen</strong> na gebruik om je account veilig te houden.</li>
+        </ol>
+        <p>Met deze instructie kun je als chef optimaal gebruikmaken van het e-Chef platform. Veel succes en plezier met koken!</p>
+    </body>
+    </html>
+</div>
+{% endblock %}
