@@ -34,10 +34,5 @@
     <button type="submit" style="margin-top: 20px;">Selecteer gerechten en print menukaart</button>
 </form>
 
-<form id="exportCookbookForm" method="POST" action="{{ url_for('export_cookbook') }}">
-    <input type="hidden" name="selected_dishes" value="">
-    <button type="submit" style="margin-top: 20px;">Selecteer gerechten en print kookboek</button>
-</form>
-
 <a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}" style="display: inline-block; margin-top: 20px;">Terug naar Dashboard</a>
 {% endblock %}

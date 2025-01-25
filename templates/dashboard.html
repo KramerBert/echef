@@ -10,4 +10,10 @@
     <a href="{{ url_for('all_dishes') }}">Gerechten beheren</a>
 </p>
 
+<h3>Export Kookboek</h3>
+<form method="POST" action="{{ url_for('export_cookbook') }}">
+    <input type="hidden" name="exportForm" value="1">
+    <button type="submit">Exporteren naar Kookboek</button>
+</form>
+
 {% endblock %}

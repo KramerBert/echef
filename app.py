@@ -253,14 +253,7 @@ def bulk_add_ingredients(chef_naam):
     cur = conn.cursor()
 
     try:
-        # Try reading the file with UTF-8 encoding first
-        try:
-            csv_reader = csv.reader(io.StringIO(file.stream.read().decode('utf-8')))
-        except UnicodeDecodeError:
-            # If UTF-8 fails, try reading with ISO-8859-1 encoding
-            file.stream.seek(0)
-            csv_reader = csv.reader(io.StringIO(file.stream.read().decode('ISO-8859-1')))
-        
+        csv_reader = csv.reader(io.StringIO(file.stream.read().decode('utf-8')))
         next(csv_reader)  # Skip header row
         for row in csv_reader:
             if len(row) != 4:
@@ -379,7 +372,26 @@ def edit_dish(chef_naam, dish_id):
 
     # Opslaan van nieuw ingrediënt voor dit gerecht
     if request.method == 'POST':
-        if 'ingredientForm' in request.form:
+        if 'updateForm' in request.form:
+            nieuwe_naam = request.form.get('naam')
+            nieuwe_beschrijving = request.form.get('beschrijving')
+            nieuwe_verkoopprijs = request.form.get('verkoopprijs')
+            nieuwe_categorie = request.form.get('gerecht_categorie')
+            nieuwe_bereidingswijze = request.form.get('bereidingswijze')
+
+            try:
+                cur.execute("""
+                    UPDATE dishes
+                    SET naam = %s, beschrijving = %s, verkoopprijs = %s, categorie = %s, bereidingswijze = %s
+                    WHERE dish_id = %s AND chef_id = %s
+                """, (nieuwe_naam, nieuwe_beschrijving, nieuwe_verkoopprijs, nieuwe_categorie, nieuwe_bereidingswijze, dish_id, session['chef_id']))
+                conn.commit()
+                flash("Gerecht bijgewerkt!", "success")
+                return redirect(url_for('all_dishes'))
+            except Exception as e:
+                conn.rollback()
+                flash(f"Fout bij bijwerken gerecht: {str(e)}", "danger")
+        elif 'ingredientForm' in request.form:
             ingredient_id = request.form.get('ingredient_id')
             hoeveelheid = request.form.get('hoeveelheid')
 
@@ -461,30 +473,13 @@ def edit_dish(chef_naam, dish_id):
                 flash(f"Fout bij bijwerken bereidingswijze: {str(e)}", "danger")
 
     # Haal alle beschikbare ingrediënten van deze chef op
-    filter_categorie = request.args.get('filter_categorie')
-    if filter_categorie:
-        cur.execute("""
-            SELECT * 
-            FROM ingredients 
-            WHERE chef_id = %s AND categorie = %s
-            ORDER BY naam ASC
-        """, (session['chef_id'], filter_categorie))
-    else:
-        cur.execute("""
-            SELECT * 
-            FROM ingredients 
-            WHERE chef_id = %s
-            ORDER BY naam ASC
-        """, (session['chef_id'],))
-    gefilterde_ingredienten = cur.fetchall()
-
-    # Haal de unieke categorieën op
     cur.execute("""
-        SELECT DISTINCT categorie 
+        SELECT * 
         FROM ingredients 
         WHERE chef_id = %s
+        ORDER BY naam ASC
     """, (session['chef_id'],))
-    unieke_categorieen = [row['categorie'] for row in cur.fetchall()]
+    alle_ingredienten = cur.fetchall()
 
     # Haal de gekoppelde ingrediënten voor dit gerecht op
     cur.execute("""
@@ -505,88 +500,10 @@ def edit_dish(chef_naam, dish_id):
         'edit_dish.html',
         chef_naam=chef_naam,
         gerecht=gerecht,
-        gefilterde_ingredienten=gefilterde_ingredienten,
-        unieke_categorieen=unieke_categorieen,
+        alle_ingredienten=alle_ingredienten,
         gerecht_ingredienten=gerecht_ingredienten,
-        totaal_ingredient_prijs=totaal_ingredient_prijs,
-        filter_categorie=filter_categorie
+        totaal_ingredient_prijs=totaal_ingredient_prijs
     )
-
-@app.route('/dashboard/<chef_naam>/dishes/<int:dish_id>/ingredients/<int:ingredient_id>/edit', methods=['POST'])
-def edit_dish_ingredient(chef_naam, dish_id, ingredient_id):
-    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
-        flash("Geen toegang. Log opnieuw in.", "danger")
-        return redirect(url_for('login'))
-
-    hoeveelheid = request.form.get('hoeveelheid')
-    if not hoeveelheid:
-        flash("Hoeveelheid is vereist.", "danger")
-        return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
-
-    conn = get_db_connection()
-    if conn is None:
-        flash("Database connection error.", "danger")
-        return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
-    cur = conn.cursor()
-
-    try:
-        # Bepaal prijs_totaal (hoeveelheid * prijs_per_eenheid)
-        cur.execute("""
-            SELECT prijs_per_eenheid 
-            FROM ingredients 
-            WHERE ingredient_id = %s 
-              AND chef_id = %s
-        """, (ingredient_id, session['chef_id']))
-        ingredient_info = cur.fetchone()
-        if ingredient_info:
-            prijs_per_eenheid = ingredient_info['prijs_per_eenheid']
-            prijs_totaal = float(hoeveelheid) * float(prijs_per_eenheid)
-
-            cur.execute("""
-                UPDATE dish_ingredients
-                SET hoeveelheid = %s, prijs_totaal = %s
-                WHERE dish_id = %s AND ingredient_id = %s
-            """, (hoeveelheid, prijs_totaal, dish_id, ingredient_id))
-            conn.commit()
-            flash("Ingrediënt bijgewerkt!", "success")
-        else:
-            flash("Ongeldig ingrediënt of geen toegang.", "danger")
-    except Exception as e:
-        conn.rollback()
-        flash(f"Fout bij bijwerken ingrediënt: {str(e)}", "danger")
-    finally:
-        cur.close()
-        conn.close()
-
-    return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
-
-@app.route('/dashboard/<chef_naam>/dishes/<int:dish_id>/ingredients/<int:ingredient_id>/delete', methods=['POST'])
-def delete_dish_ingredient(chef_naam, dish_id, ingredient_id):
-    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
-        flash("Geen toegang. Log opnieuw in.", "danger")
-        return redirect(url_for('login'))
-
-    conn = get_db_connection()
-    if conn is None:
-        flash("Database connection error.", "danger")
-        return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
-    cur = conn.cursor()
-
-    try:
-        cur.execute("""
-            DELETE FROM dish_ingredients 
-            WHERE dish_id = %s AND ingredient_id = %s
-        """, (dish_id, ingredient_id))
-        conn.commit()
-        flash("Ingrediënt verwijderd uit het gerecht!", "success")
-    except Exception as e:
-        conn.rollback()
-        flash(f"Fout bij verwijderen ingrediënt: {str(e)}", "danger")
-    finally:
-        cur.close()
-        conn.close()
-
-    return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
 
 # -----------------------------------------------------------
 #  Alle Gerechten Beheren
@@ -706,16 +623,11 @@ def export_dishes():
 @app.route('/export_cookbook', methods=['POST'])
 def export_cookbook():
     """
-    Export selected dishes to a Microsoft Word document as a cookbook.
+    Export all dishes to a Microsoft Word document as a cookbook.
     """
     if 'chef_id' not in session:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
-
-    selected_dish_ids = request.form.getlist('selected_dishes')
-    if not selected_dish_ids:
-        flash("Geen gerechten geselecteerd.", "danger")
-        return redirect(url_for('all_dishes'))
 
     conn = get_db_connection()
     if conn is None:
@@ -723,16 +635,15 @@ def export_cookbook():
         return redirect(url_for('all_dishes'))
     cur = conn.cursor(dictionary=True)
 
-    # Haal de geselecteerde gerechten op
-    format_strings = ','.join(['%s'] * len(selected_dish_ids))
-    cur.execute(f"""
+    # Haal alle gerechten van de ingelogde chef op
+    cur.execute("""
         SELECT d.*, c.naam as chef_naam, 
                (SELECT SUM(di.prijs_totaal) 
                 FROM dish_ingredients di 
                 WHERE di.dish_id = d.dish_id) as totaal_ingredient_prijs
         FROM dishes d
         JOIN chefs c ON d.chef_id = c.chef_id
-        WHERE d.dish_id IN ({format_strings})
+        WHERE d.chef_id = %s
         ORDER BY CASE 
             WHEN d.categorie = 'Amuse-bouche' THEN 1
             WHEN d.categorie = 'Hors-d''oeuvre' THEN 2
@@ -749,21 +660,28 @@ def export_cookbook():
             WHEN d.categorie = 'Digestief' THEN 13
             ELSE 14
         END
-    """, tuple(selected_dish_ids))
-    selected_dishes = cur.fetchall()
+    """, (session['chef_id'],))
+    all_dishes = cur.fetchall()
 
     # Maak een Word-document aan
     doc = Document()
-    doc.add_heading('Kookboek', 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.add_heading('Kookboek', 0).alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-    for dish in selected_dishes:
+    # Voeg een inhoudsopgave toe
+    doc.add_heading('Inhoudsopgave', level=1)
+    for dish in all_dishes:
+        doc.add_paragraph(dish['naam'], style='List Number')
+
+    doc.add_page_break()
+
+    for dish in all_dishes:
         verkoopprijs = dish['verkoopprijs'] if dish['verkoopprijs'] else 'n.v.t.'
         heading = doc.add_heading(f"{dish['naam']} - €{verkoopprijs}", level=1)
-        heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        heading.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
         description_text = dish['beschrijving'] if dish['beschrijving'] else 'Geen beschrijving'
         description = doc.add_paragraph(description_text)
-        description.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        description.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
         # Haal de ingrediënten voor dit gerecht op
         cur.execute("""
@@ -778,14 +696,14 @@ def export_cookbook():
             doc.add_heading('Ingrediënten', level=2)
             for gi in gerecht_ingredienten:
                 ingredient_text = f"{gi['hoeveelheid']} {gi['eenheid']} {gi['ingredient_naam']}"
-                doc.add_paragraph(ingredient_text)
+                doc.add_paragraph(ingredient_text).alignment = WD_ALIGN_PARAGRAPH.LEFT
 
         method_text = dish['bereidingswijze'] if dish['bereidingswijze'] else 'Geen bereidingswijze'
         doc.add_heading('Bereidingswijze', level=2)
         method = doc.add_paragraph(method_text)
-        method.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        method.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-        doc.add_paragraph("\n").alignment = WD_ALIGN_PARAGRAPH.CENTER
+        doc.add_paragraph("\n").alignment = WD_ALIGN_PARAGRAPH.LEFT
 
     cur.close()
     conn.close()
@@ -908,6 +826,61 @@ def delete_ingredient(chef_naam, ingredient_id):
         conn.close()
 
     return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
+
+# -----------------------------------------------------------
+#  Export Dish to MS Word
+# -----------------------------------------------------------
+@app.route('/export_dish/<chef_naam>/<dish_id>', methods=['POST'])
+def export_dish(chef_naam, dish_id):
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('manage_dishes', chef_naam=chef_naam))
+    cur = conn.cursor(dictionary=True)
+
+    cur.execute("SELECT * FROM dishes WHERE dish_id = %s AND chef_id = %s", (dish_id, session['chef_id']))
+    gerecht = cur.fetchone()
+    if not gerecht:
+        cur.close()
+        conn.close()
+        flash("Gerecht niet gevonden of je hebt geen toestemming.", "danger")
+        return redirect(url_for('manage_dishes', chef_naam=chef_naam))
+
+    cur.execute("""
+        SELECT di.*, i.naam AS ingredient_naam, i.eenheid
+        FROM dish_ingredients di
+        JOIN ingredients i ON di.ingredient_id = i.ingredient_id
+        WHERE di.dish_id = %s
+    """, (dish_id,))
+    gerecht_ingredienten = cur.fetchall()
+
+    cur.close()
+    conn.close()
+    document = Document()
+    
+    document.add_heading(gerecht.naam, level=1)
+    document.add_paragraph(f"Beschrijving: {gerecht.beschrijving}")
+    document.add_paragraph(f"Bereidingswijze: {gerecht.bereidingswijze}")
+    
+    document.add_heading('Ingrediënten', level=2)
+    table = document.add_table(rows=1, cols=3)
+    hdr_cells = table.rows[0].cells
+    hdr_cells[0].text = 'Ingrediënt'
+    hdr_cells[1].text = 'Hoeveelheid'
+    hdr_cells[2].text = 'Eenheid'
+    
+    for gi in gerecht_ingredienten:
+        row_cells = table.add_row().cells
+        row_cells[0].text = gi.ingredient_naam
+        row_cells[1].text = str(gi.hoeveelheid)
+        row_cells[2].text = gi.eenheid
+    
+    # Save the document to a BytesIO object
+    f = io.BytesIO()
+    document.save(f)
+    f.seek(0)
+    
+    return send_file(f, as_attachment=True, download_name=f"{gerecht.naam}.docx")
 
 # -----------------------------------------------------------
 # Start de server

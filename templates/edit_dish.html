@@ -4,40 +4,26 @@
 <p>Categorie: {{ gerecht.categorie }}</p>
 <p>Verkoopprijs: {{ gerecht.verkoopprijs if gerecht.verkoopprijs else 'n.v.t.' }}</p>
 
-<!-- Formulier om de naam bij te werken -->
-<h3>Naam bijwerken</h3>
+<!-- Formulier om alle velden bij te werken -->
 <form method="POST" action="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
-    <input type="hidden" name="nameForm" value="1">
+    <input type="hidden" name="updateForm" value="1">
+
+    <h3>Naam bijwerken</h3>
     <input type="text" id="naam" name="naam" value="{{ gerecht.naam }}" required><br><br>
-    <button type="submit">Naam bijwerken</button>
-</form>
 
-<hr>
+    <hr>
 
-<!-- Formulier om de beschrijving bij te werken -->
-<h3>Beschrijving bijwerken</h3>
-<form method="POST" action="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
-    <input type="hidden" name="descriptionForm" value="1">
+    <h3>Beschrijving bijwerken</h3>
     <textarea id="beschrijving" name="beschrijving" rows="4" cols="50" required>{{ gerecht.beschrijving if gerecht.beschrijving else '' }}</textarea><br><br>
-    <button type="submit">Beschrijving bijwerken</button>
-</form>
 
-<hr>
+    <hr>
 
-<!-- Formulier om de verkoopprijs bij te werken -->
-<h3>Verkoopprijs bijwerken</h3>
-<form method="POST" action="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
-    <input type="hidden" name="priceForm" value="1">
+    <h3>Verkoopprijs bijwerken</h3>
     <input type="number" step="0.01" id="verkoopprijs" name="verkoopprijs" value="{{ gerecht.verkoopprijs }}" required><br><br>
-    <button type="submit">Verkoopprijs bijwerken</button>
-</form>
 
-<hr>
+    <hr>
 
-<!-- Formulier om de categorie bij te werken -->
-<h3>Categorie bijwerken</h3>
-<form method="POST" action="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
-    <input type="hidden" name="categoryForm" value="1">
+    <h3>Categorie bijwerken</h3>
     <select id="gerecht_categorie" name="gerecht_categorie" required>
         <option value="Amuse-bouche" {% if gerecht.categorie == 'Amuse-bouche' %}selected{% endif %}>Amuse-bouche (optioneel)</option>
         <option value="Hors-d'œuvre" {% if gerecht.categorie == "Hors-d'œuvre" %}selected{% endif %}>Hors-d'œuvre (koud voorgerecht)</option>
@@ -52,40 +38,29 @@
         <option value="Entremets" {% if gerecht.categorie == 'Entremets' %}selected{% endif %}>Entremets (zoet nagerecht)</option>
         <option value="Café / Mignardises" {% if gerecht.categorie == 'Café / Mignardises' %}selected{% endif %}>Café / Mignardises</option>
         <option value="Digestief" {% if gerecht.categorie == 'Digestief' %}selected{% endif %}>Digestief (optioneel)</option>
+        <option value="Basisgerecht" {% if gerecht.categorie == 'Basisgerecht' %}selected{% endif %}>Basisgerecht</option>
     </select><br><br>
-    <button type="submit">Categorie bijwerken</button>
-</form>
 
-<hr>
+    <hr>
 
-<!-- Formulier om de bereidingswijze bij te werken -->
-<h3>Bereidingswijze bijwerken</h3>
-<form method="POST" action="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
-    <input type="hidden" name="methodForm" value="1">
-    <textarea id="bereidingswijze" name="bereidingswijze" rows="6" cols="50" required>{{ gerecht.bereidingswijze if gerecht.bereidingswijze else '' }}</textarea><br><br>
-    <button type="submit">Bereidingswijze bijwerken</button>
+    <h3>Bereidingswijze bijwerken</h3>
+    <textarea id="bereidingswijze" name="bereidingswijze" rows="6" cols="50">{{ gerecht.bereidingswijze if gerecht.bereidingswijze else '' }}</textarea><br><br>
+
+    <hr>
+
+    <button type="submit">Opslaan</button>
 </form>
 
 <hr>
 
 <h3>Ingrediënten toevoegen</h3>
-<form id="filterForm" method="GET" action="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
-    <label for="filter_categorie">Filter op categorie:</label>
-    <select id="filter_categorie" name="filter_categorie">
-        <option value="">Alle categorieën</option>
-        {% for categorie in unieke_categorieen %}
-        <option value="{{ categorie }}" {% if filter_categorie == categorie %}selected{% endif %}>{{ categorie }}</option>
-        {% endfor %}
-    </select>
-</form>
-
-<form id="ingredientForm" method="POST" action="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}" style="display: flex; align-items: center;">
+<form method="POST" action="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}" style="display: flex; align-items: center;">
     <input type="hidden" name="ingredientForm" value="1">
 
     <label for="ingredient_id">Ingrediënt:</label>
     <select id="ingredient_id" name="ingredient_id" required>
         <option value="" disabled selected>Selecteer Ingrediënt</option>
-        {% for ingr in gefilterde_ingredienten %}
+        {% for ingr in alle_ingredienten %}
         <option value="{{ ingr.ingredient_id }}">{{ ingr.naam }} ({{ ingr.eenheid }})</option>
         {% endfor %}
     </select>
@@ -107,7 +82,6 @@
         <th>Hoeveelheid</th>
         <th>Eenheid</th>
         <th>Prijs Totaal</th>
-        <th>Acties</th>
     </tr>
     {% for gi in gerecht_ingredienten %}
     <tr>
@@ -115,15 +89,6 @@
         <td>{{ gi.hoeveelheid }}</td>
         <td>{{ gi.eenheid }}</td>
         <td>{{ gi.prijs_totaal }}</td>
-        <td>
-            <form method="POST" action="{{ url_for('edit_dish_ingredient', chef_naam=chef_naam, dish_id=gerecht.dish_id, ingredient_id=gi.ingredient_id) }}" style="display: inline;">
-                <input type="number" step="0.01" name="hoeveelheid" value="{{ gi.hoeveelheid }}" required>
-                <button type="submit">Bijwerken</button>
-            </form>
-            <form method="POST" action="{{ url_for('delete_dish_ingredient', chef_naam=chef_naam, dish_id=gerecht.dish_id, ingredient_id=gi.ingredient_id) }}" style="display: inline;" onsubmit="return confirm('Weet u zeker dat u dit ingrediënt wilt verwijderen?');">
-                <button type="submit">Verwijderen</button>
-            </form>
-        </td>
     </tr>
     {% endfor %}
 </table>
@@ -132,45 +97,7 @@
 <p>Er zijn nog geen ingrediënten aan dit gerecht toegevoegd.</p>
 {% endif %}
 
+<hr>
+
 <a href="{{ url_for('manage_dishes', chef_naam=chef_naam) }}">Terug naar Gerechtenoverzicht</a>
-
-<script>
-document.getElementById('filter_categorie').addEventListener('change', function() {
-    const form = document.getElementById('filterForm');
-    const formData = new FormData(form);
-    const queryString = new URLSearchParams(formData).toString();
-    const url = form.action + '?' + queryString;
-
-    fetch(url)
-        .then(response => response.text())
-        .then(html => {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const newIngredientSelect = doc.getElementById('ingredient_id').innerHTML;
-            document.getElementById('ingredient_id').innerHTML = newIngredientSelect;
-        })
-        .catch(error => console.error('Error:', error));
-});
-
-document.getElementById('ingredientForm').addEventListener('submit', function(event) {
-    event.preventDefault();
-    const form = event.target;
-    const formData = new FormData(form);
-    const url = form.action;
-
-    fetch(url, {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.text())
-    .then(html => {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        const newIngredientTable = doc.querySelector('table').outerHTML;
-        document.querySelector('table').outerHTML = newIngredientTable;
-        form.reset();
-    })
-    .catch(error => console.error('Error:', error));
-});
-</script>
 {% endblock %}
