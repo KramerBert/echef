@@ -229,3 +229,52 @@ footer {
     display: inline-block;
     margin-right: 1rem;
 }
+
+.allergeen-icon {
+    font-size: 1.2em;
+    margin-right: 5px;
+}
+.allergenen-icons {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.allergeen-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2em;
+    height: 2em;
+    border-radius: 50%;
+    background-color: #dc3545;
+    color: white;
+    font-weight: bold;
+    font-size: 0.8em;
+    margin-right: 0.5em;
+    user-select: none;
+}
+
+.allergenen-icons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
+    margin-top: 0.5em;
+}
+
+.allergeen-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1em;
+    margin-top: 1em;
+    padding: 1em;
+    background-color: #f8f9fa;
+    border-radius: 0.5em;
+}
+
+.allergeen-legend-item {
+    display: flex;
+    align-items: center;
+    font-size: 0.9em;
+}

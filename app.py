@@ -564,6 +564,17 @@ def edit_dish(chef_naam, dish_id):
     # Eventuele totale kostprijs (op basis van dish_ingredients.prijs_totaal)
     totaal_ingredient_prijs = sum([gi['prijs_totaal'] for gi in gerecht_ingredienten])
 
+    # Haal alle beschikbare allergenen op
+    cur.execute("SELECT * FROM allergenen ORDER BY naam")
+    alle_allergenen = cur.fetchall()
+    
+    # Haal de geselecteerde allergenen voor dit gerecht op
+    cur.execute("""
+        SELECT allergeen_id FROM dish_allergenen
+        WHERE dish_id = %s
+    """, (dish_id,))
+    gerecht_allergenen = [row['allergeen_id'] for row in cur.fetchall()]
+
     cur.close()
     conn.close()
 
@@ -573,7 +584,9 @@ def edit_dish(chef_naam, dish_id):
         gerecht=gerecht,
         alle_ingredienten=alle_ingredienten,
         gerecht_ingredienten=gerecht_ingredienten,
-        totaal_ingredient_prijs=totaal_ingredient_prijs
+        totaal_ingredient_prijs=totaal_ingredient_prijs,
+        alle_allergenen=alle_allergenen,
+        gerecht_allergenen=gerecht_allergenen
     )
 
 @app.route('/chef/<chef_naam>/dish/<int:dish_id>/ingredient/<int:ingredient_id>/update', methods=['POST'])
@@ -653,6 +666,38 @@ def remove_dish_ingredient(chef_naam, dish_id, ingredient_id):
     
     return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id) + '#ingredienten-tabel')
 
+@app.route('/dashboard/<chef_naam>/dish/<int:dish_id>/allergenen', methods=['POST'])
+def update_dish_allergenen(chef_naam, dish_id):
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        # Verwijder bestaande allergenen voor dit gerecht
+        cur.execute("DELETE FROM dish_allergenen WHERE dish_id = %s", (dish_id,))
+        
+        # Voeg nieuwe allergenen toe
+        nieuwe_allergenen = request.form.getlist('allergenen[]')
+        for allergeen_id in nieuwe_allergenen:
+            cur.execute("""
+                INSERT INTO dish_allergenen (dish_id, allergeen_id)
+                VALUES (%s, %s)
+            """, (dish_id, allergeen_id))
+        
+        conn.commit()
+        flash("Allergenen bijgewerkt!", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Fout bij bijwerken allergenen: {str(e)}", "danger")
+    finally:
+        cur.close()
+        conn.close()
+
+    return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
+
 # -----------------------------------------------------------
 #  Alle Gerechten Beheren
 # -----------------------------------------------------------
@@ -711,67 +756,85 @@ def export_dishes():
         return redirect(url_for('all_dishes'))
     cur = conn.cursor(dictionary=True)
 
-    # Haal de geselecteerde gerechten op
-    format_strings = ','.join(['%s'] * len(selected_dish_ids))
-    cur.execute(f"""
-        SELECT d.*, c.naam as chef_naam, 
-               (SELECT SUM(di.prijs_totaal) 
-                FROM dish_ingredients di 
-                WHERE di.dish_id = d.dish_id) as totaal_ingredient_prijs
-        FROM dishes d
-        JOIN chefs c ON d.chef_id = c.chef_id
-        WHERE d.dish_id IN ({format_strings})
-        ORDER BY CASE 
-            WHEN d.categorie = 'Amuse-bouche' THEN 1
-            WHEN d.categorie = 'Hors-d''oeuvre' THEN 2
-            WHEN d.categorie = 'Potage' THEN 3
-            WHEN d.categorie = 'Poisson' THEN 4
-            WHEN d.categorie = 'Entrée' THEN 5
-            WHEN d.categorie = 'Sorbet' THEN 6
-            WHEN d.categorie = 'Relevé of Rôti' THEN 7
-            WHEN d.categorie = 'Légumes / Groentegerecht' THEN 8
-            WHEN d.categorie = 'Salade' THEN 9
-            WHEN d.categorie = 'Fromage' THEN 10
-            WHEN d.categorie = 'Entremets' THEN 11
-            WHEN d.categorie = 'Café / Mignardises' THEN 12
-            WHEN d.categorie = 'Digestief' THEN 13
-            ELSE 14
-        END
-    """, tuple(selected_dish_ids))
-    selected_dishes = cur.fetchall()
+    try:
+        # Haal de geselecteerde gerechten op
+        format_strings = ','.join(['%s'] * len(selected_dish_ids))
+        cur.execute(f"""
+            SELECT d.*, c.naam as chef_naam, 
+                   (SELECT SUM(di.prijs_totaal) 
+                    FROM dish_ingredients di 
+                    WHERE di.dish_id = d.dish_id) as totaal_ingredient_prijs
+            FROM dishes d
+            JOIN chefs c ON d.chef_id = c.chef_id
+            WHERE d.dish_id IN ({format_strings})
+            ORDER BY d.categorie
+        """, tuple(selected_dish_ids))
+        selected_dishes = cur.fetchall()
 
-    cur.close()
-    conn.close()
+        # Maak een Word-document aan
+        doc = Document()
+        doc.add_heading('Menukaart', 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    # Maak een Word-document aan
-    doc = Document()
-    doc.add_heading('Menukaart', 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
+        # Groepeer gerechten per categorie
+        current_category = None
+        for dish in selected_dishes:
+            # Voeg categorieheader toe als we een nieuwe categorie tegenkomen
+            if dish['categorie'] != current_category:
+                current_category = dish['categorie']
+                doc.add_heading(current_category, level=1).alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    # Voeg veiligheidscontroles toe voor alle velden
-    for dish in selected_dishes:
-        verkoopprijs = dish['verkoopprijs'] if dish['verkoopprijs'] else 'n.v.t.'
-        naam = dish['naam'] if dish['naam'] else 'Onbekend gerecht'
-        heading = doc.add_heading(f"{naam} - €{verkoopprijs}", level=1)
-        heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            # Voeg gerechtnaam en prijs toe
+            verkoopprijs = dish['verkoopprijs'] if dish['verkoopprijs'] else 'n.v.t.'
+            naam = dish['naam'] if dish['naam'] else 'Onbekend gerecht'
+            price_paragraph = doc.add_paragraph()
+            price_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            price_paragraph.add_run(f"{naam} - €{verkoopprijs}").bold = True
 
-        description_text = dish['beschrijving'] if dish['beschrijving'] else 'Geen beschrijving'
-        description = doc.add_paragraph(description_text)
-        description.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            # Voeg beschrijving toe
+            if dish['beschrijving']:
+                desc_paragraph = doc.add_paragraph(dish['beschrijving'])
+                desc_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-        doc.add_paragraph("\n").alignment = WD_ALIGN_PARAGRAPH.CENTER
+            # Haal allergenen op voor dit gerecht
+            cur.execute("""
+                SELECT a.naam, a.icon_class 
+                FROM allergenen a
+                JOIN dish_allergenen da ON a.allergeen_id = da.allergeen_id
+                WHERE da.dish_id = %s
+                ORDER BY a.naam
+            """, (dish['dish_id'],))
+            allergenen = cur.fetchall()
 
-    # Sla het document op in een in-memory buffer
-    buffer = io.BytesIO()
-    doc.save(buffer)
-    buffer.seek(0)
+            # Voeg allergenen toe als ze bestaan
+            if allergenen:
+                allergenen_paragraph = doc.add_paragraph()
+                allergenen_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                allergenen_text = "Allergenen: " + ", ".join([a['naam'] for a in allergenen])
+                allergenen_paragraph.add_run(allergenen_text).italic = True
 
-    safe_filename = quote('Menukaart.docx', safe='')
-    return send_file(
-        buffer, 
-        as_attachment=True, 
-        download_name=safe_filename,
-        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    )
+            # Voeg witruimte toe tussen gerechten
+            doc.add_paragraph()
+
+        # Sla het document op in een in-memory buffer
+        buffer = io.BytesIO()
+        doc.save(buffer)
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name='Menukaart.docx',
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+
+    except Exception as e:
+        logger.error(f'Error exporting dishes: {str(e)}')
+        flash("Er is een fout opgetreden bij het exporteren van de menukaart.", "danger")
+        return redirect(url_for('all_dishes'))
+    
+    finally:
+        cur.close()
+        conn.close()
 
 # -----------------------------------------------------------
 #  Export Cookbook to MS Word

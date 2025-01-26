@@ -294,6 +294,35 @@
     </div>
 
     <div class="edit-section">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Allergenen</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('update_dish_allergenen', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
+                    <div class="row">
+                        {% for allergeen in alle_allergenen %}
+                        <div class="col-md-3 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       name="allergenen[]" 
+                                       value="{{ allergeen.allergeen_id }}"
+                                       id="allergeen{{ allergeen.allergeen_id }}"
+                                       {% if allergeen.allergeen_id in gerecht_allergenen %} checked {% endif %}>
+                                <label class="form-check-label" for="allergeen{{ allergeen.allergeen_id }}">
+                                    <span class="allergeen-icon">{{ allergeen.icon_class }}</span> {{ allergeen.naam }}
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-3">Allergenen Opslaan</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="edit-section">
         <a href="{{ url_for('all_dishes') }}" class="btn btn-secondary">Terug naar Gerechtenoverzicht</a>
     </div>
 </div>
