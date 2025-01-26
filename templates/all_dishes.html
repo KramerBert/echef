@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Alle Gerechten Beheren</h2>
+<h2>Gerechten Overzicht</h2>
 <p>Hier kunt u alle gerechten bekijken en beheren.</p>
 
 <table border="1" cellpadding="5" cellspacing="0">
@@ -19,8 +19,14 @@
         <td>{{ gerecht.totaal_ingredient_prijs if gerecht.totaal_ingredient_prijs else 'n.v.t.' }}</td>
         <td>{{ gerecht.verkoopprijs if gerecht.verkoopprijs else 'n.v.t.' }}</td>
         <td>
-            <form method="GET" action="{{ url_for('edit_dish', chef_naam=gerecht.chef_naam, dish_id=gerecht.dish_id) }}" onsubmit="return confirm('Weet u zeker dat u dit gerecht wilt bewerken?');">
-                <button type="submit">Bewerken</button>
+            <a href="{{ url_for('edit_dish', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" class="btn btn-sm btn-primary">Bewerken</a>
+            
+            <form method="POST" action="{{ url_for('export_dish', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" style="display: inline;">
+                <button type="submit" class="btn btn-sm btn-info">Export Recept</button>
+            </form>
+            
+            <form method="POST" action="{{ url_for('delete_dish', dish_id=gerecht.dish_id) }}" style="display: inline;" onsubmit="return confirm('Weet u zeker dat u dit gerecht wilt verwijderen?');">
+                <button type="submit" class="btn btn-sm btn-danger">Verwijderen</button>
             </form>
         </td>
         <td>

@@ -10,10 +10,16 @@
     </div>
     <div class="row mb-4">
         <div class="col-12">
-            <div class="btn-group" role="group" aria-label="Dashboard actions">
-                <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}" class="btn btn-secondary" aria-label="Manage ingredients"><i class="fas fa-carrot"></i> Ingrediënten Beheren</a>
-                <a href="{{ url_for('manage_dishes', chef_naam=chef_naam) }}" class="btn btn-secondary" aria-label="Create new dish"><i class="fas fa-utensils"></i> Nieuw Gerecht Samenstellen</a>
-                <a href="{{ url_for('all_dishes') }}" class="btn btn-secondary" aria-label="Manage dishes"><i class="fas fa-list"></i> Gerechten beheren</a>
+            <div class="btn-group d-flex flex-wrap gap-3" role="group" aria-label="Dashboard actions">
+                <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}" class="btn btn-secondary p-3" aria-label="Manage ingredients">
+                    <i class="fas fa-carrot"></i> Ingrediënten Beheren
+                </a>
+                <a href="{{ url_for('manage_dishes', chef_naam=chef_naam) }}" class="btn btn-secondary p-3" aria-label="Create new dish">
+                    <i class="fas fa-utensils"></i> Nieuw Gerecht Samenstellen
+                </a>
+                <a href="{{ url_for('all_dishes') }}" class="btn btn-secondary p-3" aria-label="Manage dishes">
+                    <i class="fas fa-list"></i> Gerechten beheren
+                </a>
             </div>
         </div>
     </div>
@@ -22,7 +28,7 @@
             <h3>Export Kookboek</h3>
             <form method="POST" action="{{ url_for('export_cookbook') }}" aria-label="Export cookbook form">
                 <input type="hidden" name="exportForm" value="1">
-                <button type="submit" class="btn btn-primary" aria-label="Export to cookbook"><i class="fas fa-file-export"></i> Exporteren naar Kookboek</button>
+                <button type="submit" class="btn btn-primary" aria-label="Export to cookbook"><i class="fas fa-file-export"></i>Druk al je gerechten af in een kookboek(MSword)</button>
             </form>
         </div>
     </div>

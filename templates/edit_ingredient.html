@@ -34,5 +34,24 @@
     <button type="submit">Bijwerken</button>
 </form>
 
+{% if gerechten_met_ingredient %}
+<hr>
+<h3>Dit ingrediënt wordt gebruikt in de volgende gerechten:</h3>
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <th>Gerecht</th>
+        <th>Hoeveelheid</th>
+        <th>Nieuwe Kostprijs</th>
+    </tr>
+    {% for gerecht in gerechten_met_ingredient %}
+    <tr>
+        <td>{{ gerecht.naam }}</td>
+        <td>{{ gerecht.hoeveelheid }} {{ ingredient.eenheid }}</td>
+        <td>€ {{ gerecht.prijs_totaal }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endif %}
+
 <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}">Terug naar Ingrediëntenoverzicht</a>
 {% endblock %}
