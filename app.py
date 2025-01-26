@@ -15,8 +15,6 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import csv
 from datetime import datetime, timedelta  # Voeg deze import toe bovenaan bij de andere imports
-from ai_helper import RecipeAssistant
-import os
 
 load_dotenv()  # Load the values from .env
 
@@ -87,31 +85,6 @@ def get_db_connection():
     except Error as e:
         print(f"Error connecting to the database: {e}")
         return None
-
-# Initialize AI assistant
-ai_assistant = RecipeAssistant(api_key=os.getenv('OPENAI_API_KEY'))
-
-@app.route('/ai-assistant/<chef_naam>')
-@login_required
-def ai_assistant(chef_naam):
-    return render_template('ai_assistant.html', chef_naam=chef_naam)
-
-@app.route('/ai-generate-recipe', methods=['POST'])
-@login_required
-def ai_generate_recipe():
-    prompt = request.form.get('recipe_prompt')
-    recipe_data = ai_assistant.generate_recipe(prompt)
-    return render_template('ai_assistant.html', 
-                         chef_naam=session.get('chef_naam'),
-                         recipe_data=recipe_data)
-
-@app.route('/save-ai-recipe', methods=['POST'])
-@login_required
-def save_ai_recipe():
-    recipe_data = json.loads(request.form.get('recipe_data'))
-    # Implementeer hier de logica om het recept op te slaan in je database
-    flash('Recept succesvol opgeslagen!', 'success')
-    return redirect(url_for('dashboard', chef_naam=session.get('chef_naam')))
 
 # -----------------------------------------------------------
 #  Homepage (index)
