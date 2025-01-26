@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, redirect, url_for, render_template, session, flash, send_file
+from flask import Flask, request, redirect, url_for, render_template, session, flash, send_file, jsonify
 from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import Error
@@ -15,6 +15,8 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import csv
 from datetime import datetime, timedelta  # Voeg deze import toe bovenaan bij de andere imports
+from ai_helper import RecipeAssistant
+import os
 
 load_dotenv()  # Load the values from .env
 
@@ -85,6 +87,31 @@ def get_db_connection():
     except Error as e:
         print(f"Error connecting to the database: {e}")
         return None
+
+# Initialize AI assistant
+ai_assistant = RecipeAssistant(api_key=os.getenv('OPENAI_API_KEY'))
+
+@app.route('/ai-assistant/<chef_naam>')
+@login_required
+def ai_assistant(chef_naam):
+    return render_template('ai_assistant.html', chef_naam=chef_naam)
+
+@app.route('/ai-generate-recipe', methods=['POST'])
+@login_required
+def ai_generate_recipe():
+    prompt = request.form.get('recipe_prompt')
+    recipe_data = ai_assistant.generate_recipe(prompt)
+    return render_template('ai_assistant.html', 
+                         chef_naam=session.get('chef_naam'),
+                         recipe_data=recipe_data)
+
+@app.route('/save-ai-recipe', methods=['POST'])
+@login_required
+def save_ai_recipe():
+    recipe_data = json.loads(request.form.get('recipe_data'))
+    # Implementeer hier de logica om het recept op te slaan in je database
+    flash('Recept succesvol opgeslagen!', 'success')
+    return redirect(url_for('dashboard', chef_naam=session.get('chef_naam')))
 
 # -----------------------------------------------------------
 #  Homepage (index)
@@ -1310,14 +1337,20 @@ def haccp_dashboard(chef_naam):
         return redirect(url_for('dashboard', chef_naam=chef_naam))
     cur = conn.cursor(dictionary=True)
 
-    # Haal HACCP checklists op
+    # Haal HACCP checklists op met extra informatie
     cur.execute("""
         SELECT c.*, 
                (SELECT COUNT(*) 
                 FROM haccp_metingen m 
                 JOIN haccp_checkpunten p ON m.punt_id = p.punt_id 
                 WHERE p.checklist_id = c.checklist_id 
-                AND DATE(m.timestamp) = CURDATE()) as metingen_vandaag
+                AND DATE(m.timestamp) = CURDATE()) as metingen_vandaag,
+               DATEDIFF(CURDATE(), 
+                       IFNULL((SELECT MAX(DATE(m.timestamp))
+                              FROM haccp_metingen m
+                              JOIN haccp_checkpunten p ON m.punt_id = p.punt_id
+                              WHERE p.checklist_id = c.checklist_id), 
+                              '1970-01-01')) as dagen_sinds_laatste_meting
         FROM haccp_checklists c
         WHERE c.chef_id = %s
         ORDER BY c.created_at DESC
@@ -1586,6 +1619,125 @@ def export_haccp_report(metingen, start_date, end_date, compliance):
         download_name=f'haccp_rapport_{start_date}_{end_date}.docx',
         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     )
+
+@app.route('/dashboard/<chef_naam>/haccp/meting/<int:meting_id>/update', methods=['POST'])
+def update_haccp_meting(chef_naam, meting_id):
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        return jsonify({'success': False, 'error': 'Geen toegang'}), 403
+
+    try:
+        # Debug logging
+        app.logger.info(f"Received update request for meting {meting_id}")
+        app.logger.info(f"Form data: {request.form}")
+
+        waarde = request.form.get('waarde')
+        actie_ondernomen = request.form.get('actie_ondernomen')
+
+        if waarde is None:
+            return jsonify({'success': False, 'error': 'Waarde ontbreekt'}), 400
+
+        conn = get_db_connection()
+        if conn is None:
+            return jsonify({'success': False, 'error': 'Database verbinding mislukt'}), 500
+
+        cursor = conn.cursor(dictionary=True)
+
+        try:
+            # Controleer eerst of de meting bestaat en van deze chef is
+            cursor.execute("""
+                SELECT m.meting_id, c.grenswaarde 
+                FROM haccp_metingen m
+                JOIN haccp_checkpunten c ON m.punt_id = c.punt_id
+                WHERE m.meting_id = %s AND m.chef_id = %s
+            """, (meting_id, session['chef_id']))
+            
+            meting = cursor.fetchone()
+            if not meting:
+                return jsonify({'success': False, 'error': 'Meting niet gevonden'}), 404
+
+            try:
+                waarde_float = float(waarde)
+            except ValueError:
+                return jsonify({'success': False, 'error': 'Ongeldige waarde'}), 400
+
+            # Update de meting (zonder explicit updated_at)
+            cursor.execute("""
+                UPDATE haccp_metingen 
+                SET waarde = %s, 
+                    actie_ondernomen = %s
+                WHERE meting_id = %s 
+                AND chef_id = %s
+            """, (waarde_float, actie_ondernomen, meting_id, session['chef_id']))
+            
+            if cursor.rowcount == 0:
+                conn.rollback()
+                return jsonify({'success': False, 'error': 'Geen wijzigingen aangebracht'}), 400
+            
+            conn.commit()
+            return jsonify({
+                'success': True,
+                'message': 'Meting succesvol bijgewerkt'
+            })
+
+        except mysql.connector.Error as e:
+            conn.rollback()
+            app.logger.error(f'Database error: {str(e)}')
+            return jsonify({'success': False, 'error': f'Database fout: {str(e)}'}), 500
+        finally:
+            cursor.close()
+            conn.close()
+
+    except Exception as e:
+        app.logger.error(f'Error updating HACCP measurement: {str(e)}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/dashboard/<chef_naam>/haccp/checklist/<int:checklist_id>/delete', methods=['POST'])
+def delete_haccp_checklist(chef_naam, checklist_id):
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        return jsonify({'success': False, 'error': 'Geen toegang'}), 403
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Controleer eerst of de checklist van deze chef is
+        cur.execute("""
+            SELECT chef_id FROM haccp_checklists 
+            WHERE checklist_id = %s
+        """, (checklist_id,))
+        
+        result = cur.fetchone()
+        if not result or result[0] != session['chef_id']:
+            return jsonify({'success': False, 'error': 'Checklist niet gevonden of geen toegang'}), 404
+
+        # Verwijder eerst alle metingen van deze checklist
+        cur.execute("""
+            DELETE m FROM haccp_metingen m
+            JOIN haccp_checkpunten c ON m.punt_id = c.punt_id
+            WHERE c.checklist_id = %s
+        """, (checklist_id,))
+
+        # Verwijder dan alle checkpunten
+        cur.execute("""
+            DELETE FROM haccp_checkpunten 
+            WHERE checklist_id = %s
+        """, (checklist_id,))
+
+        # Verwijder tenslotte de checklist zelf
+        cur.execute("""
+            DELETE FROM haccp_checklists 
+            WHERE checklist_id = %s AND chef_id = %s
+        """, (checklist_id, session['chef_id']))
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        logger.error(f'Error deleting HACCP checklist: {str(e)}')
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # -----------------------------------------------------------
 # Start de server

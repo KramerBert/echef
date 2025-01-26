@@ -48,6 +48,7 @@
                                 <tr>
                                     <th>Naam</th>
                                     <th>Frequentie</th>
+                                    <th>Status</th>
                                     <th>Acties</th>
                                 </tr>
                             </thead>
@@ -57,14 +58,46 @@
                                     <td>{{ checklist.naam }}</td>
                                     <td>{{ checklist.frequentie }}</td>
                                     <td>
-                                        <a href="{{ url_for('fill_haccp_checklist', chef_naam=chef_naam, checklist_id=checklist.checklist_id) }}" 
-                                           class="btn btn-sm btn-primary">
-                                            {% if checklist.metingen_vandaag > 0 %}
-                                                <i class="fas fa-check"></i> Bijwerken
+                                        {% if checklist.metingen_vandaag > 0 %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check"></i> Voltooid
+                                            </span>
+                                        {% else %}
+                                            {% if checklist.frequentie == 'dagelijks' %}
+                                                <span class="badge bg-warning">
+                                                    <i class="fas fa-exclamation-triangle"></i> Nog uit te voeren
+                                                </span>
+                                            {% elif checklist.frequentie == 'wekelijks' and checklist.dagen_sinds_laatste_meting >= 7 %}
+                                                <span class="badge bg-warning">
+                                                    <i class="fas fa-exclamation-triangle"></i> Nog uit te voeren
+                                                </span>
+                                            {% elif checklist.frequentie == 'maandelijks' and checklist.dagen_sinds_laatste_meting >= 30 %}
+                                                <span class="badge bg-warning">
+                                                    <i class="fas fa-exclamation-triangle"></i> Nog uit te voeren
+                                                </span>
                                             {% else %}
-                                                <i class="fas fa-clipboard-check"></i> Invullen
+                                                <span class="badge bg-secondary">
+                                                    <i class="fas fa-clock"></i> Niet nodig
+                                                </span>
                                             {% endif %}
-                                        </a>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{{ url_for('fill_haccp_checklist', chef_naam=chef_naam, checklist_id=checklist.checklist_id) }}" 
+                                               class="btn btn-sm btn-primary">
+                                                {% if checklist.metingen_vandaag > 0 %}
+                                                    <i class="fas fa-check"></i> Bijwerken
+                                                {% else %}
+                                                    <i class="fas fa-clipboard-check"></i> Invullen
+                                                {% endif %}
+                                            </a>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-danger" 
+                                                    onclick="verwijderChecklist('{{ checklist.checklist_id }}', '{{ checklist.naam|e }}')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -93,7 +126,16 @@
                             </thead>
                             <tbody>
                                 {% for meting in laatste_metingen %}
-                                <tr>
+                                <tr class="meting-row" style="cursor: pointer" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#metingModal"
+                                    data-meting-waarde="{{ meting.waarde }}"
+                                    data-meting-grenswaarde="{{ meting.grenswaarde }}"
+                                    data-meting-actie="{{ meting.actie_ondernomen|default('Geen actie geregistreerd', true) }}"
+                                    data-meting-omschrijving="{{ meting.omschrijving }}"
+                                    data-meting-datum="{{ meting.timestamp.strftime('%d-%m-%Y %H:%M') }}"
+                                    data-meting-corrigerende-actie="{{ meting.corrigerende_actie|default('Geen actie voorgesteld', true) }}"
+                                    data-meting-id="{{ meting.meting_id }}">
                                     <td>{{ meting.timestamp.strftime('%d-%m-%Y %H:%M') }}</td>
                                     <td>{{ meting.omschrijving }}</td>
                                     <td>{{ meting.waarde }}</td>
@@ -101,7 +143,7 @@
                                         {% if meting.waarde <= meting.grenswaarde|float %}
                                         <span class="badge bg-success">OK</span>
                                         {% else %}
-                                        <span class="badge bg-danger">Actie vereist</span>
+                                        <span class="badge bg-danger">⚠ Grenswaarde overschreden</span>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -114,4 +156,131 @@
         </div>
     </div>
 </div>
+
+<!-- Meting Detail Modal -->
+<div class="modal fade" id="metingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Meting Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <form id="editMetingForm" method="POST">
+                    <dl class="row">
+                        <dt class="col-sm-4 text-dark">Datum/tijd:</dt>
+                        <dd class="col-sm-8 text-dark" id="modalDatum"></dd>
+                        
+                        <dt class="col-sm-4 text-dark">Controlepunt:</dt>
+                        <dd class="col-sm-8 text-dark" id="modalOmschrijving"></dd>
+                        
+                        <dt class="col-sm-4 text-dark">Gemeten waarde:</dt>
+                        <dd class="col-sm-8 text-dark">
+                            <input type="number" class="form-control" id="modalWaardeInput" name="waarde" step="0.1">
+                        </dd>
+                        
+                        <dt class="col-sm-4 text-dark">Grenswaarde:</dt>
+                        <dd class="col-sm-8 text-dark" id="modalGrenswaarde"></dd>
+                        
+                        <dt class="col-sm-4 text-dark">Voorgestelde actie:</dt>
+                        <dd class="col-sm-8 text-dark" id="modalCorrigerendeActie"></dd>
+                        
+                        <dt class="col-sm-4 text-dark">Ondernomen actie:</dt>
+                        <dd class="col-sm-8 text-dark">
+                            <textarea class="form-control" id="modalActieInput" name="actie_ondernomen" rows="3"></textarea>
+                        </dd>
+                    </dl>
+                    <input type="hidden" id="modalMetingId" name="meting_id">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Sluiten</button>
+                <button type="button" class="btn btn-primary" onclick="updateMeting()">Opslaan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const metingModal = document.getElementById('metingModal');
+    metingModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        
+        // Log voor debugging
+        console.log('Modal triggered with data:', button.dataset);
+        
+        // Vul de modal met data
+        document.getElementById('modalDatum').textContent = button.getAttribute('data-meting-datum');
+        document.getElementById('modalOmschrijving').textContent = button.getAttribute('data-meting-omschrijving');
+        document.getElementById('modalWaardeInput').value = button.getAttribute('data-meting-waarde');
+        document.getElementById('modalGrenswaarde').textContent = button.getAttribute('data-meting-grenswaarde');
+        document.getElementById('modalCorrigerendeActie').textContent = button.getAttribute('data-meting-corrigerende-actie');
+        document.getElementById('modalActieInput').value = button.getAttribute('data-meting-actie');
+        document.getElementById('modalMetingId').value = button.getAttribute('data-meting-id');
+    });
+});
+
+function updateMeting() {
+    const formData = new FormData(document.getElementById('editMetingForm'));
+    const metingId = document.getElementById('modalMetingId').value;
+    const chef_naam = '{{ chef_naam }}';
+
+    // Debug logging
+    console.log('Sending update request:', {
+        url: `/dashboard/${chef_naam}/haccp/meting/${metingId}/update`,
+        waarde: formData.get('waarde'),
+        actie: formData.get('actie_ondernomen')
+    });
+
+    fetch(`/dashboard/${chef_naam}/haccp/meting/${metingId}/update`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Toon succesmelding
+            alert(data.message || 'Meting succesvol bijgewerkt');
+            location.reload();
+        } else {
+            alert(data.error || 'Er is een fout opgetreden bij het bijwerken van de meting.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Er is een fout opgetreden bij het bijwerken van de meting: ' + error.message);
+    });
+}
+
+function verwijderChecklist(checklistId, checklistNaam) {
+    if (confirm(`Weet je zeker dat je de checklist "${checklistNaam}" wilt verwijderen? Alle metingen worden ook verwijderd.`)) {
+        fetch(`/dashboard/{{ chef_naam }}/haccp/checklist/${checklistId}/delete`, {
+            method: 'POST',
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Er is een fout opgetreden bij het verwijderen van de checklist.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Er is een fout opgetreden bij het verwijderen van de checklist.');
+        });
+    }
+}
+</script>
 {% endblock %}
