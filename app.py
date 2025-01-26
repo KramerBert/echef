@@ -554,7 +554,7 @@ def edit_dish(chef_naam, dish_id):
 
     # Haal de gekoppelde ingrediënten voor dit gerecht op
     cur.execute("""
-        SELECT di.*, i.naam AS ingredient_naam, i.eenheid
+        SELECT di.*, i.naam AS ingredient_naam, i.eenheid, i.prijs_per_eenheid
         FROM dish_ingredients di
         JOIN ingredients i ON di.ingredient_id = i.ingredient_id
         WHERE di.dish_id = %s

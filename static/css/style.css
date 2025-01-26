@@ -76,3 +76,156 @@ footer {
         opacity: 1;
     }
 }
+
+/* Tabel styling */
+.dish-actions {
+    display: flex;
+    gap: 5px;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.btn-action {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-edit {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-export {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.btn-delete {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-action:hover {
+    opacity: 0.9;
+}
+
+/* Checkbox styling */
+.print-checkbox {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    cursor: pointer;
+}
+
+/* Gerechten tabel styling */
+.dish-table {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.dish-table th {
+    background-color: #073642;
+    color: white;
+    padding: 10px;
+}
+
+.dish-table td {
+    padding: 8px;
+    vertical-align: middle;
+}
+
+/* Specifieke kolom breedtes */
+.col-actions {
+    width: 250px;
+}
+
+.col-price {
+    width: 100px;
+}
+
+.col-amount {
+    width: 80px;
+}
+
+.col-amount input {
+    width: 20px !important;
+    padding: 2px;
+    text-align: center;
+}
+
+/* Edit Dish Styling */
+.edit-dish-form {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.edit-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background-color: #073642;
+    border-radius: 4px;
+}
+
+.edit-section h3 {
+    color: #eee8d5;
+    margin-bottom: 1rem;
+}
+
+.ingredient-form {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.ingredient-form select {
+    flex: 2;
+}
+
+.ingredient-form select#categorie_filter {
+    flex: 1;
+}
+
+.ingredient-form input {
+    flex: 0.5;
+    max-width: 80px;
+}
+
+.ingredient-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+.ingredient-table th {
+    background-color: #002b36;
+    color: #fff;
+    padding: 0.75rem;
+}
+
+.ingredient-table td {
+    padding: 0.5rem;
+    vertical-align: middle;
+}
+
+.ingredient-table input[type="number"] {
+    width: 20px;
+    text-align: center;
+}
+
+.price-section {
+    background-color: #002b36;
+    padding: 1rem;
+    margin: 1rem 0;
+    border-radius: 4px;
+}
+
+.price-section input {
+    width: 150px;
+    display: inline-block;
+    margin-right: 1rem;
+}
