@@ -14,11 +14,11 @@ import io
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import csv
+from datetime import datetime, timedelta  # Voeg deze import toe bovenaan bij de andere imports
 
 load_dotenv()  # Load the values from .env
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -1296,10 +1296,302 @@ def export_orderlist():
         conn.close()
 
 # -----------------------------------------------------------
+#  HACCP Module
+# -----------------------------------------------------------
+@app.route('/dashboard/<chef_naam>/haccp')
+def haccp_dashboard(chef_naam):
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('dashboard', chef_naam=chef_naam))
+    cur = conn.cursor(dictionary=True)
+
+    # Haal HACCP checklists op
+    cur.execute("""
+        SELECT c.*, 
+               (SELECT COUNT(*) 
+                FROM haccp_metingen m 
+                JOIN haccp_checkpunten p ON m.punt_id = p.punt_id 
+                WHERE p.checklist_id = c.checklist_id 
+                AND DATE(m.timestamp) = CURDATE()) as metingen_vandaag
+        FROM haccp_checklists c
+        WHERE c.chef_id = %s
+        ORDER BY c.created_at DESC
+    """, (session['chef_id'],))
+    checklists = cur.fetchall()
+
+    # Haal laatste metingen op
+    cur.execute("""
+        SELECT m.*, c.omschrijving, c.grenswaarde
+        FROM haccp_metingen m
+        JOIN haccp_checkpunten c ON m.punt_id = c.punt_id
+        WHERE m.chef_id = %s
+        ORDER BY m.timestamp DESC
+        LIMIT 10
+    """, (session['chef_id'],))
+    laatste_metingen = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template('haccp/dashboard.html',
+                         chef_naam=chef_naam,
+                         checklists=checklists,
+                         laatste_metingen=laatste_metingen)
+
+@app.route('/dashboard/<chef_naam>/haccp/new_checklist', methods=['GET', 'POST'])
+def new_haccp_checklist(chef_naam):
+    if request.method == 'POST':
+        naam = request.form.get('naam')
+        frequentie = request.form.get('frequentie')
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        try:
+            cur.execute("""
+                INSERT INTO haccp_checklists (chef_id, naam, frequentie)
+                VALUES (%s, %s, %s)
+            """, (session['chef_id'], naam, frequentie))
+            checklist_id = cur.lastrowid
+            
+            # Voeg checkpunten toe
+            checkpunten = request.form.getlist('checkpunt[]')
+            grenswaarden = request.form.getlist('grenswaarde[]')
+            acties = request.form.getlist('actie[]')
+            
+            for i in range(len(checkpunten)):
+                cur.execute("""
+                    INSERT INTO haccp_checkpunten 
+                    (checklist_id, omschrijving, grenswaarde, corrigerende_actie)
+                    VALUES (%s, %s, %s, %s)
+                """, (checklist_id, checkpunten[i], grenswaarden[i], acties[i]))
+            
+            conn.commit()
+            flash("HACCP-checklist aangemaakt!", "success")
+            
+        except Exception as e:
+            conn.rollback()
+            flash(f"Fout bij aanmaken checklist: {str(e)}", "danger")
+        finally:
+            cur.close()
+            conn.close()
+            
+        return redirect(url_for('haccp_dashboard', chef_naam=chef_naam))
+        
+    return render_template('haccp/new_checklist.html', chef_naam=chef_naam)
+
+@app.route('/dashboard/<chef_naam>/haccp/checklist/<int:checklist_id>/fill', methods=['GET', 'POST'])
+def fill_haccp_checklist(chef_naam, checklist_id):
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('haccp_dashboard', chef_naam=chef_naam))
+    
+    cur = conn.cursor(dictionary=True)
+
+    try:
+        # Haal checklist informatie op
+        cur.execute("""
+            SELECT * FROM haccp_checklists 
+            WHERE checklist_id = %s AND chef_id = %s
+        """, (checklist_id, session['chef_id']))
+        checklist = cur.fetchone()
+
+        if not checklist:
+            flash("Checklist niet gevonden.", "danger")
+            return redirect(url_for('haccp_dashboard', chef_naam=chef_naam))
+
+        # Haal alle checkpunten op
+        cur.execute("""
+            SELECT * FROM haccp_checkpunten
+            WHERE checklist_id = %s
+        """, (checklist_id,))
+        checkpunten = cur.fetchall()
+
+        if request.method == 'POST':
+            for punt in checkpunten:
+                waarde = request.form.get(f'waarde_{punt["punt_id"]}')
+                opmerking = request.form.get(f'opmerking_{punt["punt_id"]}')
+                actie = request.form.get(f'actie_{punt["punt_id"]}')
+
+                if waarde:  # Alleen opslaan als er een waarde is ingevuld
+                    cur.execute("""
+                        INSERT INTO haccp_metingen 
+                        (punt_id, chef_id, waarde, opmerking, actie_ondernomen)
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, (punt['punt_id'], session['chef_id'], waarde, opmerking, actie))
+
+            conn.commit()
+            flash("HACCP metingen opgeslagen!", "success")
+            return redirect(url_for('haccp_dashboard', chef_naam=chef_naam))
+
+    except Exception as e:
+        conn.rollback()
+        logger.error(f'Error processing HACCP checklist: {str(e)}')
+        flash("Er is een fout opgetreden bij het verwerken van de checklist.", "danger")
+    finally:
+        cur.close()
+        conn.close()
+
+    return render_template('haccp/fill_checklist.html',
+                         chef_naam=chef_naam,
+                         checklist=checklist,
+                         checkpunten=checkpunten)
+
+@app.route('/dashboard/<chef_naam>/haccp/reports', methods=['GET', 'POST'])
+def haccp_reports(chef_naam):
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
+
+    try:
+        # Haal alle checklists op voor het filter
+        cur.execute("""
+            SELECT * FROM haccp_checklists 
+            WHERE chef_id = %s
+        """, (session['chef_id'],))
+        checklists = cur.fetchall()
+
+        # Filter parameters met veilige defaults
+        try:
+            start_date = datetime.strptime(
+                request.args.get('start_date', ''), 
+                '%Y-%m-%d'
+            ).strftime('%Y-%m-%d')
+        except (ValueError, TypeError):
+            start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+
+        try:
+            end_date = datetime.strptime(
+                request.args.get('end_date', ''), 
+                '%Y-%m-%d'
+            ).strftime('%Y-%m-%d')
+        except (ValueError, TypeError):
+            end_date = datetime.now().strftime('%Y-%m-%d')
+
+        selected_checklist = request.args.get('checklist_id')
+
+        # Query voor metingen
+        query = """
+            SELECT m.*, c.omschrijving, c.grenswaarde, cl.naam as checklist_naam
+            FROM haccp_metingen m
+            JOIN haccp_checkpunten c ON m.punt_id = c.punt_id
+            JOIN haccp_checklists cl ON c.checklist_id = cl.checklist_id
+            WHERE m.chef_id = %s
+            AND DATE(m.timestamp) BETWEEN %s AND %s
+        """
+        params = [session['chef_id'], start_date, end_date]
+
+        if selected_checklist:
+            query += " AND cl.checklist_id = %s"
+            params.append(selected_checklist)
+
+        query += " ORDER BY m.timestamp DESC"
+        
+        cur.execute(query, tuple(params))
+        metingen = cur.fetchall()
+
+        # Bereken statistieken met veilige type conversies
+        if metingen:
+            afwijkingen = 0
+            for m in metingen:
+                try:
+                    waarde = float(m['waarde'] or 0)
+                    grenswaarde = float(m['grenswaarde'] or 0)
+                    if waarde > grenswaarde:
+                        afwijkingen += 1
+                except (ValueError, TypeError):
+                    continue
+            
+            compliance = ((len(metingen) - afwijkingen) / len(metingen) * 100) if metingen else 100
+        else:
+            compliance = 100
+
+        if request.args.get('export'):
+            return export_haccp_report(metingen, start_date, end_date, compliance)
+
+        return render_template('haccp/reports.html',
+                             chef_naam=chef_naam,
+                             checklists=checklists,
+                             metingen=metingen,
+                             start_date=start_date,
+                             end_date=end_date,
+                             selected_checklist=selected_checklist,
+                             compliance=compliance)
+
+    except Exception as e:
+        logger.error(f'Error in HACCP reports: {str(e)}')
+        flash("Er is een fout opgetreden bij het ophalen van de HACCP rapportage.", "danger")
+        return redirect(url_for('haccp_dashboard', chef_naam=chef_naam))
+    finally:
+        cur.close()
+        conn.close()
+
+def export_haccp_report(metingen, start_date, end_date, compliance):
+    doc = Document()
+    doc.add_heading('HACCP Rapport', 0)
+    
+    # Voeg periode toe
+    doc.add_paragraph(f'Periode: {start_date} t/m {end_date}')
+    doc.add_paragraph(f'Compliance score: {compliance:.1f}%')
+
+    # Maak tabel met metingen
+    table = doc.add_table(rows=1, cols=6)
+    table.style = 'Table Grid'
+    
+    # Headers
+    header_cells = table.rows[0].cells
+    header_cells[0].text = 'Datum'
+    header_cells[1].text = 'Checklist'
+    header_cells[2].text = 'Controlepunt'
+    header_cells[3].text = 'Waarde'
+    header_cells[4].text = 'Status'
+    header_cells[5].text = 'Actie'
+
+    # Voeg metingen toe
+    for meting in metingen:
+        row_cells = table.add_row().cells
+        row_cells[0].text = meting['timestamp'].strftime('%d-%m-%Y %H:%M')
+        row_cells[1].text = meting['checklist_naam']
+        row_cells[2].text = meting['omschrijving']
+        row_cells[3].text = f"{meting['waarde']}"
+        
+        if float(meting['waarde']) <= float(meting['grenswaarde']):
+            row_cells[4].text = '✓ OK'
+        else:
+            row_cells[4].text = '⚠ Afwijking'
+        
+        row_cells[5].text = meting['actie_ondernomen'] or '-'
+
+    # Exporteer document
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=f'haccp_rapport_{start_date}_{end_date}.docx',
+        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
+
+# -----------------------------------------------------------
 # Start de server
 # -----------------------------------------------------------
 
-if __name__ == '__main__':
+if __name__ == '____main__':
     app.run(debug=True)
 
 # -----------------------------------------------------------

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>HACCP Checklist Invullen</h1>
+    <h2>{{ checklist.naam }} ({{ checklist.frequentie }})</h2>
+    
+    <form method="POST">
+        <div class="card mb-4">
+            <div class="card-body">
+                {% for punt in checkpunten %}
+                <div class="mb-4 p-3 border rounded">
+                    <h3>{{ punt.omschrijving }}</h3>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label">Gemeten waarde</label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   name="waarde_{{ punt.punt_id }}" 
+                                   step="0.1" 
+                                   required>
+                            <small class="text-muted">Grenswaarde: {{ punt.grenswaarde }}</small>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Opmerking</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="opmerking_{{ punt.punt_id }}">
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <label class="form-label">Ondernomen actie (indien nodig)</label>
+                        <textarea class="form-control" 
+                                name="actie_{{ punt.punt_id }}" 
+                                rows="2"></textarea>
+                        <small class="text-muted">Voorgestelde actie: {{ punt.corrigerende_actie }}</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Metingen Opslaan</button>
+    </form>
+</div>
+{% endblock %}

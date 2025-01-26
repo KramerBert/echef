@@ -1,0 +1,64 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Nieuwe HACCP Checklist</h1>
+    
+    <form method="POST">
+        <div class="mb-3">
+            <label for="naam" class="form-label">Naam Checklist</label>
+            <input type="text" class="form-control" id="naam" name="naam" required>
+        </div>
+        
+        <div class="mb-3">
+            <label for="frequentie" class="form-label">Frequentie</label>
+            <select class="form-control" id="frequentie" name="frequentie" required>
+                <option value="dagelijks">Dagelijks</option>
+                <option value="wekelijks">Wekelijks</option>
+                <option value="maandelijks">Maandelijks</option>
+            </select>
+        </div>
+        
+        <div id="checkpunten">
+            <h3>Controlepunten</h3>
+            <div class="checkpunt-entry mb-3">
+                <div class="row">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" name="checkpunt[]" 
+                               placeholder="Controlepunt" required>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" name="grenswaarde[]" 
+                               placeholder="Grenswaarde" required>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" name="actie[]" 
+                               placeholder="Corrigerende actie" required>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <button type="button" class="btn btn-secondary mb-3" onclick="addCheckpunt()">
+            <i class="fas fa-plus"></i> Controlepunt Toevoegen
+        </button>
+        
+        <div>
+            <button type="submit" class="btn btn-primary">Checklist Aanmaken</button>
+        </div>
+    </form>
+</div>
+
+<script>
+function addCheckpunt() {
+    const container = document.getElementById('checkpunten');
+    const newEntry = document.querySelector('.checkpunt-entry').cloneNode(true);
+    
+    // Clear the values
+    newEntry.querySelectorAll('input').forEach(input => input.value = '');
+    
+    container.appendChild(newEntry);
+}
+</script>
+{% endblock %}

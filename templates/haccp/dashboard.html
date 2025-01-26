@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>HACCP Dashboard</h1>
+
+    <!-- Snelkoppelingen -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Snelkoppelingen</h2>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('new_haccp_checklist', chef_naam=chef_naam) }}" 
+                           class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Nieuwe Checklist
+                        </a>
+                        <a href="{{ url_for('haccp_reports', chef_naam=chef_naam) }}" 
+                           class="btn btn-success">
+                            <i class="fas fa-chart-line"></i> Rapportages
+                        </a>
+                        <a href="{{ url_for('haccp_reports', chef_naam=chef_naam, export=true) }}" 
+                           class="btn btn-info">
+                            <i class="fas fa-file-export"></i> Exporteer Rapport
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Checklists</h2>
+                    <a href="{{ url_for('new_haccp_checklist', chef_naam=chef_naam) }}" 
+                       class="btn btn-primary btn-sm float-end">
+                        <i class="fas fa-plus"></i> Nieuwe Checklist
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Naam</th>
+                                    <th>Frequentie</th>
+                                    <th>Acties</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for checklist in checklists %}
+                                <tr>
+                                    <td>{{ checklist.naam }}</td>
+                                    <td>{{ checklist.frequentie }}</td>
+                                    <td>
+                                        <a href="{{ url_for('fill_haccp_checklist', chef_naam=chef_naam, checklist_id=checklist.checklist_id) }}" 
+                                           class="btn btn-sm btn-primary">
+                                            {% if checklist.metingen_vandaag > 0 %}
+                                                <i class="fas fa-check"></i> Bijwerken
+                                            {% else %}
+                                                <i class="fas fa-clipboard-check"></i> Invullen
+                                            {% endif %}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Laatste Metingen</h2>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Datum</th>
+                                    <th>Controlepunt</th>
+                                    <th>Waarde</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for meting in laatste_metingen %}
+                                <tr>
+                                    <td>{{ meting.timestamp.strftime('%d-%m-%Y %H:%M') }}</td>
+                                    <td>{{ meting.omschrijving }}</td>
+                                    <td>{{ meting.waarde }}</td>
+                                    <td>
+                                        {% if meting.waarde <= meting.grenswaarde|float %}
+                                        <span class="badge bg-success">OK</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Actie vereist</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

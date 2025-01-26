@@ -98,6 +98,11 @@
                                 </a>
                             </li>
                             <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('haccp_dashboard', chef_naam=session.get('chef_naam')) }}">
+                                    <i class="fas fa-clipboard-check"></i> HACCP
+                                </a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link" href="{{ url_for('logout') }}">
                                     <i class="fas fa-sign-out-alt"></i> Uitloggen
                                 </a>

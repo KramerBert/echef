@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>HACCP Rapportage</h1>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Start datum</label>
+                    <input type="date" class="form-control" name="start_date" value="{{ start_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Eind datum</label>
+                    <input type="date" class="form-control" name="end_date" value="{{ end_date }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Checklist</label>
+                    <select class="form-control" name="checklist_id">
+                        <option value="">Alle checklists</option>
+                        {% for checklist in checklists %}
+                        <option value="{{ checklist.checklist_id }}" 
+                                {% if selected_checklist|string == checklist.checklist_id|string %}selected{% endif %}>
+                            {{ checklist.naam }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary d-block">Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Compliance Score</h5>
+                    <h2 class="display-4 {% if compliance >= 90 %}text-success{% elif compliance >= 70 %}text-warning{% else %}text-danger{% endif %}">
+                        {{ "%.1f"|format(compliance) }}%
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2>Metingen</h2>
+            <a href="{{ request.url }}&export=true" class="btn btn-success">
+                <i class="fas fa-file-export"></i> Exporteer Rapport
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Checklist</th>
+                            <th>Controlepunt</th>
+                            <th>Waarde</th>
+                            <th>Status</th>
+                            <th>Actie</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for meting in metingen %}
+                        <tr>
+                            <td>{{ meting.timestamp.strftime('%d-%m-%Y %H:%M') }}</td>
+                            <td>{{ meting.checklist_naam }}</td>
+                            <td>{{ meting.omschrijving }}</td>
+                            <td>{{ meting.waarde }}</td>
+                            <td>
+                                {% if meting.waarde|float <= meting.grenswaarde|float %}
+                                <span class="badge bg-success">✓ OK</span>
+                                {% else %}
+                                <span class="badge bg-danger">⚠ Afwijking</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ meting.actie_ondernomen or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
