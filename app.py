@@ -525,6 +525,7 @@ def edit_dish(chef_naam, dish_id):
                 """, (nieuwe_verkoopprijs, dish_id, session['chef_id']))
                 conn.commit()
                 flash("Verkoopprijs bijgewerkt!", "success")
+                return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id) + '#verkoopprijs-sectie')
             except Exception as e:
                 conn.rollback()
                 flash(f"Fout bij bijwerken verkoopprijs: {str(e)}", "danger")
