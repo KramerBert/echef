@@ -1113,6 +1113,189 @@ def handle_exception(e):
     return render_template('error.html', error=e), e.code
 
 # -----------------------------------------------------------
+#  Bestellijst Beheren
+# -----------------------------------------------------------
+@app.route('/orderlist', methods=['GET', 'POST'])
+def manage_orderlist():
+    if 'chef_id' not in session:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('home'))
+    cur = conn.cursor(dictionary=True)
+
+    # Haal alle gerechten op
+    cur.execute("""
+        SELECT d.*, c.naam as chef_naam
+        FROM dishes d
+        JOIN chefs c ON d.chef_id = c.chef_id
+        ORDER BY d.naam
+    """)
+    alle_gerechten = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template('manage_orderlist.html', gerechten=alle_gerechten)
+
+@app.route('/export_orderlist', methods=['POST'])
+def export_orderlist():
+    if 'chef_id' not in session:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('login'))
+
+    dish_quantities = {}
+    for key, value in request.form.items():
+        if key.startswith('quantity_') and value and int(value) > 0:
+            dish_id = int(key.replace('quantity_', ''))
+            dish_quantities[dish_id] = int(value)
+
+    if not dish_quantities:
+        flash("Geen gerechten geselecteerd.", "warning")
+        return redirect(url_for('manage_orderlist'))
+
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('manage_orderlist'))
+    
+    cur = conn.cursor(dictionary=True)
+
+    try:
+        total_cost = 0  # Variabele voor totale kostprijs
+        ingredient_total = 0  # Verplaatst naar hier voor betere scope
+
+        # Gebruik een dictionary met tuple als key voor de ingrediënten
+        total_ingredients = {}
+        dishes_info = {}
+
+        for dish_id, quantity in dish_quantities.items():
+            # Haal gerecht informatie op
+            cur.execute("""
+                SELECT * FROM dishes 
+                WHERE dish_id = %s
+            """, (dish_id,))
+            dish = cur.fetchone()
+            
+            if dish:  # Voeg veiligheidscheck toe
+                dishes_info[dish_id] = {
+                    'naam': dish['naam'], 
+                    'aantal': quantity,
+                    'verkoopprijs': float(dish['verkoopprijs'] or 0)
+                }
+                # Bereken totale verkoopprijs
+                total_cost += dishes_info[dish_id]['verkoopprijs'] * quantity
+
+                # Haal ingrediënten voor dit gerecht op met foutafhandeling
+                try:
+                    cur.execute("""
+                        SELECT di.hoeveelheid, 
+                               i.naam AS ingredient_naam, 
+                               i.eenheid, 
+                               i.prijs_per_eenheid
+                        FROM dish_ingredients di
+                        JOIN ingredients i ON di.ingredient_id = i.ingredient_id
+                        WHERE di.dish_id = %s
+                    """, (dish_id,))
+                    
+                    ingredients = cur.fetchall()
+                    for ing in ingredients:
+                        key = (
+                            ing['ingredient_naam'],
+                            ing['eenheid'],
+                            float(ing['prijs_per_eenheid'] or 0)
+                        )
+                        if key not in total_ingredients:
+                            total_ingredients[key] = 0
+                        total_ingredients[key] += float(ing['hoeveelheid']) * quantity
+                except Exception as e:
+                    logger.error(f'Error processing ingredients for dish {dish_id}: {str(e)}')
+                    continue
+
+        # Maak Word document
+        doc = Document()
+        doc.add_heading('Bestellijst', 0)
+
+        # Voeg bestelde gerechten toe
+        doc.add_heading('Verwachtte verkoop:', level=1)
+        for dish_info in dishes_info.values():
+            doc.add_paragraph(f"{dish_info['naam']}: {dish_info['aantal']}x @ €{dish_info['verkoopprijs']:.2f}")
+
+        # Voeg totale ingrediëntenlijst toe
+        doc.add_heading('Benodigde Ingrediënten:', level=1)
+        table = doc.add_table(rows=1, cols=5)
+        table.style = 'Table Grid'
+        
+        # Headers
+        header_cells = table.rows[0].cells
+        header_cells[0].text = 'Ingrediënt'
+        header_cells[1].text = 'Totaal'
+        header_cells[2].text = 'Eenheid'
+        header_cells[3].text = 'Prijs per eenheid'
+        header_cells[4].text = 'Totaalprijs'
+
+        # Voeg ingrediënten toe met foutafhandeling
+        ingredient_total = 0
+        for (naam, eenheid, prijs_per_eenheid), hoeveelheid in sorted(total_ingredients.items()):
+            try:
+                row_cells = table.add_row().cells
+                row_cells[0].text = str(naam)
+                row_cells[1].text = f"{hoeveelheid:.2f}"
+                row_cells[2].text = str(eenheid)
+                row_cells[3].text = f"€{prijs_per_eenheid:.2f}"
+                subtotal = hoeveelheid * prijs_per_eenheid
+                row_cells[4].text = f"€{subtotal:.2f}"
+                ingredient_total += subtotal
+            except Exception as e:
+                logger.error(f'Error adding ingredient {naam} to table: {str(e)}')
+                continue
+
+        # Voeg financieel overzicht toe
+        doc.add_heading('Financieel Overzicht:', level=1)
+        
+        # Ingrediëntenkosten
+        cost_table = doc.add_table(rows=1, cols=2)
+        cost_table.style = 'Table Grid'
+        cost_row = cost_table.rows[0].cells
+        cost_row[0].text = 'Totale Ingrediëntenkosten:'
+        cost_row[1].text = f"€{ingredient_total:.2f}"
+
+        # Verwachte verkoopprijs
+        price_row = cost_table.add_row().cells
+        price_row[0].text = 'Verwachte Verkoopprijs:'
+        price_row[1].text = f"€{total_cost:.2f}"
+
+        # Verwachte winst
+        expected_profit = total_cost - ingredient_total
+        profit_row = cost_table.add_row().cells
+        profit_row[0].text = 'Verwachte Winst:'
+        profit_row[1].text = f"€{expected_profit:.2f}"
+
+        # Exporteer document
+        buffer = io.BytesIO()
+        doc.save(buffer)
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name='bestellijst.docx',
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+
+    except Exception as e:
+        logger.error(f'Error creating orderlist: {str(e)}')
+        flash("Er is een fout opgetreden bij het maken van de bestellijst.", "danger")
+        return redirect(url_for('manage_orderlist'))
+    
+    finally:
+        cur.close()
+        conn.close()
+
+# -----------------------------------------------------------
 # Start de server
 # -----------------------------------------------------------
 

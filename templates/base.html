@@ -86,6 +86,11 @@
                                     <i class="fas fa-book"></i> Werkinstructie
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('manage_orderlist') }}">
+                                    <i class="fas fa-clipboard-list"></i> Bestellijst
+                                </a>
+                            </li>
                             {% if session.get('chef_id') %}
                             <li class="nav-item">
                                 <a class="nav-link {% if request.path.startswith(url_for('dashboard', chef_naam=session.get('chef_naam'))) %}active{% endif %}" href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}">
