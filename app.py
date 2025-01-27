@@ -575,6 +575,17 @@ def edit_dish(chef_naam, dish_id):
     """, (dish_id,))
     gerecht_allergenen = [row['allergeen_id'] for row in cur.fetchall()]
 
+    # Haal alle beschikbare diëten op
+    cur.execute("SELECT * FROM dieten ORDER BY naam")
+    alle_dieten = cur.fetchall()
+    
+    # Haal de geselecteerde diëten voor dit gerecht op
+    cur.execute("""
+        SELECT dieet_id FROM dish_dieten
+        WHERE dish_id = %s
+    """, (dish_id,))
+    gerecht_dieten = [row['dieet_id'] for row in cur.fetchall()]
+
     cur.close()
     conn.close()
 
@@ -586,7 +597,9 @@ def edit_dish(chef_naam, dish_id):
         gerecht_ingredienten=gerecht_ingredienten,
         totaal_ingredient_prijs=totaal_ingredient_prijs,
         alle_allergenen=alle_allergenen,
-        gerecht_allergenen=gerecht_allergenen
+        gerecht_allergenen=gerecht_allergenen,
+        alle_dieten=alle_dieten,
+        gerecht_dieten=gerecht_dieten
     )
 
 @app.route('/chef/<chef_naam>/dish/<int:dish_id>/ingredient/<int:ingredient_id>/update', methods=['POST'])
@@ -692,6 +705,38 @@ def update_dish_allergenen(chef_naam, dish_id):
     except Exception as e:
         conn.rollback()
         flash(f"Fout bij bijwerken allergenen: {str(e)}", "danger")
+    finally:
+        cur.close()
+        conn.close()
+
+    return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
+
+@app.route('/dashboard/<chef_naam>/dish/<int:dish_id>/dieten', methods=['POST'])
+def update_dish_dieten(chef_naam, dish_id):
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        # Verwijder bestaande diëten voor dit gerecht
+        cur.execute("DELETE FROM dish_dieten WHERE dish_id = %s", (dish_id,))
+        
+        # Voeg nieuwe diëten toe
+        nieuwe_dieten = request.form.getlist('dieten[]')
+        for dieet_id in nieuwe_dieten:
+            cur.execute("""
+                INSERT INTO dish_dieten (dish_id, dieet_id)
+                VALUES (%s, %s)
+            """, (dish_id, dieet_id))
+        
+        conn.commit()
+        flash("Diëten bijgewerkt!", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Fout bij bijwerken diëten: {str(e)}", "danger")
     finally:
         cur.close()
         conn.close()
@@ -812,6 +857,22 @@ def export_dishes():
                 allergenen_text = "Allergenen: " + ", ".join([a['naam'] for a in allergenen])
                 allergenen_paragraph.add_run(allergenen_text).italic = True
 
+            # Voeg diëten toe aan het document
+            cur.execute("""
+                SELECT d.naam, d.icon_class 
+                FROM dieten d
+                JOIN dish_dieten dd ON d.dieet_id = dd.dieet_id
+                WHERE dd.dish_id = %s
+                ORDER BY d.naam
+            """, (dish['dish_id'],))
+            dieten = cur.fetchall()
+            
+            if dieten:
+                dieten_paragraph = doc.add_paragraph()
+                dieten_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                dieten_text = "Geschikt voor: " + ", ".join([d['naam'] for d in dieten])
+                dieten_paragraph.add_run(dieten_text).italic = True
+
             # Voeg witruimte toe tussen gerechten
             doc.add_paragraph()
 
@@ -923,6 +984,39 @@ def export_cookbook():
         doc.add_heading('Bereidingswijze', level=2)
         method = doc.add_paragraph(method_text)
         method.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+        # Haal allergenen op voor dit gerecht
+        cur.execute("""
+            SELECT a.naam, a.icon_class 
+            FROM allergenen a
+            JOIN dish_allergenen da ON a.allergeen_id = da.allergeen_id
+            WHERE da.dish_id = %s
+            ORDER BY a.naam
+        """, (dish['dish_id'],))
+        allergenen = cur.fetchall()
+
+        # Voeg allergenen toe als ze bestaan
+        if allergenen:
+            allergenen_paragraph = doc.add_paragraph()
+            allergenen_paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            allergenen_text = "Allergenen: " + ", ".join([a['naam'] for a in allergenen])
+            allergenen_paragraph.add_run(allergenen_text).italic = True
+
+        # Voeg diëten toe aan het document
+        cur.execute("""
+            SELECT d.naam, d.icon_class 
+            FROM dieten d
+            JOIN dish_dieten dd ON d.dieet_id = dd.dieet_id
+            WHERE dd.dish_id = %s
+            ORDER BY d.naam
+        """, (dish['dish_id'],))
+        dieten = cur.fetchall()
+        
+        if dieten:
+            dieten_paragraph = doc.add_paragraph()
+            dieten_paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            dieten_text = "Geschikt voor: " + ", ".join([d['naam'] for d in dieten])
+            dieten_paragraph.add_run(dieten_text).italic = True
 
         doc.add_paragraph("\n").alignment = WD_ALIGN_PARAGRAPH.LEFT
 

@@ -278,3 +278,42 @@ footer {
     align-items: center;
     font-size: 0.9em;
 }
+
+/* Dieet iconen styling */
+.dieet-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2em;
+    height: 2em;
+    border-radius: 50%;
+    background-color: #28a745;  /* Groen in plaats van rood voor diëten */
+    color: white;
+    font-weight: bold;
+    font-size: 0.8em;
+    margin-right: 0.5em;
+    user-select: none;
+}
+
+.dieten-icons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
+    margin-top: 0.5em;
+}
+
+.dieet-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1em;
+    margin-top: 1em;
+    padding: 1em;
+    background-color: #f8f9fa;
+    border-radius: 0.5em;
+}
+
+.dieet-legend-item {
+    display: flex;
+    align-items: center;
+    font-size: 0.9em;
+}

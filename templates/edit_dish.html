@@ -323,6 +323,35 @@
     </div>
 
     <div class="edit-section">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Diëten</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('update_dish_dieten', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
+                    <div class="row">
+                        {% for dieet in alle_dieten %}
+                        <div class="col-md-3 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       name="dieten[]" 
+                                       value="{{ dieet.dieet_id }}"
+                                       id="dieet{{ dieet.dieet_id }}"
+                                       {% if dieet.dieet_id in gerecht_dieten %} checked {% endif %}>
+                                <label class="form-check-label" for="dieet{{ dieet.dieet_id }}">
+                                    <span class="dieet-icon">{{ dieet.icon_class }}</span> {{ dieet.naam }}
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-3">Diëten Opslaan</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="edit-section">
         <a href="{{ url_for('all_dishes') }}" class="btn btn-secondary">Terug naar Gerechtenoverzicht</a>
     </div>
 </div>
