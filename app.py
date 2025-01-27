@@ -61,25 +61,35 @@ def handle_exception(e):
     error = InternalServerError()
     return render_template('error.html', error=error), 500
 
-# Database configuration from .env
-DB_NAME = os.getenv("DB_NAME")
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
+# Database configuration from environment variables
+DB_CONFIG = {}
+if os.getenv('JAWSDB_URL'):
+    # Parse JAWSDB_URL when on Heroku
+    from urllib.parse import urlparse
+    url = urlparse(os.getenv('JAWSDB_URL'))
+    DB_CONFIG = {
+        'host': url.hostname,
+        'user': url.username,
+        'password': url.password,
+        'database': url.path[1:],
+        'port': url.port
+    }
+else:
+    # Local development settings from .env
+    DB_CONFIG = {
+        'host': os.getenv('DB_HOST'),
+        'user': os.getenv('DB_USER'),
+        'password': os.getenv('DB_PASSWORD'),
+        'database': os.getenv('DB_NAME'),
+        'port': os.getenv('DB_PORT')
+    }
 
 def get_db_connection():
     """
-    Creates a new database connection using the details from .env
+    Creates a new database connection using the configuration
     """
     try:
-        conn = mysql.connector.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT
-        )
+        conn = mysql.connector.connect(**DB_CONFIG)
         if conn.is_connected():
             return conn
     except Error as e:
