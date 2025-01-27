@@ -2,26 +2,41 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1>Bestellijst Samenstellen</h1>
-    
+
+    <h2>Bestellijst Samenstellen</h2>
+    <p>Selecteer gerechten en voer de gewenste aantallen in.</p>
+
+    <div class="search-filter">
+        <input type="text" id="dishSearch" class="form-control" 
+               placeholder="Zoek gerecht..." style="max-width: 300px; display: inline-block;">
+        <select id="categoryFilter" class="form-control" style="max-width: 200px; display: inline-block; margin-left: 10px;">
+            <option value="">Alle categorieën</option>
+            {% for categorie in gerechten|map(attribute='categorie')|unique %}
+            <option value="{{ categorie }}">{{ categorie }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
     <form action="{{ url_for('export_orderlist') }}" method="post">
         <div class="table-responsive">
-            <table class="table">
+            <table class="table dish-table">
                 <thead>
                     <tr>
                         <th>Gerecht</th>
-                        <th>Chef</th>
-                        <th>Aantal</th>
+                        <th>Categorie</th>
+                        <th class="col-price">Verkoopprijs</th>
+                        <th class="col-quantity">Aantal</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for gerecht in gerechten %}
                     <tr>
                         <td>{{ gerecht.naam }}</td>
-                        <td>{{ gerecht.chef_naam }}</td>
-                        <td>
+                        <td>{{ gerecht.categorie }}</td>
+                        <td class="col-price">€ {{ "%.2f"|format(gerecht.verkoopprijs|float) if gerecht.verkoopprijs else 'n.v.t.' }}</td>
+                        <td class="col-quantity">
                             <input type="number" 
-                                   class="form-control" 
+                                   class="form-control quantity-input" 
                                    name="quantity_{{ gerecht.dish_id }}" 
                                    min="0" 
                                    value="0"
@@ -33,9 +48,140 @@
             </table>
         </div>
         
-        <button type="submit" class="btn btn-primary">
-            <i class="fas fa-file-export"></i> Exporteer Bestellijst
-        </button>
+        <div class="action-buttons">
+            <button type="submit" class="btn btn-primary btn-action">
+                <i class="fas fa-file-export"></i> Exporteer Bestellijst
+            </button>
+            <a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}" class="btn btn-primary btn-action">
+                <i class="fas fa-arrow-left"></i> Terug naar Dashboard
+            </a>
+        </div>
     </form>
 </div>
+
+<style>
+    .search-filter {
+        background-color: #073642;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+    
+    .search-filter input,
+    .search-filter select {
+        background-color: #002b36;
+        color: #fff;
+        border: 1px solid #586e75;
+        padding: 8px;
+    }
+
+    .dish-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        background-color: #073642;
+    }
+
+    .dish-table th {
+        background-color: #002b36;
+        padding: 12px;
+        text-align: left;
+        color: #93a1a1;
+    }
+
+    .dish-table td {
+        padding: 10px;
+        border: 1px solid #586e75;
+    }
+
+    .col-price {
+        text-align: right;
+        width: 120px;
+    }
+
+    .col-quantity {
+        width: 100px;
+        text-align: center;
+    }
+
+    .quantity-input {
+        width: 60px;
+        padding: 4px;
+        text-align: center;
+        background-color: #002b36;
+        color: #fff;
+        border: 1px solid #586e75;
+        border-radius: 4px;
+    }
+
+    .action-buttons {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-action {
+        display: inline-block;
+        padding: 8px 16px;
+        background-color: #268bd2;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    .btn-action:hover {
+        background-color: #1e6ea7;
+        color: white;
+    }
+
+    /* Responsieve aanpassingen */
+    @media (max-width: 768px) {
+        .search-filter input,
+        .search-filter select {
+            width: 100%;
+            margin: 5px 0;
+            display: block;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+        }
+        
+        .btn-action {
+            width: 100%;
+            margin: 5px 0;
+            text-align: center;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('dishSearch');
+        const categoryFilter = document.getElementById('categoryFilter');
+        const table = document.querySelector('.dish-table');
+        const rows = table.getElementsByTagName('tr');
+
+        function filterTable() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const category = categoryFilter.value.toLowerCase();
+
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const name = row.cells[0].textContent.toLowerCase();
+                const rowCategory = row.cells[1].textContent.toLowerCase();
+                
+                const matchesSearch = name.includes(searchTerm);
+                const matchesCategory = category === '' || rowCategory === category;
+
+                row.style.display = matchesSearch && matchesCategory ? '' : 'none';
+            }
+        }
+
+        searchInput.addEventListener('input', filterTable);
+        categoryFilter.addEventListener('change', filterTable);
+    });
+</script>
 {% endblock %}

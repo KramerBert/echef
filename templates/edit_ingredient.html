@@ -2,42 +2,93 @@
 {% block content %}
 <h2>Ingrediënt Bewerken: {{ ingredient.naam }}</h2>
 
-<form method="POST" action="{{ url_for('edit_ingredient', chef_naam=chef_naam, ingredient_id=ingredient.ingredient_id) }}">
-    <label for="naam">Naam ingrediënt:</label><br>
-    <input type="text" id="naam" name="naam" value="{{ ingredient.naam }}" required><br><br>
+<style>
+    .edit-ingredient-form {
+        background-color: var(--kitchen-dark);
+        padding: 20px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
 
-    <label for="categorie">Categorie:</label><br>
-    <input type="text" id="categorie" name="categorie" value="{{ ingredient.categorie }}" required><br><br>
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
 
-    <label for="eenheid">Eenheid:</label><br>
-    <select id="eenheid" name="eenheid" required>
-        <option value="gram (g)" {% if ingredient.eenheid == 'gram (g)' %}selected{% endif %}>gram (g)</option>
-        <option value="kilogram (kg)" {% if ingredient.eenheid == 'kilogram (kg)' %}selected{% endif %}>kilogram (kg)</option>
-        <option value="milliliter (ml)" {% if ingredient.eenheid == 'milliliter (ml)' %}selected{% endif %}>milliliter (ml)</option>
-        <option value="centiliter (cl)" {% if ingredient.eenheid == 'centiliter (cl)' %}selected{% endif %}>centiliter (cl)</option>
-        <option value="deciliter (dl)" {% if ingredient.eenheid == 'deciliter (dl)' %}selected{% endif %}>deciliter (dl)</option>
-        <option value="liter (l)" {% if ingredient.eenheid == 'liter (l)' %}selected{% endif %}>liter (l)</option>
-        <option value="theelepel (tl or tsp)" {% if ingredient.eenheid == 'theelepel (tl or tsp)' %}selected{% endif %}>theelepel (tl or tsp) – ca. 5 ml</option>
-        <option value="eetlepel (el or tbsp)" {% if ingredient.eenheid == 'eetlepel (el or tbsp)' %}selected{% endif %}>eetlepel (el or tbsp) – ca. 15 ml</option>
-        <option value="mespuntje" {% if ingredient.eenheid == 'mespuntje' %}selected{% endif %}>mespuntje</option>
-        <option value="snufje" {% if ingredient.eenheid == 'snufje' %}selected{% endif %}>snufje</option>
-        <option value="scheutje" {% if ingredient.eenheid == 'scheutje' %}selected{% endif %}>scheutje</option>
-        <option value="kopje" {% if ingredient.eenheid == 'kopje' %}selected{% endif %}>kopje ±125–150 ml</option>
-        <option value="mok" {% if ingredient.eenheid == 'mok' %}selected{% endif %}>mok (200–300 ml of meer)</option>
-        <option value="stuk/stuks" {% if ingredient.eenheid == 'stuk/stuks' %}selected{% endif %}>stuk/stuks</option>
-        <option value="pak" {% if ingredient.eenheid == 'pak' %}selected{% endif %}>pak</option>
-    </select><br><br>
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--text-muted);
+    }
 
-    <label for="prijs_per_eenheid">Prijs per eenheid (€):</label><br>
-    <input type="number" step="0.01" id="prijs_per_eenheid" name="prijs_per_eenheid" value="{{ ingredient.prijs_per_eenheid }}" required><br><br>
+    .form-control {
+        width: 100%;
+        padding: 8px;
+        background-color: var(--kitchen-black);
+        color: var(--text-light);
+        border: 1px solid var(--kitchen-steel);
+        border-radius: 4px;
+    }
 
-    <button type="submit">Bijwerken</button>
+    .btn-action {
+        background-color: var(--kitchen-blue);
+        color: var(--text-light);
+    }
+
+    .usage-table {
+        background-color: var(--kitchen-dark);
+        border: 1px solid var(--kitchen-steel);
+    }
+
+    .usage-table th {
+        background-color: var(--kitchen-blue);
+        color: var(--text-light);
+    }
+</style>
+
+<form method="POST" action="{{ url_for('edit_ingredient', chef_naam=chef_naam, ingredient_id=ingredient.ingredient_id) }}" class="edit-ingredient-form">
+    <div class="form-group">
+        <label for="naam">Naam ingrediënt:</label><br>
+        <input type="text" id="naam" name="naam" value="{{ ingredient.naam }}" class="form-control" required><br><br>
+    </div>
+
+    <div class="form-group">
+        <label for="categorie">Categorie:</label><br>
+        <input type="text" id="categorie" name="categorie" value="{{ ingredient.categorie }}" class="form-control" required><br><br>
+    </div>
+
+    <div class="form-group">
+        <label for="eenheid">Eenheid:</label><br>
+        <select id="eenheid" name="eenheid" class="form-control" required>
+            <option value="gram (g)" {% if ingredient.eenheid == 'gram (g)' %}selected{% endif %}>gram (g)</option>
+            <option value="kilogram (kg)" {% if ingredient.eenheid == 'kilogram (kg)' %}selected{% endif %}>kilogram (kg)</option>
+            <option value="milliliter (ml)" {% if ingredient.eenheid == 'milliliter (ml)' %}selected{% endif %}>milliliter (ml)</option>
+            <option value="centiliter (cl)" {% if ingredient.eenheid == 'centiliter (cl)' %}selected{% endif %}>centiliter (cl)</option>
+            <option value="deciliter (dl)" {% if ingredient.eenheid == 'deciliter (dl)' %}selected{% endif %}>deciliter (dl)</option>
+            <option value="liter (l)" {% if ingredient.eenheid == 'liter (l)' %}selected{% endif %}>liter (l)</option>
+            <option value="theelepel (tl or tsp)" {% if ingredient.eenheid == 'theelepel (tl or tsp)' %}selected{% endif %}>theelepel (tl or tsp) – ca. 5 ml</option>
+            <option value="eetlepel (el or tbsp)" {% if ingredient.eenheid == 'eetlepel (el or tbsp)' %}selected{% endif %}>eetlepel (el or tbsp) – ca. 15 ml</option>
+            <option value="mespuntje" {% if ingredient.eenheid == 'mespuntje' %}selected{% endif %}>mespuntje</option>
+            <option value="snufje" {% if ingredient.eenheid == 'snufje' %}selected{% endif %}>snufje</option>
+            <option value="scheutje" {% if ingredient.eenheid == 'scheutje' %}selected{% endif %}>scheutje</option>
+            <option value="kopje" {% if ingredient.eenheid == 'kopje' %}selected{% endif %}>kopje ±125–150 ml</option>
+            <option value="mok" {% if ingredient.eenheid == 'mok' %}selected{% endif %}>mok (200–300 ml of meer)</option>
+            <option value="stuk/stuks" {% if ingredient.eenheid == 'stuk/stuks' %}selected{% endif %}>stuk/stuks</option>
+            <option value="pak" {% if ingredient.eenheid == 'pak' %}selected{% endif %}>pak</option>
+        </select><br><br>
+    </div>
+
+    <div class="form-group">
+        <label for="prijs_per_eenheid">Prijs per eenheid (€):</label><br>
+        <input type="number" step="0.01" id="prijs_per_eenheid" name="prijs_per_eenheid" value="{{ ingredient.prijs_per_eenheid }}" class="form-control" required><br><br>
+    </div>
+
+    <button type="submit" class="btn-action">Bijwerken</button>
 </form>
 
 {% if gerechten_met_ingredient %}
 <hr>
 <h3>Dit ingrediënt wordt gebruikt in de volgende gerechten:</h3>
-<table border="1" cellpadding="5" cellspacing="0">
+<table border="1" cellpadding="5" cellspacing="0" class="usage-table">
     <tr>
         <th>Gerecht</th>
         <th>Hoeveelheid</th>

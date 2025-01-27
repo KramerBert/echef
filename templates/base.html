@@ -10,6 +10,25 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
    
    <style>
+        :root {
+            /* Hoofdkleuren */
+            --kitchen-steel: #D8E1E7;        /* Roestvrijstaal licht */
+            --kitchen-dark: #2C3E50;         /* Donker antraciet */
+            --kitchen-black: #1A1A1A;        /* Professioneel zwart */
+            
+            /* Accent kleuren */
+            --kitchen-blue: #34495E;         /* Industrieel blauw */
+            --kitchen-highlight: #3498DB;     /* Actieve elementen */
+            --kitchen-success: #27AE60;       /* Success/bevestiging */
+            --kitchen-warning: #E67E22;       /* Waarschuwing/belangrijk */
+            --kitchen-danger: #E74C3C;        /* Gevaar/verwijderen */
+            
+            /* Tekst kleuren */
+            --text-light: #ECF0F1;           /* Lichte tekst */
+            --text-dark: #2C3E50;            /* Donkere tekst */
+            --text-muted: #95A5A6;           /* Secundaire tekst */
+        }
+
         body {
             display: flex;
             justify-content: center;
@@ -17,33 +36,35 @@
             min-height: 100vh;
             margin: 0;
             font-family: Arial, sans-serif;
-            background-color: #002b36;
-            color: #ffffff;
+            background-color: var(--kitchen-black);
+            color: var(--text-light);
         }
         .container {
             width: 95%;  /* Verhoog van 80% naar 95% */
             max-width: 1400px;  /* Verhoog van 800px naar 1400px */
             padding: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            background-color: #073642;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            background-color: var(--kitchen-dark);
         }
         .flash-message {
             border: 1px solid #ccc;
             padding: 5px;
             margin-bottom: 5px;
-            background-color: #f8f8f8;
-            color: #000000;
+            background-color: var(--kitchen-steel);
+            color: var(--text-dark);
+            border-color: var(--kitchen-blue);
         }
         footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-top: 1px solid var(--kitchen-steel);
         }
         footer p {
             margin: 0;
         }
         footer a {
-            color: #268bd2;
+            color: var(--kitchen-highlight);
             text-decoration: none;
         }
         footer a:hover {
@@ -57,6 +78,115 @@
             padding: 2px 5px;
             font-size: 0.8em;
             margin: 0 2px;
+        }
+        /* Verbeterde allergenen iconen styling */
+        .allergen-icon {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px;
+            margin: 0 3px;
+            font-size: 1.1em;
+            color: #93a1a1;
+            background-color: #002b36;
+            border: 1px solid #586e75;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        
+        .allergen-icon:hover {
+            color: #fff;
+            background-color: #073642;
+            transform: scale(1.1);
+        }
+
+        .form-check-label .allergen-icon {
+            margin-right: 8px;
+            width: 30px;
+            justify-content: center;
+        }
+
+        .form-check-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .form-check {
+            margin: 8px 0;
+        }
+
+        .form-check-input:checked + .form-check-label .allergen-icon {
+            background-color: #268bd2;
+            border-color: #268bd2;
+            color: #fff;
+        }
+
+        .allergen-name {
+            display: none;
+            position: absolute;
+            background: #002b36;
+            padding: 5px;
+            border-radius: 3px;
+            border: 1px solid #586e75;
+            z-index: 1000;
+        }
+
+        .allergen-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .allergen-container:hover .allergen-name {
+            display: block;
+        }
+
+        .btn-action {
+            background-color: var(--kitchen-blue);
+            color: var(--text-light);
+        }
+
+        .btn-action:hover {
+            background-color: var(--kitchen-highlight);
+            color: var(--text-light);
+        }
+
+        .btn-edit { background-color: var(--kitchen-blue); }
+        .btn-export { background-color: var(--kitchen-success); }
+        .btn-delete { background-color: var(--kitchen-danger); }
+
+        .form-control {
+            background-color: var(--kitchen-steel);
+            color: var(--text-dark);
+            border: 1px solid var(--kitchen-blue);
+        }
+
+        .form-control:focus {
+            background-color: var(--text-light);
+            border-color: var(--kitchen-highlight);
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+        }
+
+        table th {
+            background-color: var(--kitchen-blue);
+            color: var(--text-light);
+        }
+
+        table td {
+            color: var(--text-light);
+            border-color: var(--kitchen-steel);
+        }
+
+        /* Update navbar styling */
+        .navbar {
+            background-color: var(--kitchen-black) !important;
+        }
+
+        .navbar-dark .navbar-nav .nav-link {
+            color: var(--text-light);
+        }
+
+        .navbar-dark .navbar-nav .nav-link:hover {
+            color: var(--kitchen-highlight);
         }
     </style>
 </head>

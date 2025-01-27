@@ -3,69 +3,138 @@
 <h2>Gerechten Samenstellen</h2>
 <p>Voeg hier nieuwe gerechten toe of bekijk de lijst van bestaande gerechten.</p>
 
+<div class="create-dish-form">
+    <form method="POST" action="{{ url_for('manage_dishes', chef_naam=chef_naam) }}">
+        <input type="hidden" name="gerechtForm" value="1">
+        
+        <div class="form-group">
+            <label for="naam">Naam gerecht:</label>
+            <input type="text" id="naam" name="naam" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+            <label for="beschrijving">Beschrijving:</label>
+            <textarea id="beschrijving" name="beschrijving" class="form-control" required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="gerecht_categorie">Categorie:</label>
+            <select id="gerecht_categorie" name="gerecht_categorie" class="form-control" required>
+                <option value="Amuse-bouche">Amuse-bouche (optioneel)</option>
+                <option value="Hors-d'œuvre">Hors-d'œuvre (koud voorgerecht)</option>
+                <option value="Potage">Potage (soep)</option>
+                <option value="Poisson">Poisson (visgerecht)</option>
+                <option value="Entrée">Entrée (warm voorgerecht / tussengerecht)</option>
+                <option value="Sorbet">Sorbet (verfrissende gang)</option>
+                <option value="Relevé of Rôti">Relevé of Rôti (hoofdgerecht/vleesgerecht)</option>
+                <option value="Légumes / Groentegerecht">Légumes / Groentegerecht</option>
+                <option value="Salade">Salade</option>
+                <option value="Fromage">Fromage (kaas)</option>
+                <option value="Entremets">Entremets (zoet nagerecht)</option>
+                <option value="Café / Mignardises">Café / Mignardises</option>
+                <option value="Digestief">Digestief (optioneel)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="bereidingswijze">Bereidingswijze:</label>
+            <textarea id="bereidingswijze" name="bereidingswijze" class="form-control" required></textarea>
+        </div>
+
+        <button type="submit" class="btn-action">
+            <i class="fas fa-save"></i> Opslaan
+        </button>
+    </form>
+</div>
+
+<div class="navigation-buttons">
+    <a href="{{ url_for('all_dishes') }}" class="btn-action">
+        <i class="fas fa-list"></i> Gerechten Overzicht
+    </a>
+    <a href="{{ url_for('dashboard', chef_naam=chef_naam) }}" class="btn-action">
+        <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+</div>
+
 <style>
+    .create-dish-form {
+        background-color: var(--kitchen-dark);
+        padding: 20px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+
     .form-group {
         margin-bottom: 1.5rem;
-        width: 100%;
     }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--text-muted);
+    }
+
     .form-control {
         width: 100%;
         padding: 8px;
-        box-sizing: border-box;
+        background-color: var(--kitchen-black);
+        color: var(--text-light);
+        border: 1px solid var(--kitchen-steel);
+        border-radius: 4px;
     }
-    input[type="text"], 
-    textarea, 
-    select {
-        width: 100%;
-        min-width: 300px;
-        max-width: 800px;
-        padding: 8px;
-        margin-top: 5px;
+
+    .form-control:focus {
+        background-color: var(--kitchen-steel);
+        border-color: var(--kitchen-highlight);
+        color: var(--text-dark);
     }
-    textarea {
+
+    textarea.form-control {
         min-height: 100px;
+        resize: vertical;
+    }
+
+    .btn-action {
+        display: inline-block;
+        padding: 8px 16px;
+        background-color: var(--kitchen-blue);
+        color: var(--text-light);
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        margin: 0 5px;
+    }
+
+    .btn-action:hover {
+        background-color: var(--kitchen-highlight);
+        color: var(--text-light);
+    }
+
+    .navigation-buttons {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+    }
+
+    /* Responsieve aanpassingen */
+    @media (max-width: 768px) {
+        .create-dish-form {
+            padding: 15px;
+        }
+        
+        .form-control {
+            font-size: 16px; /* Voorkomt inzoomen op mobiel */
+        }
+        
+        .btn-action {
+            width: 100%;
+            margin: 5px 0;
+        }
+        
+        .navigation-buttons {
+            flex-direction: column;
+        }
     }
 </style>
-
-<!-- Formulier om een nieuw gerecht toe te voegen -->
-<form method="POST" action="{{ url_for('manage_dishes', chef_naam=chef_naam) }}">
-    <input type="hidden" name="gerechtForm" value="1">
-    
-    <div class="form-group">
-        <label for="naam">Naam gerecht:</label><br>
-        <input type="text" id="naam" name="naam" class="form-control" required>
-    </div>
-
-    <div class="form-group">
-        <label for="beschrijving">Beschrijving:</label><br>
-        <textarea id="beschrijving" name="beschrijving" class="form-control" required></textarea>
-    </div>
-
-    <div class="form-group">
-        <label for="gerecht_categorie">Categorie:</label><br>
-        <select id="gerecht_categorie" name="gerecht_categorie" class="form-control" required>
-            <option value="Amuse-bouche">Amuse-bouche (optioneel)</option>
-            <option value="Hors-d'œuvre">Hors-d'œuvre (koud voorgerecht)</option>
-            <option value="Potage">Potage (soep)</option>
-            <option value="Poisson">Poisson (visgerecht)</option>
-            <option value="Entrée">Entrée (warm voorgerecht / tussengerecht)</option>
-            <option value="Sorbet">Sorbet (verfrissende gang)</option>
-            <option value="Relevé of Rôti">Relevé of Rôti (hoofdgerecht/vleesgerecht)</option>
-            <option value="Légumes / Groentegerecht">Légumes / Groentegerecht (optioneel apart geserveerd)</option>
-            <option value="Salade">Salade (optioneel apart)</option>
-            <option value="Fromage">Fromage (kaas)</option>
-            <option value="Entremets">Entremets (zoet nagerecht)</option>
-            <option value="Café / Mignardises">Café / Mignardises</option>
-            <option value="Digestief">Digestief (optioneel)</option>
-        </select>
-    </div>
-
-    <div class="form-group">
-        <label for="bereidingswijze">Bereidingswijze:</label><br>
-        <textarea id="bereidingswijze" name="bereidingswijze" class="form-control" required></textarea>
-    </div>
-
-    <button type="submit" class="btn btn-primary">Opslaan</button>
-</form>
-
 {% endblock %}

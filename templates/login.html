@@ -1,23 +1,51 @@
 {% extends "base.html" %}
 {% block title %}Inloggen - E-chef{% endblock %}
 {% block content %}
+<style>
+    .auth-form {
+        background-color: var(--kitchen-dark);
+        padding: 25px;
+        border-radius: 4px;
+        max-width: 400px;
+        margin: 0 auto;
+    }
+
+    .form-control {
+        background-color: var(--kitchen-black);
+        color: var(--text-light);
+        border: 1px solid var(--kitchen-steel);
+    }
+
+    .form-control:focus {
+        background-color: var(--kitchen-steel);
+        color: var(--text-dark);
+        border-color: var(--kitchen-highlight);
+    }
+
+    .auth-form h2 {
+        color: var(--text-light);
+        margin-bottom: 20px;
+    }
+</style>
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-6">
-            <h2>Inloggen</h2>
-            <form method="POST" action="{{ url_for('login') }}" aria-label="Login form">
-                <div class="mb-3">
-                    <label for="email" class="form-label">E-mail</label>
-                    <input type="email" class="form-control" id="email" name="email" required>
-                </div>
-                <div class="mb-3">
-                    <label for="wachtwoord" class="form-label">Wachtwoord</label>
-                    <input type="password" class="form-control" id="wachtwoord" name="wachtwoord" required>
-                </div>
-                <button type="submit" class="btn btn-primary" aria-label="Login">
-                    <i class="fas fa-sign-in-alt"></i> Inloggen
-                </button>
-            </form>
+            <div class="auth-form">
+                <h2>Inloggen</h2>
+                <form method="POST" action="{{ url_for('login') }}" aria-label="Login form">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">E-mail</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="wachtwoord" class="form-label">Wachtwoord</label>
+                        <input type="password" class="form-control" id="wachtwoord" name="wachtwoord" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" aria-label="Login">
+                        <i class="fas fa-sign-in-alt"></i> Inloggen
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </div>

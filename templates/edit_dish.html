@@ -310,7 +310,8 @@
                                        id="allergeen{{ allergeen.allergeen_id }}"
                                        {% if allergeen.allergeen_id in gerecht_allergenen %} checked {% endif %}>
                                 <label class="form-check-label" for="allergeen{{ allergeen.allergeen_id }}">
-                                    <span class="allergeen-icon">{{ allergeen.icon_class }}</span> {{ allergeen.naam }}
+                                    <i class="fas {{ allergeen.icon_class }}" title="{{ allergeen.naam }}"></i>
+                                    {{ allergeen.naam }}
                                 </label>
                             </div>
                         </div>
