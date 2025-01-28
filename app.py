@@ -179,10 +179,13 @@ def login():
 
             conn = get_db_connection()
             if conn is None:
-                raise Exception("Database connection error")
+                logger.error("Database connection failed during login")
+                flash("Database verbinding mislukt. Probeer het later opnieuw.", "danger")
+                return render_template('login.html')
 
             cur = conn.cursor(dictionary=True)
             try:
+                logger.info(f"Attempting login for email: {email}")  # Debug log
                 cur.execute("SELECT * FROM chefs WHERE email = %s", (email,))
                 chef = cur.fetchone()
                 
@@ -194,7 +197,11 @@ def login():
                     flash("Succesvol ingelogd!", "success")
                     return redirect(url_for('dashboard', chef_naam=chef['naam']))
                 else:
+                    logger.warning(f"Invalid login attempt for email: {email}")  # Debug log
                     flash("Ongeldige inloggegevens.", "danger")
+            except Exception as e:
+                logger.error(f"Database error during login: {str(e)}")  # Debug log
+                flash("Er is een fout opgetreden bij het inloggen.", "danger")
             finally:
                 cur.close()
                 conn.close()
@@ -1881,9 +1888,34 @@ def delete_haccp_checklist(chef_naam, checklist_id):
 
 # -----------------------------------------------------------
 # Start de server
+        
 # -----------------------------------------------------------
 if __name__ == '__main__':
     # Disable debug mode in production
     debug = os.environ.get('FLASK_ENV') == 'development'
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=debug)
+
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=debug)
+
+        cur = conn.cursor(dictionary=True)
+        cur.execute("SELECT 1")
+        result = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+# -----------------------------------------------------------
+# Start de server
+# -----------------------------------------------------------
+if __name__ == '__main__':
+    # Disable debug mode in production
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=debug)
+
+        return jsonify({'status': 'success', 'message': 'Database connection successful'})
+    except Exception as e:

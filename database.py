@@ -3,13 +3,29 @@ from mysql.connector import Error, pooling
 from contextlib import contextmanager
 from functools import lru_cache
 import time
+import os
+from urllib.parse import urlparse
 
-dbconfig = {
-    "host": "localhost",
-    "database": "echef",
-    "user": "root",
-    "password": ""
-}
+# Update database configuratie om Heroku's JawsDB te ondersteunen
+if os.getenv('JAWSDB_URL'):
+    # Parse JAWSDB_URL when on Heroku
+    url = urlparse(os.getenv('JAWSDB_URL'))
+    dbconfig = {
+        'host': url.hostname,
+        'user': url.username,
+        'password': url.password,
+        'database': url.path[1:],
+        'port': url.port
+    }
+else:
+    # Local development settings
+    dbconfig = {
+        "host": os.getenv('DB_HOST', 'localhost'),
+        "database": os.getenv('DB_NAME', 'echef'),
+        "user": os.getenv('DB_USER', 'root'),
+        "password": os.getenv('DB_PASSWORD', ''),
+        "port": int(os.getenv('DB_PORT', 3306))
+    }
 
 connection_pool = mysql.connector.pooling.MySQLConnectionPool(
     pool_name="echef_pool",
