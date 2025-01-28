@@ -1882,24 +1882,7 @@ def delete_haccp_checklist(chef_naam, checklist_id):
 # -----------------------------------------------------------
 # Start de server
 # -----------------------------------------------------------
-
-if __name__ == '____main__':
-    app.run(debug=True)
-
-# -----------------------------------------------------------
-# Start de server
-# -----------------------------------------------------------
 if __name__ == '__main__':
-    app.run(debug=True)
-
-# -----------------------------------------------------------
-# Start de server
-# -----------------------------------------------------------
-if __name__ == '__main__':
-    app.run(debug=True)
-
-# -----------------------------------------------------------
-# Start de server
-# -----------------------------------------------------------
-if __name__ == '__main__':
-    app.run(debug=True)
+    # In production, let Gunicorn handle the server
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
