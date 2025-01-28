@@ -1883,6 +1883,7 @@ def delete_haccp_checklist(chef_naam, checklist_id):
 # Start de server
 # -----------------------------------------------------------
 if __name__ == '__main__':
-    # In production, let Gunicorn handle the server
+    # Disable debug mode in production
+    debug = os.environ.get('FLASK_ENV') == 'development'
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=debug)
