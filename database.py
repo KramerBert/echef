@@ -18,10 +18,15 @@ connection_pool = mysql.connector.pooling.MySQLConnectionPool(
 )
 
 def get_db_connection():
+    """
+    Creates a new database connection using the configuration
+    """
     try:
-        return connection_pool.get_connection()
+        conn = mysql.connector.connect(**dbconfig)
+        if conn.is_connected():
+            return conn
     except Error as e:
-        print(f"Error connecting to MySQL Database: {e}")
+        print(f"Error connecting to the database: {e}")
         return None
 
 @contextmanager
