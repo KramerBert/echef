@@ -19,6 +19,10 @@ from datetime import datetime, timedelta  # Voeg deze import toe bovenaan bij de
 load_dotenv()  # Load the values from .env
 
 # Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -30,7 +34,9 @@ app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
-    PERMANENT_SESSION_LIFETIME=1800  # 30 minutes
+    PERMANENT_SESSION_LIFETIME=1800,  # 30 minutes
+    SERVER_NAME=os.getenv('SERVER_NAME'),  # Add this line
+    PREFERRED_URL_SCHEME='https'  # Add this line
 )
 
 # Configure debug mode properly
@@ -89,10 +95,17 @@ def get_db_connection():
     Creates a new database connection using the configuration
     """
     try:
+        print("Database Config:", DB_CONFIG)  # Debug logging
+        logger.info(f"Attempting database connection with config: {DB_CONFIG}")
         conn = mysql.connector.connect(**DB_CONFIG)
         if conn.is_connected():
+            logger.info("Successfully connected to database")
             return conn
+        else:
+            logger.error("Failed to connect to database")
+            return None
     except Error as e:
+        logger.error(f"Database connection error: {str(e)}")
         print(f"Error connecting to the database: {e}")
         return None
 
@@ -172,6 +185,8 @@ def login():
         try:
             email = request.form['email']
             wachtwoord = request.form['wachtwoord']
+            
+            logger.info(f"Login attempt for email: {email}")  # Debug logging
 
             if not email or not wachtwoord:
                 flash("Vul alle velden in.", "danger")
@@ -179,28 +194,32 @@ def login():
 
             conn = get_db_connection()
             if conn is None:
-                logger.error("Database connection failed during login")
+                logger.error("Failed to establish database connection")
                 flash("Database verbinding mislukt. Probeer het later opnieuw.", "danger")
                 return render_template('login.html')
 
             cur = conn.cursor(dictionary=True)
             try:
-                logger.info(f"Attempting login for email: {email}")  # Debug log
                 cur.execute("SELECT * FROM chefs WHERE email = %s", (email,))
                 chef = cur.fetchone()
                 
-                if chef and check_password_hash(chef['wachtwoord'], wachtwoord):
-                    session.clear()
-                    session['chef_id'] = chef['chef_id']
-                    session['chef_naam'] = chef['naam']
-                    session.permanent = True
-                    flash("Succesvol ingelogd!", "success")
-                    return redirect(url_for('dashboard', chef_naam=chef['naam']))
+                if chef:
+                    logger.info(f"Found user with email {email}")  # Debug logging
+                    if check_password_hash(chef['wachtwoord'], wachtwoord):
+                        session.clear()
+                        session['chef_id'] = chef['chef_id']
+                        session['chef_naam'] = chef['naam']
+                        session.permanent = True
+                        flash("Succesvol ingelogd!", "success")
+                        return redirect(url_for('dashboard', chef_naam=chef['naam']))
+                    else:
+                        logger.warning(f"Invalid password for user {email}")  # Debug logging
                 else:
-                    logger.warning(f"Invalid login attempt for email: {email}")  # Debug log
-                    flash("Ongeldige inloggegevens.", "danger")
+                    logger.warning(f"No user found with email {email}")  # Debug logging
+                
+                flash("Ongeldige inloggegevens.", "danger")
             except Exception as e:
-                logger.error(f"Database error during login: {str(e)}")  # Debug log
+                logger.error(f"Database error during login: {str(e)}")
                 flash("Er is een fout opgetreden bij het inloggen.", "danger")
             finally:
                 cur.close()
@@ -698,12 +717,6 @@ def remove_dish_ingredient(chef_naam, dish_id, ingredient_id):
 
 @app.route('/dashboard/<chef_naam>/dish/<int:dish_id>/allergenen', methods=['POST'])
 def update_dish_allergenen(chef_naam, dish_id):
-    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
-        flash("Geen toegang. Log opnieuw in.", "danger")
-        return redirect(url_for('login'))
-
-    conn = get_db_connection()
-    cur = conn.cursor()
 
     try:
         # Verwijder bestaande allergenen voor dit gerecht
@@ -1906,6 +1919,7 @@ if __name__ == '__main__':
         cur.close()
         conn.close()
         
+    app.run(host='0.0.0.0', port=port, debug=debug)
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # -----------------------------------------------------------
@@ -1916,6 +1930,11 @@ if __name__ == '__main__':
     debug = os.environ.get('FLASK_ENV') == 'development'
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=debug)
+
+        return jsonify({'status': 'success', 'message': 'Database connection successful'})
+    except Exception as e:
+        return jsonify({'status': 'success', 'message': 'Database connection successful'})
+    except Exception as e:
 
         return jsonify({'status': 'success', 'message': 'Database connection successful'})
     except Exception as e:
