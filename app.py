@@ -2039,6 +2039,107 @@ def delete_haccp_checklist(chef_naam, checklist_id):
         logger.error(f'Error deleting HACCP checklist: {str(e)}')
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# ...existing code...
+
+@app.route('/dashboard/<chef_naam>/delete_account', methods=['POST'])
+def delete_account(chef_naam):
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('dashboard', chef_naam=chef_naam))
+    
+    cur = conn.cursor()
+    try:
+        chef_id = session['chef_id']
+        
+        # Verwijder alle gegevens die aan de chef zijn gekoppeld
+        cur.execute("DELETE FROM dish_ingredients WHERE dish_id IN (SELECT dish_id FROM dishes WHERE chef_id = %s)", (chef_id,))
+        cur.execute("DELETE FROM dishes WHERE chef_id = %s", (chef_id,))
+        cur.execute("DELETE FROM ingredients WHERE chef_id = %s", (chef_id,))
+        cur.execute("DELETE FROM password_resets WHERE chef_id = %s", (chef_id,))
+        cur.execute("DELETE FROM haccp_metingen WHERE chef_id = %s", (chef_id,))
+        cur.execute("DELETE FROM haccp_checkpunten WHERE checklist_id IN (SELECT checklist_id FROM haccp_checklists WHERE chef_id = %s)", (chef_id,))
+        cur.execute("DELETE FROM haccp_checklists WHERE chef_id = %s", (chef_id,))
+        cur.execute("DELETE FROM chefs WHERE chef_id = %s", (chef_id,))
+        
+        conn.commit()
+        session.clear()
+        flash("Je account is succesvol verwijderd.", "success")
+        return redirect(url_for('home'))
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error deleting account: {str(e)}")
+        flash("Er is een fout opgetreden bij het verwijderen van je account.", "danger")
+        return redirect(url_for('dashboard', chef_naam=chef_naam))
+    finally:
+        cur.close()
+        conn.close()
+
+# ...existing code...
+
+@app.route('/dashboard/<chef_naam>/profile', methods=['GET', 'POST'])
+def profile(chef_naam):
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('dashboard', chef_naam=chef_naam))
+    
+    cur = conn.cursor(dictionary=True)
+    
+    try:
+        # Haal gebruikersgegevens op
+        cur.execute("SELECT * FROM chefs WHERE chef_id = %s", (session['chef_id'],))
+        chef = cur.fetchone()
+        
+        if request.method == 'POST':
+            if 'update_password' in request.form:
+                current_password = request.form.get('current_password')
+                new_password = request.form.get('new_password')
+                confirm_password = request.form.get('confirm_password')
+                
+                if not check_password_hash(chef['wachtwoord'], current_password):
+                    flash("Huidig wachtwoord is onjuist.", "danger")
+                elif new_password != confirm_password:
+                    flash("Nieuwe wachtwoorden komen niet overeen.", "danger")
+                else:
+                    hashed_pw = generate_password_hash(new_password, method='pbkdf2:sha256')
+                    cur.execute("""
+                        UPDATE chefs 
+                        SET wachtwoord = %s 
+                        WHERE chef_id = %s
+                    """, (hashed_pw, session['chef_id']))
+                    conn.commit()
+                    flash("Wachtwoord succesvol gewijzigd!", "success")
+            
+            elif 'update_email' in request.form:
+                new_email = request.form.get('email')
+                if new_email:
+                    cur.execute("""
+                        UPDATE chefs 
+                        SET email = %s 
+                        WHERE chef_id = %s
+                    """, (new_email, session['chef_id']))
+                    conn.commit()
+                    flash("E-mailadres succesvol gewijzigd!", "success")
+                    
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Profile update error: {str(e)}")
+        flash("Er is een fout opgetreden bij het bijwerken van je profiel.", "danger")
+    finally:
+        cur.close()
+        conn.close()
+        
+    return render_template('profile.html', chef_naam=chef_naam, chef=chef)
+
 # -----------------------------------------------------------
 # Start de server
 # -----------------------------------------------------------
