@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.png') }}">
     <title>{% block title %}E-chef - MenuEngeneering{% endblock %}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Roboto&display=swap" rel="stylesheet">
@@ -189,6 +190,19 @@
             color: var(--kitchen-highlight);
         }
 
+        .navbar-brand img {
+            height: 40px;
+            width: auto;
+            margin-right: 10px;
+        }
+
+        /* Voor kleinere schermen */
+        @media (max-width: 768px) {
+            .navbar-brand img {
+                height: 30px;
+            }
+        }
+
         @media (max-width: 768px) {
             .container {
                 width: 100%;
@@ -211,7 +225,9 @@
         <header>
             <nav class="navbar navbar-expand-lg navbar-dark bg-dark" aria-label="Main navigation">
                 <div class="container-fluid">
-                    <a class="navbar-brand" href="{{ url_for('home') }}">E-chef</a>
+                    <a class="navbar-brand" href="{{ url_for('home') }}">
+                        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="E-chef logo">
+                    </a>
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                         <span class="navbar-toggler-icon"></span>
                     </button>
