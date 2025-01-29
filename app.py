@@ -114,7 +114,9 @@ def send_reset_email(email, token):
     msg['To'] = email
     msg['Subject'] = "e-Chef Wachtwoord Reset"
     
-    reset_url = url_for('reset_password', token=token, _external=True)
+    # Fix: Verwijder 'auth.' prefix en gebruik de juiste route naam
+    reset_url = url_for('reset_password', token=token, _external=True, _scheme='https')
+    
     body = f"""
     Er is een wachtwoord reset aangevraagd voor je e-Chef account.
     Klik op de onderstaande link om je wachtwoord te resetten:
