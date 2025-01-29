@@ -72,6 +72,26 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT")
 
+# Database configuration
+db_url = os.getenv("JAWSDB_URL")  # Gebruik JawsDB URL
+if db_url:  # Heroku
+    url = urlparse(db_url)
+    DB_CONFIG = {
+        'host': url.hostname,
+        'database': url.path[1:],
+        'user': url.username,
+        'password': url.password,
+        'port': url.port
+    }
+else:  # Local development
+    DB_CONFIG = {
+        'host': os.getenv("DB_HOST"),
+        'database': os.getenv("DB_NAME"),
+        'user': os.getenv("DB_USER"), 
+        'password': os.getenv("DB_PASSWORD"),
+        'port': os.getenv("DB_PORT")
+    }
+
 def get_db_connection():
     """
     Creates a new database connection using the configuration
@@ -81,7 +101,7 @@ def get_db_connection():
         if conn.is_connected():
             return conn
     except Error as e:
-        print(f"Error connecting to the database: {e}")
+        logger.error(f"Error connecting to the database: {e}")
         return None
 
 # Reset wachtwoord configuratie
