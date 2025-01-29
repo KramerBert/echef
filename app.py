@@ -119,7 +119,7 @@ def send_reset_email(email, token):
     msg['To'] = email
     msg['Subject'] = "e-Chef Wachtwoord Reset"
     
-    # Fix: Verwijder 'auth.' prefix en gebruik de juiste route naam
+    # Fix: Use the correct route name without 'auth.' prefix
     reset_url = url_for('reset_password', token=token, _external=True, _scheme='https')
     
     body = f"""
