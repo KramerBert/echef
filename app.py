@@ -928,7 +928,7 @@ def all_dishes():
         return redirect(url_for('home'))
     cur = conn.cursor(dictionary=True)
 
-    # Haal alle gerechten op en bereken de totale ingredient-kostprijs
+    # Aangepaste query om alleen gerechten van de ingelogde chef te tonen
     cur.execute("""
         SELECT d.*, c.naam as chef_naam, 
                (SELECT SUM(di.prijs_totaal) 
@@ -936,10 +936,11 @@ def all_dishes():
                 WHERE di.dish_id = d.dish_id) as totaal_ingredient_prijs
         FROM dishes d
         JOIN chefs c ON d.chef_id = c.chef_id
+        WHERE d.chef_id = %s  /* Voeg deze WHERE clausule toe */
         ORDER BY d.dish_id DESC
-    """)
+    """, (session['chef_id'],))
+    
     alle_gerechten = cur.fetchall()
-
     cur.close()
     conn.close()
 
@@ -969,7 +970,7 @@ def export_dishes():
     cur = conn.cursor(dictionary=True)
 
     try:
-        # Haal de geselecteerde gerechten op
+        # Haal alleen de geselecteerde gerechten van de ingelogde chef op
         format_strings = ','.join(['%s'] * len(selected_dish_ids))
         cur.execute(f"""
             SELECT d.*, c.naam as chef_naam, 
@@ -979,8 +980,9 @@ def export_dishes():
             FROM dishes d
             JOIN chefs c ON d.chef_id = c.chef_id
             WHERE d.dish_id IN ({format_strings})
+            AND d.chef_id = %s  /* Voeg deze AND clausule toe */
             ORDER BY d.categorie
-        """, tuple(selected_dish_ids))
+        """, tuple(selected_dish_ids + [session['chef_id']]))
         selected_dishes = cur.fetchall()
 
         # Maak een Word-document aan
@@ -2146,6 +2148,7 @@ def profile(chef_naam):
 # -----------------------------------------------------------
 if __name__ == '__main__':
     app.run(debug=True)
+```
 
 
 
