@@ -317,3 +317,122 @@ footer {
     align-items: center;
     font-size: 0.9em;
 }
+
+/* Mobile-first responsive design */
+@media screen and (max-width: 768px) {
+    .container {
+        width: 95%;
+        padding: 10px;
+    }
+
+    /* Navigation */
+    nav ul {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    nav ul li {
+        margin-right: 0;
+        width: 100%;
+    }
+
+    nav ul li a button {
+        width: 100%;
+        padding: 15px; /* Larger touch target */
+    }
+
+    /* Tables */
+    .dish-table, 
+    .ingredient-table,
+    .usage-table {
+        display: block;
+        overflow-x: auto;
+    }
+
+    .dish-table th,
+    .dish-table td,
+    .ingredient-table th,
+    .ingredient-table td,
+    .usage-table th,
+    .usage-table td {
+        min-width: 100px;
+        padding: 12px 8px;
+    }
+
+    /* Forms */
+    .edit-ingredient-form,
+    .edit-dish-form {
+        padding: 15px;
+    }
+
+    .ingredient-form {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .ingredient-form select,
+    .ingredient-form input {
+        width: 100%;
+        max-width: none;
+        padding: 12px;
+    }
+
+    /* Search and filters */
+    .search-filter {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .search-filter input,
+    .search-filter select {
+        width: 100%;
+        max-width: none;
+        margin-left: 0;
+    }
+
+    /* Buttons */
+    .btn-action {
+        padding: 12px;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    /* Icons */
+    .allergeen-icons,
+    .dieten-icons {
+        gap: 10px;
+    }
+
+    .allergeen-icon,
+    .dieet-icon {
+        width: 2.5em;
+        height: 2.5em;
+        font-size: 1em;
+    }
+
+    /* Legends */
+    .allergeen-legend,
+    .dieet-legend {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* Price sections */
+    .price-section input {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+}
+
+/* Additional tablet breakpoint */
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+    .container {
+        width: 90%;
+    }
+
+    .ingredient-form {
+        flex-wrap: wrap;
+    }
+}

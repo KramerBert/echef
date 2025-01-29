@@ -5,10 +5,46 @@
     <div class="card-body">
         <img src="{{ url_for('static', filename='images/logo.png') }}" alt="E-chef Logo" class="img-fluid mb-4" style="max-width: 200px;">
         <h1 class="card-title">Welkom bij E-chef</h1>
-        <p class="card-text"><i class="fas fa-utensils"></i> Menu Engeneering | <i class="fas fa-book"></i> Recepten Beheren | <i class="fas fa-calculator"></i> Kostprijsberekeningen</p>
-        <p class="card-text"><i class="fas fa-print"></i> Menukaarten printen | <i class="fas fa-briefcase"></i> Portfolio | <i class="fas fa-book-open"></i> Kookboek Samenstellen</p>
+        <div class="card-text-container">
+            <p class="card-text">
+            <span><i class="fas fa-utensils"></i> Menu Engeneering</span>
+            <span><i class="fas fa-book"></i> Recepten Beheren</span>
+            <span><i class="fas fa-calculator"></i> Kostprijsberekeningen</span>
+            <span><i class="fas fa-print"></i> Menukaarten printen</span>
+            <!-- <span><i class="fas fa-briefcase"></i> Portfolio</span> -->
+            <span><i class="fas fa-book-open"></i> Kookboek Samenstellen</span>
+            </p>
+            <br>
+        </div>
+
+        <style>
+            .card-text span {
+            display: inline-block;
+            margin: 0.5rem;
+            }
+            @media (max-width: 576px) {
+            .card-text span {
+                display: block;
+            }
+            }
+        </style>
         <a href="{{ url_for('register') }}" class="btn btn-info" aria-label="Register"><i class="fas fa-user-plus"></i> Registreren</a>
         <a href="{{ url_for('login') }}" class="btn btn-info" aria-label="Login"><i class="fas fa-sign-in-alt"></i> Inloggen</a>
     </div>
 </div>
+
+<style>
+.card-text-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .card-text-container {
+        flex-direction: column;
+    }
+}
+</style>
 {% endblock %}
