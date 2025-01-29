@@ -1338,7 +1338,7 @@ def delete_ingredient(chef_naam, ingredient_id):
 # -----------------------------------------------------------
 @app.route('/export_dish/<chef_naam>/<dish_id>', methods=['POST'])
 def export_dish(chef_naam, dish_id):
-    if 'chef_id' not in session:
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
 
@@ -1675,6 +1675,10 @@ def haccp_dashboard(chef_naam):
 
 @app.route('/dashboard/<chef_naam>/haccp/new_checklist', methods=['GET', 'POST'])
 def new_haccp_checklist(chef_naam):
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('login'))
+
     if request.method == 'POST':
         naam = request.form.get('naam')
         frequentie = request.form.get('frequentie')
@@ -2038,24 +2042,7 @@ def delete_haccp_checklist(chef_naam, checklist_id):
 # -----------------------------------------------------------
 # Start de server
 # -----------------------------------------------------------
-
-if __name__ == '____main__':
-    app.run(debug=True)
-
-# -----------------------------------------------------------
-# Start de server
-# -----------------------------------------------------------
 if __name__ == '__main__':
     app.run(debug=True)
 
-# -----------------------------------------------------------
-# Start de server
-# -----------------------------------------------------------
-if __name__ == '__main__':
-    app.run(debug=True)
 
-# -----------------------------------------------------------
-# Start de server
-# -----------------------------------------------------------
-if __name__ == '__main__':
-    app.run(debug=True)

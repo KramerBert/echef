@@ -15,10 +15,10 @@
                     <i class="fas fa-book"></i> E-chef Werkinstructie
                 </a>
                 <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}" class="btn btn-secondary p-3 btn-action" aria-label="Manage ingredients">
-                    <i class="fas fa-carrot"></i> Ingrediënten Beheren
+                    <i class="fas fa-carrot"></i> Ingrediënten beheren
                 </a>
                 <a href="{{ url_for('manage_dishes', chef_naam=chef_naam) }}" class="btn btn-secondary p-3 btn-action" aria-label="Create new dish">
-                    <i class="fas fa-utensils"></i> Nieuw Gerecht Opvoeren
+                    <i class="fas fa-utensils"></i> Nieuw rerecht opvoeren
                 </a>
                 <a href="{{ url_for('all_dishes') }}" class="btn btn-secondary p-3 btn-action" aria-label="Manage dishes">
                     <i class="fas fa-list"></i> Gerechten beheren
@@ -27,12 +27,12 @@
                     <i class="fas fa-clipboard-check"></i> HACCP automatiseren
                 </a>
                 <a href="{{ url_for('manage_orderlist') }}" class="btn btn-secondary p-3 btn-action" aria-label="Order list">
-                    <i class="fas fa-clipboard-list"></i> Bestellijst Samenstellen
+                    <i class="fas fa-clipboard-list"></i> Bestellijst samenstellen
                 </a>
                 <form method="POST" action="{{ url_for('export_cookbook') }}" class="btn-action" aria-label="Export cookbook form">
                     <input type="hidden" name="exportForm" value="1">
                     <button type="submit" class="btn btn-secondary p-3 w-100" aria-label="Export to cookbook">
-                        <i class="fas fa-file-export"></i> Exporteer je Kookboek
+                        <i class="fas fa-file-export"></i> Exporteer je kookboek
                     </button>
                 </form>
             </div>
