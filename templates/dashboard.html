@@ -11,34 +11,28 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex flex-wrap gap-3" role="group" aria-label="Primary dashboard actions">
-                <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}" class="btn btn-secondary p-3" style="width: 30%" aria-label="Manage ingredients">
+                <a href="{{ url_for('instructions') }}" class="btn btn-secondary p-3 btn-action" aria-label="Instructions">
+                    <i class="fas fa-book"></i> E-chef Werkinstructie
+                </a>
+                <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}" class="btn btn-secondary p-3 btn-action" aria-label="Manage ingredients">
                     <i class="fas fa-carrot"></i> Ingrediënten Beheren
                 </a>
-                <a href="{{ url_for('manage_dishes', chef_naam=chef_naam) }}" class="btn btn-secondary p-3" style="width: 30%" aria-label="Create new dish">
-                    <i class="fas fa-utensils"></i> Nieuw Gerecht Samenstellen
+                <a href="{{ url_for('manage_dishes', chef_naam=chef_naam) }}" class="btn btn-secondary p-3 btn-action" aria-label="Create new dish">
+                    <i class="fas fa-utensils"></i> Nieuw Gerecht Opvoeren
                 </a>
-                <a href="{{ url_for('all_dishes') }}" class="btn btn-secondary p-3" style="width: 30%" aria-label="Manage dishes">
+                <a href="{{ url_for('all_dishes') }}" class="btn btn-secondary p-3 btn-action" aria-label="Manage dishes">
                     <i class="fas fa-list"></i> Gerechten beheren
                 </a>
-            </div>
-        </div>
-    </div>
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex flex-wrap gap-3" role="group" aria-label="Secondary dashboard actions">
-                <a href="{{ url_for('haccp_dashboard', chef_naam=chef_naam) }}" class="btn btn-secondary p-3" style="width: 30%" aria-label="HACCP Dashboard">
-                    <i class="fas fa-clipboard-check"></i> HACCP
+                <a href="{{ url_for('haccp_dashboard', chef_naam=chef_naam) }}" class="btn btn-secondary p-3 btn-action" aria-label="HACCP Dashboard">
+                    <i class="fas fa-clipboard-check"></i> HACCP automatiseren
                 </a>
-                <a href="{{ url_for('manage_orderlist') }}" class="btn btn-secondary p-3" style="width: 30%" aria-label="Order list">
-                    <i class="fas fa-clipboard-list"></i> Bestellijst
+                <a href="{{ url_for('manage_orderlist') }}" class="btn btn-secondary p-3 btn-action" aria-label="Order list">
+                    <i class="fas fa-clipboard-list"></i> Bestellijst Samenstellen
                 </a>
-                <a href="{{ url_for('instructions') }}" class="btn btn-secondary p-3" style="width: 30%" aria-label="Instructions">
-                    <i class="fas fa-book"></i> Werkinstructie
-                </a>
-                <form method="POST" action="{{ url_for('export_cookbook') }}" style="width: 30%" aria-label="Export cookbook form">
+                <form method="POST" action="{{ url_for('export_cookbook') }}" class="btn-action" aria-label="Export cookbook form">
                     <input type="hidden" name="exportForm" value="1">
                     <button type="submit" class="btn btn-secondary p-3 w-100" aria-label="Export to cookbook">
-                        <i class="fas fa-file-export"></i> Exporteer Kookboek
+                        <i class="fas fa-file-export"></i> Exporteer je Kookboek
                     </button>
                 </form>
             </div>
@@ -73,6 +67,10 @@
     .dashboard-link:hover {
         background-color: var(--kitchen-highlight);
         color: var(--text-light);
+    }
+
+    .btn-action {
+        width: 30%;
     }
 
     @media (max-width: 768px) {
