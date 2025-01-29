@@ -1451,15 +1451,16 @@ def manage_orderlist():
         return redirect(url_for('home'))
     cur = conn.cursor(dictionary=True)
 
-    # Haal alle gerechten op
+    # Aangepaste query om alleen gerechten van de ingelogde chef te tonen
     cur.execute("""
         SELECT d.*, c.naam as chef_naam
         FROM dishes d
         JOIN chefs c ON d.chef_id = c.chef_id
+        WHERE d.chef_id = %s
         ORDER BY d.naam
-    """)
+    """, (session['chef_id'],))
+    
     alle_gerechten = cur.fetchall()
-
     cur.close()
     conn.close()
 
@@ -2145,5 +2146,7 @@ def profile(chef_naam):
 # -----------------------------------------------------------
 if __name__ == '__main__':
     app.run(debug=True)
+
+
 
 
