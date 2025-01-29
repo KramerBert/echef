@@ -15,6 +15,10 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import csv
 from datetime import datetime, timedelta  # Voeg deze import toe bovenaan bij de andere imports
+import secrets
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import smtplib
 
 load_dotenv()  # Load the values from .env
 
@@ -85,6 +89,152 @@ def get_db_connection():
     except Error as e:
         print(f"Error connecting to the database: {e}")
         return None
+
+# Reset wachtwoord configuratie
+app.config['RESET_TOKEN_EXPIRE_MINUTES'] = 30
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_USE_TLS'] = True
+
+def send_reset_email(email, token):
+    """Stuur een wachtwoord reset email."""
+    msg = MIMEMultipart()
+    msg['From'] = app.config['MAIL_USERNAME']
+    msg['To'] = email
+    msg['Subject'] = "e-Chef Wachtwoord Reset"
+    
+    reset_url = url_for('reset_password', token=token, _external=True)
+    body = f"""
+    Er is een wachtwoord reset aangevraagd voor je e-Chef account.
+    Klik op de onderstaande link om je wachtwoord te resetten:
+    
+    {reset_url}
+    
+    Deze link verloopt over {app.config['RESET_TOKEN_EXPIRE_MINUTES']} minuten.
+    Als je geen reset hebt aangevraagd, kun je deze email negeren.
+    """
+    
+    msg.attach(MIMEText(body, 'plain'))
+    
+    try:
+        server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
+        server.starttls()
+        server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        logger.error(f"Email error: {str(e)}")
+        return False
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        
+        conn = get_db_connection()
+        if conn is None:
+            flash("Database connection error.", "danger")
+            return redirect(url_for('forgot_password'))
+        
+        cur = conn.cursor(dictionary=True)
+        try:
+            # Check of email bestaat
+            cur.execute("SELECT chef_id FROM chefs WHERE email = %s", (email,))
+            chef = cur.fetchone()
+            
+            if chef:
+                # Genereer token en sla op
+                token = secrets.token_urlsafe(32)
+                expires = datetime.now() + timedelta(minutes=app.config['RESET_TOKEN_EXPIRE_MINUTES'])
+                
+                cur.execute("""
+                    INSERT INTO password_resets (chef_id, token, expires_at)
+                    VALUES (%s, %s, %s)
+                """, (chef['chef_id'], token, expires))
+                conn.commit()
+                
+                # Stuur reset email
+                if send_reset_email(email, token):
+                    flash("Check je email voor de wachtwoord reset link.", "success")
+                else:
+                    flash("Er is een fout opgetreden bij het verzenden van de email.", "danger")
+            else:
+                # Voorkom email enumeration door altijd succes te tonen
+                flash("Check je email voor de wachtwoord reset link.", "success")
+                
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"Password reset error: {str(e)}")
+            flash("Er is een fout opgetreden.", "danger")
+        finally:
+            cur.close()
+            conn.close()
+            
+        return redirect(url_for('login'))
+        
+    return render_template('forgot_password.html')
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('login'))
+    
+    cur = conn.cursor(dictionary=True)
+    
+    try:
+        # Valideer token
+        cur.execute("""
+            SELECT r.*, c.email 
+            FROM password_resets r
+            JOIN chefs c ON r.chef_id = c.chef_id
+            WHERE r.token = %s AND r.used = 0 
+            AND r.expires_at > NOW()
+        """, (token,))
+        reset = cur.fetchone()
+        
+        if not reset:
+            flash("Ongeldige of verlopen reset link.", "danger")
+            return redirect(url_for('login'))
+        
+        if request.method == 'POST':
+            password = request.form.get('password')
+            confirm = request.form.get('confirm_password')
+            
+            if not password or password != confirm:
+                flash("Wachtwoorden komen niet overeen.", "danger")
+                return render_template('reset_password.html', token=token)
+            
+            # Update wachtwoord en markeer token als gebruikt
+            hashed_pw = generate_password_hash(password, method='pbkdf2:sha256')
+            cur.execute("""
+                UPDATE chefs SET wachtwoord = %s 
+                WHERE chef_id = %s
+            """, (hashed_pw, reset['chef_id']))
+            
+            cur.execute("""
+                UPDATE password_resets SET used = 1
+                WHERE token = %s
+            """, (token,))
+            
+            conn.commit()
+            flash("Je wachtwoord is succesvol gewijzigd!", "success")
+            return redirect(url_for('login'))
+            
+        return render_template('reset_password.html', token=token)
+        
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Password reset error: {str(e)}")
+        flash("Er is een fout opgetreden.", "danger")
+        return redirect(url_for('login'))
+    finally:
+        cur.close()
+        conn.close()
 
 # -----------------------------------------------------------
 #  Homepage (index)
