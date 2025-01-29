@@ -188,6 +188,22 @@
         .navbar-dark .navbar-nav .nav-link:hover {
             color: var(--kitchen-highlight);
         }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 100%;
+                padding: 10px;
+            }
+            .navbar-nav {
+                text-align: center;
+            }
+            .navbar-nav .nav-item {
+                margin-bottom: 10px;
+            }
+            .navbar-nav .nav-link {
+                padding: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -209,11 +225,6 @@
                             <li class="nav-item">
                                 <a class="nav-link {% if request.path == url_for('about') %}active{% endif %}" href="{{ url_for('about') }}">
                                     <i class="fas fa-info-circle"></i> Over e-Chef
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.path == url_for('instructions') %}active{% endif %}" href="{{ url_for('instructions') }}">
-                                    <i class="fas fa-book"></i> Werkinstructie
                                 </a>
                             </li>
                             {% if session.get('chef_id') %}
