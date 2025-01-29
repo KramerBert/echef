@@ -4,11 +4,12 @@ from .database import (get_db_cursor, PREPARED_STATEMENTS, Error,
 import time
 from datetime import datetime
 from .models import db, Gerecht, Ingredient, GerechtIngredient
-from .app import app, get_db_connection  # Import app and get_db_connection to use its configuration
-import smtplib  # Import smtplib for sending emails
-from email.mime.text import MIMEText  # Import MIMEText for email content
-from email.mime.multipart import MIMEMultipart  # Import MIMEMultipart for email content
-from werkzeug.security import generate_password_hash  # Import generate_password_hash for password hashing
+from .app import app, get_db_connection  # Import app en get_db_connection om de configuratie te gebruiken
+import smtplib  # Import smtplib voor het verzenden van e-mails
+from email.mime.text import MIMEText  # Import MIMEText voor e-mailinhoud
+from email.mime.multipart import MIMEMultipart  # Import MIMEMultipart voor e-mailinhoud
+from werkzeug.security import generate_password_hash  # Import generate_password_hash voor wachtwoord hashing
+import os  # Import os voor toegang tot omgevingsvariabelen
 
 # Blueprint maken
 routes = Blueprint('routes', __name__)
@@ -123,8 +124,9 @@ def send_reset_email(email, token):
     msg['To'] = email
     msg['Subject'] = "e-Chef Wachtwoord Reset"
     
-    # Fix: Use the correct route name without 'auth.' prefix
-    reset_url = url_for('routes.reset_password', token=token, _external=True, _scheme='https')
+    # Gebruik HTTPS in productie en HTTP in lokale ontwikkeling
+    scheme = 'https' if os.getenv('FLASK_ENV') == 'production' else 'http'
+    reset_url = url_for('reset_password', token=token, _external=True, _scheme=scheme)
     
     body = f"""
     Er is een wachtwoord reset aangevraagd voor je e-Chef account.
@@ -149,61 +151,7 @@ def send_reset_email(email, token):
         app.logger.error(f"Email error: {str(e)}")
         return False
 
-@routes.route('/reset-password/<token>', methods=['GET', 'POST'])
-def reset_password(token):
-    conn = get_db_connection()
-    if conn is None:
-        flash("Database connection error.", "danger")
-        return redirect(url_for('routes.login'))
-    
-    cur = conn.cursor(dictionary=True)
-    
-    try:
-        # Valideer token
-        cur.execute("""
-            SELECT r.*, c.email 
-            FROM password_resets r
-            JOIN chefs c ON r.chef_id = c.chef_id
-            WHERE r.token = %s AND r.used = 0 
-            AND r.expires_at > NOW()
-        """, (token,))
-        reset = cur.fetchone()
-        
-        if not reset:
-            flash("Ongeldige of verlopen reset link.", "danger")
-            return redirect(url_for('routes.login'))
-        
-        if request.method == 'POST':
-            password = request.form.get('password')
-            confirm = request.form.get('confirm_password')
-            
-            if not password or password != confirm:
-                flash("Wachtwoorden komen niet overeen.", "danger")
-                return render_template('reset_password.html', token=token)
-            
-            # Update wachtwoord en markeer token als gebruikt
-            hashed_pw = generate_password_hash(password, method='pbkdf2:sha256')
-            cur.execute("""
-                UPDATE chefs SET wachtwoord = %s 
-                WHERE chef_id = %s
-            """, (hashed_pw, reset['chef_id']))
-            
-            cur.execute("""
-                UPDATE password_resets SET used = 1
-                WHERE token = %s
-            """, (token,))
-            
-            conn.commit()
-            flash("Je wachtwoord is succesvol gewijzigd!", "success")
-            return redirect(url_for('routes.login'))
-            
-        return render_template('reset_password.html', token=token)
-        
-    except Exception as e:
-        conn.rollback()
-        app.logger.error(f"Password reset error: {str(e)}")
-        flash("Er is een fout opgetreden.", "danger")
-        return redirect(url_for('routes.login'))
-    finally:
-        cur.close()
-        conn.close()
+# Verwijder de reset_password route uit de Blueprint
+# @routes.route('/reset-password/<token>', methods=['GET', 'POST'])
+# def reset_password(token):
+#     # ...existing code...

@@ -119,8 +119,9 @@ def send_reset_email(email, token):
     msg['To'] = email
     msg['Subject'] = "e-Chef Wachtwoord Reset"
     
-    # Fix: Use the correct route name without 'auth.' prefix
-    reset_url = url_for('reset_password', token=token, _external=True, _scheme='https')
+    # Gebruik HTTPS in productie en HTTP in lokale ontwikkeling
+    scheme = 'https' if os.getenv('FLASK_ENV') == 'production' else 'http'
+    reset_url = url_for('reset_password', token=token, _external=True, _scheme=scheme)
     
     body = f"""
     Er is een wachtwoord reset aangevraagd voor je e-Chef account.
@@ -1960,7 +1961,6 @@ def update_haccp_meting(chef_naam, meting_id):
             cursor.execute("""
                 UPDATE haccp_metingen 
                 SET waarde = %s, 
-                    actie_ondernomen = %s
                 WHERE meting_id = %s 
                 AND chef_id = %s
             """, (waarde_float, actie_ondernomen, meting_id, session['chef_id']))
