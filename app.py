@@ -972,17 +972,19 @@ def export_dishes():
     try:
         # Haal alleen de geselecteerde gerechten van de ingelogde chef op
         format_strings = ','.join(['%s'] * len(selected_dish_ids))
-        cur.execute(f"""
+        query = """
             SELECT d.*, c.naam as chef_naam, 
                    (SELECT SUM(di.prijs_totaal) 
                     FROM dish_ingredients di 
                     WHERE di.dish_id = d.dish_id) as totaal_ingredient_prijs
             FROM dishes d
             JOIN chefs c ON d.chef_id = c.chef_id
-            WHERE d.dish_id IN ({format_strings})
-            AND d.chef_id = %s  /* Voeg deze AND clausule toe */
+            WHERE d.dish_id IN ({}) AND d.chef_id = %s
             ORDER BY d.categorie
-        """, tuple(selected_dish_ids + [session['chef_id']]))
+        """.format(format_strings)
+        
+        params = selected_dish_ids + [session['chef_id']]
+        cur.execute(query, tuple(params))
         selected_dishes = cur.fetchall()
 
         # Maak een Word-document aan
@@ -2148,7 +2150,6 @@ def profile(chef_naam):
 # -----------------------------------------------------------
 if __name__ == '__main__':
     app.run(debug=True)
-```
 
 
 
