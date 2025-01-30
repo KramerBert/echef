@@ -19,6 +19,8 @@ import secrets
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import smtplib
+import requests
+from itsdangerous import URLSafeTimedSerializer
 
 load_dotenv()  # Load the values from .env
 
@@ -41,6 +43,10 @@ app.config.update(
 if app.debug:
     app.config['TEMPLATES_AUTO_RELOAD'] = True
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
+app.config['RECAPTCHA_SITE_KEY'] = os.getenv('RECAPTCHA_SITE_KEY')
+app.config['RECAPTCHA_SECRET_KEY'] = os.getenv('RECAPTCHA_SECRET_KEY')
+app.config['SECURITY_PASSWORD_SALT'] = os.getenv('SECURITY_PASSWORD_SALT')
 
 # Improved error handlers
 @app.errorhandler(404)
@@ -131,6 +137,67 @@ def send_reset_email(email, token):
     
     Deze link verloopt over {app.config['RESET_TOKEN_EXPIRE_MINUTES']} minuten.
     Als je geen reset hebt aangevraagd, kun je deze email negeren.
+    """
+    
+    msg.attach(MIMEText(body, 'plain'))
+    
+    try:
+        server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
+        server.starttls()
+        server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        logger.error(f"Email error: {str(e)}")
+        return False
+
+def verify_recaptcha(response):
+    """Verify the reCAPTCHA response"""
+    verify_url = 'https://www.google.com/recaptcha/api/siteverify'
+    payload = {
+        'secret': app.config['RECAPTCHA_SECRET_KEY'],
+        'response': response
+    }
+    response = requests.post(verify_url, data=payload)
+    return response.json()['success']
+
+def generate_confirmation_token(email):
+    """Generate email confirmation token"""
+    serializer = URLSafeTimedSerializer(app.secret_key)
+    return serializer.dumps(email, salt=app.config['SECURITY_PASSWORD_SALT'])
+
+def confirm_token(token, expiration=3600):
+    """Verify email confirmation token"""
+    serializer = URLSafeTimedSerializer(app.secret_key)
+    try:
+        email = serializer.loads(
+            token,
+            salt=app.config['SECURITY_PASSWORD_SALT'],
+            max_age=expiration
+        )
+        return email
+    except:
+        return False
+
+def send_confirmation_email(email, token):
+    """Send confirmation email"""
+    msg = MIMEMultipart()
+    msg['From'] = app.config['MAIL_USERNAME']
+    msg['To'] = email
+    msg['Subject'] = "e-Chef Email Verificatie"
+    
+    scheme = 'https' if os.getenv('FLASK_ENV') == 'production' else 'http'
+    verify_url = url_for('verify_email', token=token, _external=True, _scheme=scheme)
+    
+    body = f"""
+    Welkom bij e-Chef!
+    
+    Klik op de onderstaande link om je email adres te verifiëren:
+    
+    {verify_url}
+    
+    Deze link verloopt over 1 uur.
     """
     
     msg.attach(MIMEText(body, 'plain'))
@@ -287,10 +354,16 @@ def register():
             naam = secure_filename(request.form['naam'])
             email = request.form['email']
             wachtwoord = request.form['wachtwoord']
+            recaptcha_response = request.form.get('g-recaptcha-response')
 
-            if not all([naam, email, wachtwoord]):
+            if not all([naam, email, wachtwoord, recaptcha_response]):
                 flash("Vul alle velden in.", "danger")
-                return render_template('register.html')
+                return render_template('register.html', recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
+
+            # Verify reCAPTCHA
+            if not verify_recaptcha(recaptcha_response):
+                flash("reCAPTCHA verificatie mislukt. Probeer opnieuw.", "danger")
+                return render_template('register.html', recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
 
             hashed_pw = generate_password_hash(wachtwoord, method='pbkdf2:sha256')
 
@@ -300,13 +373,21 @@ def register():
 
             cur = conn.cursor()
             try:
+                # Add email_verified column with default value 0
                 cur.execute("""
-                    INSERT INTO chefs (naam, email, wachtwoord)
-                    VALUES (%s, %s, %s)
+                    INSERT INTO chefs (naam, email, wachtwoord, email_verified)
+                    VALUES (%s, %s, %s, 0)
                 """, (naam, email, hashed_pw))
                 conn.commit()
-                flash("Registratie succesvol! Log nu in.", "success")
-                return redirect(url_for('login'))
+
+                # Generate confirmation token and send email
+                token = generate_confirmation_token(email)
+                if send_confirmation_email(email, token):
+                    flash("Registratie succesvol! Check je email om je account te verifiëren.", "success")
+                    return redirect(url_for('verify_email'))
+                else:
+                    flash("Registratie succesvol, maar er ging iets mis met het versturen van de verificatie email. Neem contact op met support.", "warning")
+
             except Exception as e:
                 conn.rollback()
                 logger.error(f'Registration error: {str(e)}')
@@ -314,11 +395,42 @@ def register():
             finally:
                 cur.close()
                 conn.close()
+
         except Exception as e:
             logger.error(f'Registration error: {str(e)}')
             flash("Er is een fout opgetreden.", "danger")
 
-    return render_template('register.html')
+    return render_template('register.html', recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
+
+@app.route('/verify-email/<token>')
+def verify_email(token=None):
+    if token:
+        email = confirm_token(token)
+        if email:
+            conn = get_db_connection()
+            if conn:
+                cur = conn.cursor()
+                try:
+                    cur.execute("""
+                        UPDATE chefs 
+                        SET email_verified = 1 
+                        WHERE email = %s
+                    """, (email,))
+                    conn.commit()
+                    flash("Email adres geverifieerd! Je kunt nu inloggen.", "success")
+                    return render_template('verify_email.html', verified=True)
+                except Exception as e:
+                    conn.rollback()
+                    logger.error(f'Email verification error: {str(e)}')
+                    flash("Er is een fout opgetreden bij het verifiëren van je email.", "danger")
+                finally:
+                    cur.close()
+                    conn.close()
+        else:
+            flash("Ongeldige of verlopen verificatie link.", "danger")
+            return render_template('verify_email.html', verified=False)
+    
+    return render_template('verify_email.html', verified=False)
 
 # -----------------------------------------------------------
 #  Inloggen
@@ -344,6 +456,10 @@ def login():
                 chef = cur.fetchone()
                 
                 if chef and check_password_hash(chef['wachtwoord'], wachtwoord):
+                    if not chef['email_verified']:
+                        flash("Verifieer eerst je email adres voordat je inlogt.", "warning")
+                        return redirect(url_for('verify_email'))
+                    
                     session.clear()
                     session['chef_id'] = chef['chef_id']
                     session['chef_naam'] = chef['naam']

@@ -18,6 +18,8 @@
                     <label for="wachtwoord" class="form-label">Wachtwoord</label>
                     <input type="password" class="form-control" id="wachtwoord" name="wachtwoord" required>
                 </div>
+                <!-- Add reCAPTCHA widget before submit button -->
+                <div class="g-recaptcha mb-3" data-sitekey="{{ recaptcha_site_key }}"></div>
                 <button type="submit" class="btn btn-primary" aria-label="Register">
                     <i class="fas fa-user-plus"></i> Registreren
                 </button>
@@ -25,4 +27,5 @@
         </div>
     </div>
 </div>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 {% endblock %}
