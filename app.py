@@ -21,6 +21,11 @@ from email.mime.multipart import MIMEMultipart
 import smtplib
 import requests
 from itsdangerous import URLSafeTimedSerializer
+from flask_wtf.csrf import CSRFProtect
+from flask_session import Session
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField
+from wtforms.validators import DataRequired, Email, EqualTo
 
 load_dotenv()  # Load the values from .env
 
@@ -29,7 +34,17 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)
-app.secret_key = os.getenv("SECRET_KEY")  # Needed for session management
+app.secret_key = os.getenv("SECRET_KEY")  # Needed for session management and CSRF protection
+
+# Initialize CSRF protection
+csrf = CSRFProtect(app)
+
+# Configure session management
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_PERMANENT'] = False
+app.config['SESSION_USE_SIGNER'] = True
+app.config['SESSION_KEY_PREFIX'] = 'echef_'
+Session(app)
 
 # Configure session handling
 app.config.update(
@@ -38,15 +53,6 @@ app.config.update(
     SESSION_COOKIE_SAMESITE='Lax',
     PERMANENT_SESSION_LIFETIME=1800  # 30 minutes
 )
-
-# Configure debug mode properly
-if app.debug:
-    app.config['TEMPLATES_AUTO_RELOAD'] = True
-    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
-
-app.config['RECAPTCHA_SITE_KEY'] = os.getenv('RECAPTCHA_SITE_KEY')
-app.config['RECAPTCHA_SECRET_KEY'] = os.getenv('RECAPTCHA_SECRET_KEY')
-app.config['SECURITY_PASSWORD_SALT'] = os.getenv('SECURITY_PASSWORD_SALT')
 
 # Improved error handlers
 @app.errorhandler(404)
@@ -213,6 +219,18 @@ def send_confirmation_email(email, token):
         logger.error(f"Email error: {str(e)}")
         return False
 
+class RegistrationForm(FlaskForm):
+    naam = StringField('Naam', validators=[DataRequired()])
+    email = StringField('E-mail', validators=[DataRequired(), Email()])
+    wachtwoord = PasswordField('Wachtwoord', validators=[DataRequired()])
+    confirm_password = PasswordField('Bevestig Wachtwoord', validators=[DataRequired(), EqualTo('wachtwoord')])
+    submit = SubmitField('Registreren')
+
+class LoginForm(FlaskForm):
+    email = StringField('E-mail', validators=[DataRequired(), Email()])
+    wachtwoord = PasswordField('Wachtwoord', validators=[DataRequired()])
+    submit = SubmitField('Inloggen')
+
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
@@ -349,21 +367,22 @@ def privacy():
 # -----------------------------------------------------------
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    if request.method == 'POST':
+    form = RegistrationForm()
+    if (form.validate_on_submit()):
         try:
-            naam = secure_filename(request.form['naam'])
-            email = request.form['email']
-            wachtwoord = request.form['wachtwoord']
+            naam = secure_filename(form.naam.data)
+            email = form.email.data
+            wachtwoord = form.wachtwoord.data
             recaptcha_response = request.form.get('g-recaptcha-response')
 
             if not all([naam, email, wachtwoord, recaptcha_response]):
                 flash("Vul alle velden in.", "danger")
-                return render_template('register.html', recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
+                return render_template('register.html', form=form, recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
 
             # Verify reCAPTCHA
             if not verify_recaptcha(recaptcha_response):
                 flash("reCAPTCHA verificatie mislukt. Probeer opnieuw.", "danger")
-                return render_template('register.html', recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
+                return render_template('register.html', form=form, recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
 
             hashed_pw = generate_password_hash(wachtwoord, method='pbkdf2:sha256')
 
@@ -400,7 +419,7 @@ def register():
             logger.error(f'Registration error: {str(e)}')
             flash("Er is een fout opgetreden.", "danger")
 
-    return render_template('register.html', recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
+    return render_template('register.html', form=form, recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
 
 @app.route('/verify-email', methods=['GET'])
 @app.route('/verify-email/<token>', methods=['GET'])
@@ -442,14 +461,15 @@ def verify_email(token=None):
 # -----------------------------------------------------------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
+    form = LoginForm()
+    if form.validate_on_submit():
         try:
-            email = request.form['email']
-            wachtwoord = request.form['wachtwoord']
+            email = form.email.data
+            wachtwoord = form.wachtwoord.data
 
             if not email or not wachtwoord:
                 flash("Vul alle velden in.", "danger")
-                return render_template('login.html')
+                return render_template('login.html', form=form)
 
             conn = get_db_connection()
             if conn is None:
@@ -480,7 +500,7 @@ def login():
             logger.error(f'Login error: {str(e)}')
             flash("Er is een fout opgetreden bij inloggen.", "danger")
 
-    return render_template('login.html')
+    return render_template('login.html', form=form)
 
 # -----------------------------------------------------------
 #  Uitloggen
@@ -500,12 +520,31 @@ def dashboard(chef_naam):
     Eenvoudig dashboard waarop de chef na inloggen belandt.
     We controleren of de ingelogde chef overeenkomt met de URL.
     """
-    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
-        flash("Ongeldige sessie. Log opnieuw in.", "warning")
-        return redirect(url_for('login'))
+    try:
+        app.logger.info(f"Accessing dashboard for chef: {chef_naam}")
+        app.logger.info(f"Session data: {session}")
+        
+        if 'chef_id' not in session:
+            app.logger.warning("No chef_id in session")
+            flash("Je bent niet ingelogd.", "warning")
+            return redirect(url_for('login'))
+            
+        if 'chef_naam' not in session:
+            app.logger.warning("No chef_naam in session")
+            flash("Sessie verlopen.", "warning")
+            return redirect(url_for('login'))
+            
+        if session['chef_naam'] != chef_naam:
+            app.logger.warning(f"Chef naam mismatch: {session['chef_naam']} != {chef_naam}")
+            flash("Ongeldige sessie. Log opnieuw in.", "warning")
+            return redirect(url_for('login'))
 
-    # Eventueel stats/overzicht tonen
-    return render_template('dashboard.html', chef_naam=chef_naam)
+        return render_template('dashboard.html', chef_naam=chef_naam)
+        
+    except Exception as e:
+        app.logger.error(f"Dashboard error: {str(e)}")
+        flash("Er is een fout opgetreden.", "danger")
+        return redirect(url_for('login'))
 
 # -----------------------------------------------------------
 #  Ingrediënten Beheren
@@ -2090,7 +2129,7 @@ def update_haccp_meting(chef_naam, meting_id):
             # Update de meting (zonder explicit updated_at)
             cursor.execute("""
                 UPDATE haccp_metingen 
-                SET waarde = %s, 
+                SET waarde = %s, actie_ondernomen = %s
                 WHERE meting_id = %s 
                 AND chef_id = %s
             """, (waarde_float, actie_ondernomen, meting_id, session['chef_id']))

@@ -6,23 +6,25 @@
         <div class="col-md-6">
             <h2>Registreren</h2>
             <form method="POST" action="{{ url_for('register') }}" aria-label="Registration form">
+                {{ form.hidden_tag() }}  <!-- Gebruik alleen deze regel voor CSRF bescherming -->
                 <div class="mb-3">
-                    <label for="naam" class="form-label">Naam</label>
-                    <input type="text" class="form-control" id="naam" name="naam" required>
+                    {{ form.naam.label(class="form-label") }}
+                    {{ form.naam(class="form-control") }}
                 </div>
                 <div class="mb-3">
-                    <label for="email" class="form-label">E-mail</label>
-                    <input type="email" class="form-control" id="email" name="email" required>
+                    {{ form.email.label(class="form-label") }}
+                    {{ form.email(class="form-control") }}
                 </div>
                 <div class="mb-3">
-                    <label for="wachtwoord" class="form-label">Wachtwoord</label>
-                    <input type="password" class="form-control" id="wachtwoord" name="wachtwoord" required>
+                    {{ form.wachtwoord.label(class="form-label") }}
+                    {{ form.wachtwoord(class="form-control") }}
                 </div>
-                <!-- Add reCAPTCHA widget before submit button -->
+                <div class="mb-3">
+                    {{ form.confirm_password.label(class="form-label") }}
+                    {{ form.confirm_password(class="form-control") }}
+                </div>
                 <div class="g-recaptcha mb-3" data-sitekey="{{ recaptcha_site_key }}"></div>
-                <button type="submit" class="btn btn-primary" aria-label="Register">
-                    <i class="fas fa-user-plus"></i> Registreren
-                </button>
+                {{ form.submit(class="btn btn-primary") }}
             </form>
         </div>
     </div>
