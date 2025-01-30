@@ -384,7 +384,7 @@ def register():
                 token = generate_confirmation_token(email)
                 if send_confirmation_email(email, token):
                     flash("Registratie succesvol! Check je email om je account te verifiëren.", "success")
-                    return redirect(url_for('verify_email'))
+                    return redirect(url_for('verify_email'))  # Zonder token parameter
                 else:
                     flash("Registratie succesvol, maar er ging iets mis met het versturen van de verificatie email. Neem contact op met support.", "warning")
 
@@ -402,33 +402,38 @@ def register():
 
     return render_template('register.html', recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
 
-@app.route('/verify-email/<token>')
+@app.route('/verify-email', methods=['GET'])
+@app.route('/verify-email/<token>', methods=['GET'])
 def verify_email(token=None):
-    if token:
-        email = confirm_token(token)
-        if email:
-            conn = get_db_connection()
-            if conn:
-                cur = conn.cursor()
-                try:
-                    cur.execute("""
-                        UPDATE chefs 
-                        SET email_verified = 1 
-                        WHERE email = %s
-                    """, (email,))
-                    conn.commit()
-                    flash("Email adres geverifieerd! Je kunt nu inloggen.", "success")
-                    return render_template('verify_email.html', verified=True)
-                except Exception as e:
-                    conn.rollback()
-                    logger.error(f'Email verification error: {str(e)}')
-                    flash("Er is een fout opgetreden bij het verifiëren van je email.", "danger")
-                finally:
-                    cur.close()
-                    conn.close()
-        else:
-            flash("Ongeldige of verlopen verificatie link.", "danger")
-            return render_template('verify_email.html', verified=False)
+    """Handle both the initial verification page and token verification"""
+    if not token:
+        # Show the initial verification page
+        return render_template('verify_email.html', verified=False)
+        
+    # Handle token verification
+    email = confirm_token(token)
+    if email:
+        conn = get_db_connection()
+        if conn:
+            cur = conn.cursor()
+            try:
+                cur.execute("""
+                    UPDATE chefs 
+                    SET email_verified = 1 
+                    WHERE email = %s
+                """, (email,))
+                conn.commit()
+                flash("Email adres geverifieerd! Je kunt nu inloggen.", "success")
+                return render_template('verify_email.html', verified=True)
+            except Exception as e:
+                conn.rollback()
+                logger.error(f'Email verification error: {str(e)}')
+                flash("Er is een fout opgetreden bij het verifiëren van je email.", "danger")
+            finally:
+                cur.close()
+                conn.close()
+    else:
+        flash("Ongeldige of verlopen verificatie link.", "danger")
     
     return render_template('verify_email.html', verified=False)
 
