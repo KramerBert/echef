@@ -1,9 +1,62 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
+    <!-- SEO Meta Tags 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="E-chef - Professionele menu engineering software voor kookprofessionals. Beheer recepten, bereken kostprijzen en creëer menukaarten.">
+    <meta name="keywords" content="menu engineering, recepten beheer, kostprijsberekening, restaurant software, horeca software, keuken management, HACCP">
+    <meta name="author" content="E-chef">
+    -->
+
+    <!-- Open Graph Meta Tags voor sociale media 
+    <meta property="og:title" content="E-chef - Menu Engineering Software">
+    <meta property="og:description" content="Professionele menu engineering software voor kookprofessionals. Beheer recepten, bereken kostprijzen en creëer menukaarten.">
+    <meta property="og:image" content="{{ url_for('static', filename='images/logo.png', _external=True) }}">
+    <meta property="og:url" content="https://www.e-chef.nl{{ request.path }}">
+    <meta property="og:type" content="website">
+    -->
+
+    <!-- Twitter Card Meta Tags 
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="E-chef - Menu Engineering Software">
+    <meta name="twitter:description" content="Professionele menu engineering software voor restaurants.">
+    <meta name="twitter:image" content="{{ url_for('static', filename='images/logo.png', _external=True) }}">
+    -->
+
+    <!-- Canonical URL om duplicate content te voorkomen 
+    <link rel="canonical" href="https://www.e-chef.nl{{ request.path }}">
+    -->
+
+    <!-- Schema.org markup voor Google 
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "E-chef",
+        "applicationCategory": "Restaurant Management Software",
+        "description": "Menu engineering software voor professionele restaurants",
+        "operatingSystem": "Web-based",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "EUR"
+        },
+        "features": [
+            "Menu Engineering",
+            "Receptenbeheer",
+            "Kostprijsberekening",
+            "Menukaarten genereren",
+            "HACCP management"
+        ],
+        "url": "https://www.e-chef.nl"
+    }
+    </script>
+    -->
+
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.png') }}">
+    <meta name="application-name" content="E-chef">
+    <meta name="msapplication-TileImage" content="https://www.e-chef.nl{{ url_for('static', filename='images/logo.png') }}">
     <title>{% block title %}E-chef - MenuEngeneering{% endblock %}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Roboto&display=swap" rel="stylesheet">
@@ -54,7 +107,7 @@
             padding: 5px;
             margin-bottom: 5px;
             background-color: var(--kitchen-steel);
-            color: var(--text-dark);
+            color: var (--text-dark);
             border-color: var(--kitchen-blue);
         }
         footer {
@@ -185,7 +238,7 @@
         }
 
         .navbar-dark .navbar-nav .nav-link {
-            color: var(--text-light);
+            color: var (--text-light);
         }
 
         .navbar-dark .navbar-nav .nav-link:hover {
@@ -294,7 +347,10 @@
         <footer class="mt-4" aria-label="Footer">
             <hr>
             <p class="text-start flex-fill">&copy; 2025 E-chef - Menu Engeneering</p>
-            <a href="{{ url_for('privacy') }}" class="text-end flex-fill">AVG privacy verklaring</a>
+            <div class="text-end flex-fill">
+                <a href="{{ url_for('privacy') }}" class="me-3">AVG privacy verklaring</a>
+                <a href="{{ url_for('terms') }}">Algemene Voorwaarden</a>
+            </div>
         </footer>
         <p class="wcag-indicator text-start flex-fill"></p>
         <a href="https://www.w3.org/WAI/WCAG2A-Conformance" class="wcag-indicator text-end flex-fill">WCAG Compliant</a>

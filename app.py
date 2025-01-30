@@ -2267,6 +2267,13 @@ def profile(chef_naam):
     return render_template('profile.html', chef_naam=chef_naam, chef=chef)
 
 # -----------------------------------------------------------
+#  Terms and Conditions
+# -----------------------------------------------------------
+@app.route('/terms')
+def terms():
+    return render_template('terms.html')
+
+# -----------------------------------------------------------
 # Start de server
 # -----------------------------------------------------------
 if __name__ == '__main__':

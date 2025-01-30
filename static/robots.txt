@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /login
+Disallow: /register
+Disallow: /profile
+
+Sitemap: https://www.e-chef.nl/sitemap.xml
