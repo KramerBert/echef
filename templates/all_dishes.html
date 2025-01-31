@@ -34,14 +34,18 @@
                 <a href="{{ url_for('edit_dish', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" 
                    class="btn-action btn-edit" title="Bewerken"><i class="fas fa-edit"></i></a>
                 
-                <form method="POST" action="{{ url_for('export_dish', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" style="display: inline;">
-                    <button type="submit" class="btn-action btn-export" title="Export Recept"><i class="fas fa-file-export"></i></button>
+                <form method="POST" action="{{ url_for('export_dish', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-action btn-export" title="Export Recept">
+                        <i class="fas fa-file-export"></i>
+                    </button>
                 </form>
                 
-                <form method="POST" action="{{ url_for('delete_dish', dish_id=gerecht.dish_id) }}" 
-                      style="display: inline;" 
-                      onsubmit="return confirm('Weet u zeker dat u dit gerecht wilt verwijderen?');">
-                    <button type="submit" class="btn-action btn-delete" title="Verwijderen"><i class="fas fa-trash-alt"></i></button>
+                <form method="POST" action="{{ url_for('delete_dish', dish_id=gerecht.dish_id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-action btn-delete" title="Verwijderen">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
                 </form>
             </div>
         </td>
@@ -54,8 +58,16 @@
 </table>
 
 <form id="exportForm" method="POST" action="{{ url_for('export_dishes') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button type="submit" class="btn-action" style="margin-top: 20px;" title="Print Menukaart">
         <i class="fas fa-print"></i> Selecteer gerechten en print menukaart
+    </button>
+</form>
+
+<form method="POST" action="{{ url_for('export_cookbook') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-success">
+        <i class="fas fa-book"></i> Exporteer als Kookboek
     </button>
 </form>
 

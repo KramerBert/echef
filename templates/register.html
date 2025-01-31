@@ -6,17 +6,19 @@
         <div class="col-md-6">
             <h2>Registreren</h2>
             <form method="POST" action="{{ url_for('register') }}" aria-label="Registration form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {{ form.hidden_tag() }}
                 <div class="mb-3">
                     <label for="naam" class="form-label">Naam</label>
-                    <input type="text" class="form-control" id="naam" name="naam" required>
+                    {{ form.naam(class="form-control", id="naam") }}
                 </div>
                 <div class="mb-3">
                     <label for="email" class="form-label">E-mail</label>
-                    <input type="email" class="form-control" id="email" name="email" required>
+                    {{ form.email(class="form-control", id="email") }}
                 </div>
                 <div class="mb-3">
                     <label for="wachtwoord" class="form-label">Wachtwoord</label>
-                    <input type="password" class="form-control" id="wachtwoord" name="wachtwoord" required>
+                    {{ form.wachtwoord(class="form-control", id="wachtwoord") }}
                 </div>
                 <!-- Add reCAPTCHA widget before submit button -->
                 <div class="g-recaptcha mb-3" data-sitekey="{{ recaptcha_site_key }}"></div>

@@ -7,5 +7,5 @@ def create_app():
     
     # Register the routes Blueprint
     app.register_blueprint(routes, url_prefix='/')
-    
+
     return app

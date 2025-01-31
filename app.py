@@ -21,15 +21,35 @@ from email.mime.multipart import MIMEMultipart
 import smtplib
 import requests
 from itsdangerous import URLSafeTimedSerializer
+from flask_wtf.csrf import CSRFProtect
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField
+from wtforms.validators import DataRequired, Email
 
 load_dotenv()  # Load the values from .env
 
 # Configure logging
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)  # Set logging level to DEBUG
+
+# Create console handler and set level to debug
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+# Create formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# Add formatter to ch
+ch.setFormatter(formatter)
+
+# Add ch to logger
+logger.addHandler(ch)
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)
 app.secret_key = os.getenv("SECRET_KEY")  # Needed for session management
+
+csrf = CSRFProtect(app)
 
 # Configure session handling
 app.config.update(
@@ -51,7 +71,8 @@ app.config['SECURITY_PASSWORD_SALT'] = os.getenv('SECURITY_PASSWORD_SALT')
 # Improved error handlers
 @app.errorhandler(404)
 def not_found_error(error):
-    logger.error(f'Page not found: {request.url}')
+    if "manifest.json" not in request.url:
+        logger.error(f'Page not found: {request.url}')
     return render_template('error.html', error=error), 404
 
 @app.errorhandler(500)
@@ -347,23 +368,29 @@ def privacy():
 # -----------------------------------------------------------
 #  Registreren
 # -----------------------------------------------------------
+class RegisterForm(FlaskForm):
+    naam = StringField('Naam', validators=[DataRequired()])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    wachtwoord = PasswordField('Wachtwoord', validators=[DataRequired()])
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    if request.method == 'POST':
+    form = RegisterForm()
+    if form.validate_on_submit():
         try:
-            naam = secure_filename(request.form['naam'])
-            email = request.form['email']
-            wachtwoord = request.form['wachtwoord']
+            naam = secure_filename(form.naam.data)
+            email = form.email.data
+            wachtwoord = form.wachtwoord.data
             recaptcha_response = request.form.get('g-recaptcha-response')
 
-            if not all([naam, email, wachtwoord, recaptcha_response]):
-                flash("Vul alle velden in.", "danger")
-                return render_template('register.html', recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
+            if not recaptcha_response:
+                flash("Vul de reCAPTCHA in.", "danger")
+                return render_template('register.html', form=form, recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
 
             # Verify reCAPTCHA
             if not verify_recaptcha(recaptcha_response):
                 flash("reCAPTCHA verificatie mislukt. Probeer opnieuw.", "danger")
-                return render_template('register.html', recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
+                return render_template('register.html', form=form, recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
 
             hashed_pw = generate_password_hash(wachtwoord, method='pbkdf2:sha256')
 
@@ -400,7 +427,7 @@ def register():
             logger.error(f'Registration error: {str(e)}')
             flash("Er is een fout opgetreden.", "danger")
 
-    return render_template('register.html', recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
+    return render_template('register.html', form=form, recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
 
 @app.route('/verify-email', methods=['GET'])
 @app.route('/verify-email/<token>', methods=['GET'])
@@ -409,7 +436,7 @@ def verify_email(token=None):
     if not token:
         # Show the initial verification page
         return render_template('verify_email.html', verified=False)
-        
+    
     # Handle token verification
     email = confirm_token(token)
     if email:
@@ -440,16 +467,17 @@ def verify_email(token=None):
 # -----------------------------------------------------------
 #  Inloggen
 # -----------------------------------------------------------
+class LoginForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    wachtwoord = PasswordField('Wachtwoord', validators=[DataRequired()])
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
+    form = LoginForm()
+    if (form.validate_on_submit()):
         try:
-            email = request.form['email']
-            wachtwoord = request.form['wachtwoord']
-
-            if not email or not wachtwoord:
-                flash("Vul alle velden in.", "danger")
-                return render_template('login.html')
+            email = form.email.data
+            wachtwoord = form.wachtwoord.data
 
             conn = get_db_connection()
             if conn is None:
@@ -480,7 +508,7 @@ def login():
             logger.error(f'Login error: {str(e)}')
             flash("Er is een fout opgetreden bij inloggen.", "danger")
 
-    return render_template('login.html')
+    return render_template('login.html', form=form)
 
 # -----------------------------------------------------------
 #  Uitloggen
@@ -512,6 +540,7 @@ def dashboard(chef_naam):
 # -----------------------------------------------------------
 @app.route('/dashboard/<chef_naam>/ingredients', methods=['GET', 'POST'])
 def manage_ingredients(chef_naam):
+    form = FlaskForm()  # Add this line for CSRF validation
     if 'chef_id' not in session or session['chef_naam'] != chef_naam:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
@@ -520,70 +549,82 @@ def manage_ingredients(chef_naam):
     if conn is None:
         flash("Database connection error.", "danger")
         return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
+    
     cur = conn.cursor(dictionary=True)
 
-    if request.method == 'POST':
-        naam = request.form.get('naam')
-        categorie = request.form.get('categorie')
-        eenheid = request.form.get('eenheid')
-        prijs_per_eenheid = request.form.get('prijs_per_eenheid')
+    try:
+        if request.method == 'POST':
+            if not form.validate_on_submit():  # Add CSRF validation
+                flash("Ongeldige CSRF-token. Probeer het opnieuw.", "danger")
+                return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
 
-        # Check for duplicate ingredient
+            naam = request.form.get('naam')
+            categorie = request.form.get('categorie')
+            eenheid = request.form.get('eenheid')
+            prijs_per_eenheid = request.form.get('prijs_per_eenheid')
+
+            # Check for duplicate ingredient
+            cur.execute("""
+                SELECT * FROM ingredients 
+                WHERE chef_id = %s AND naam = %s AND categorie = %s
+            """, (session['chef_id'], naam, categorie))
+            existing_ingredient = cur.fetchone()
+
+            if existing_ingredient:
+                flash("Ingrediënt bestaat al.", "danger")
+            else:
+                try:
+                    cur.execute("""
+                        INSERT INTO ingredients (chef_id, naam, categorie, eenheid, prijs_per_eenheid)
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, (session['chef_id'], naam, categorie, eenheid, prijs_per_eenheid))
+                    conn.commit()
+                    flash("Ingrediënt toegevoegd!", "success")
+                except Exception as e:
+                    conn.rollback()
+                    flash(f"Fout bij toevoegen ingrediënt: {str(e)}", "danger")
+
+        # Haal unieke categorieën op
         cur.execute("""
-            SELECT * FROM ingredients 
-            WHERE chef_id = %s AND naam = %s AND categorie = %s
-        """, (session['chef_id'], naam, categorie))
-        existing_ingredient = cur.fetchone()
-
-        if existing_ingredient:
-            flash("Ingrediënt bestaat al.", "danger")
-        else:
-            try:
-                # Voeg hier chef_id toe, zodat het ingrediënt exclusief is voor de ingelogde chef
-                cur.execute("""
-                    INSERT INTO ingredients (chef_id, naam, categorie, eenheid, prijs_per_eenheid)
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (session['chef_id'], naam, categorie, eenheid, prijs_per_eenheid))
-                conn.commit()
-                flash("Ingrediënt toegevoegd!", "success")
-            except Exception as e:
-                conn.rollback()
-                flash(f"Fout bij toevoegen ingrediënt: {str(e)}", "danger")
-
-    # Haal unieke categorieën op
-    cur.execute("""
-        SELECT DISTINCT categorie 
-        FROM ingredients 
-        WHERE chef_id = %s
-    """, (session['chef_id'],))
-    unieke_categorieen = [row['categorie'] for row in cur.fetchall()]
-
-    # Haal alleen de ingrediënten van de ingelogde chef op
-    filter_categorie = request.args.get('filter_categorie')
-    if filter_categorie:
-        cur.execute("""
-            SELECT * 
-            FROM ingredients 
-            WHERE chef_id = %s AND categorie = %s
-            ORDER BY ingredient_id DESC
-        """, (session['chef_id'], filter_categorie))
-    else:
-        cur.execute("""
-            SELECT * 
+            SELECT DISTINCT categorie 
             FROM ingredients 
             WHERE chef_id = %s
-            ORDER BY ingredient_id DESC
         """, (session['chef_id'],))
-    alle_ingredienten = cur.fetchall()
+        unieke_categorieen = [row['categorie'] for row in cur.fetchall()]
 
-    cur.close()
-    conn.close()
+        # Haal alle ingrediënten op
+        filter_categorie = request.args.get('filter_categorie')
+        if filter_categorie:
+            cur.execute("""
+                SELECT * 
+                FROM ingredients 
+                WHERE chef_id = %s AND categorie = %s
+                ORDER BY ingredient_id DESC
+            """, (session['chef_id'], filter_categorie))
+        else:
+            cur.execute("""
+                SELECT * 
+                FROM ingredients 
+                WHERE chef_id = %s
+                ORDER BY ingredient_id DESC
+            """, (session['chef_id'],))
+        alle_ingredienten = cur.fetchall()
 
-    return render_template('manage_ingredients.html',
+        return render_template('manage_ingredients.html',
                            chef_naam=chef_naam,
                            ingredienten=alle_ingredienten,
                            unieke_categorieen=unieke_categorieen,
-                           filter_categorie=filter_categorie)
+                           filter_categorie=filter_categorie,
+                           form=form)
+
+    except Exception as e:
+        logger.error(f'Error in manage_ingredients: {str(e)}')
+        flash("Er is een fout opgetreden.", "danger")
+        return redirect(url_for('dashboard', chef_naam=chef_naam))
+    
+    finally:
+        cur.close()
+        conn.close()
 
 @app.route('/dashboard/<chef_naam>/ingredients/bulk_add', methods=['POST'])
 def bulk_add_ingredients(chef_naam):
@@ -658,6 +699,7 @@ def download_csv_template():
 # -----------------------------------------------------------
 @app.route('/dashboard/<chef_naam>/dishes', methods=['GET', 'POST'])
 def manage_dishes(chef_naam):
+    form = FlaskForm()  # Add this line for CSRF validation
     if 'chef_id' not in session or session['chef_naam'] != chef_naam:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
@@ -666,51 +708,69 @@ def manage_dishes(chef_naam):
     if conn is None:
         flash("Database connection error.", "danger")
         return redirect(url_for('manage_dishes', chef_naam=chef_naam))
+    
     cur = conn.cursor(dictionary=True)
 
-    # Opslaan van nieuw gerecht
-    if request.method == 'POST' and 'gerechtForm' in request.form:
-        naam = request.form.get('naam')
-        beschrijving = request.form.get('beschrijving')
-        gerecht_categorie = request.form.get('gerecht_categorie')
-        bereidingswijze = request.form.get('bereidingswijze')
+    try:
+        if request.method == 'POST' and 'gerechtForm' in request.form:
+            if not form.validate_on_submit():  # Add CSRF validation
+                flash("Ongeldige CSRF-token. Probeer het opnieuw.", "danger")
+                return redirect(url_for('manage_dishes', chef_naam=chef_naam))
 
-        try:
-            cur.execute("""
-                INSERT INTO dishes (chef_id, naam, beschrijving, categorie, bereidingswijze)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (session['chef_id'], naam, beschrijving, gerecht_categorie, bereidingswijze))
-            new_dish_id = cur.lastrowid
-            conn.commit()
-            flash("Gerecht toegevoegd!", "success")
-            return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=new_dish_id))
-        except Exception as e:
-            conn.rollback()
-            flash(f"Fout bij toevoegen gerecht: {str(e)}", "danger")
+            naam = request.form.get('naam')
+            beschrijving = request.form.get('beschrijving')
+            gerecht_categorie = request.form.get('gerecht_categorie')
+            bereidingswijze = request.form.get('bereidingswijze')
 
-    # Haal alle gerechten van deze chef op
-    cur.execute("""
-        SELECT * FROM dishes
-        WHERE chef_id = %s
-        ORDER BY dish_id DESC
-    """, (session['chef_id'],))
-    alle_gerechten = cur.fetchall()
+            try:
+                cur.execute("""
+                    INSERT INTO dishes (chef_id, naam, beschrijving, categorie, bereidingswijze)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (session['chef_id'], naam, beschrijving, gerecht_categorie, bereidingswijze))
+                new_dish_id = cur.lastrowid
+                conn.commit()
+                flash("Gerecht toegevoegd!", "success")
+                return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=new_dish_id))
+            except Exception as e:
+                conn.rollback()
+                flash(f"Fout bij toevoegen gerecht: {str(e)}", "danger")
 
-    cur.close()
-    conn.close()
+        # Haal alle gerechten van deze chef op
+        cur.execute("""
+            SELECT * FROM dishes
+            WHERE chef_id = %s
+            ORDER BY dish_id DESC
+        """, (session['chef_id'],))
+        alle_gerechten = cur.fetchall()
 
-    return render_template('manage_dishes.html',
-                           chef_naam=chef_naam,
-                           gerechten=alle_gerechten)
+        return render_template('manage_dishes.html',
+                             chef_naam=chef_naam,
+                             gerechten=alle_gerechten,
+                             form=form)  # Add form to template context
+
+    except Exception as e:
+        logger.error(f'Error in manage_dishes: {str(e)}')
+        flash("Er is een fout opgetreden.", "danger")
+        return redirect(url_for('dashboard', chef_naam=chef_naam))
+    
+    finally:
+        cur.close()
+        conn.close()
 
 # -----------------------------------------------------------
 #  Gerecht Bewerken (Ingrediënten toevoegen)
 # -----------------------------------------------------------
 @app.route('/dashboard/<chef_naam>/dishes/<int:dish_id>', methods=['GET', 'POST'])
 def edit_dish(chef_naam, dish_id):
+    form = FlaskForm()  # Add this line for CSRF validation
     if 'chef_id' not in session or session['chef_naam'] != chef_naam:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        if not form.validate_on_submit():  # Add CSRF validation
+            flash("Ongeldige CSRF-token. Probeer het opnieuw.", "danger")
+            return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
 
     conn = get_db_connection()
     if conn is None:
@@ -887,11 +947,17 @@ def edit_dish(chef_naam, dish_id):
         alle_allergenen=alle_allergenen,
         gerecht_allergenen=gerecht_allergenen,
         alle_dieten=alle_dieten,
-        gerecht_dieten=gerecht_dieten
+        gerecht_dieten=gerecht_dieten,
+        form=form  # Add form to template context
     )
 
 @app.route('/chef/<chef_naam>/dish/<int:dish_id>/ingredient/<int:ingredient_id>/update', methods=['POST'])
 def update_dish_ingredient(chef_naam, dish_id, ingredient_id):
+    form = FlaskForm()
+    if not form.validate_on_submit():
+        flash("Ongeldige CSRF-token.", "danger")
+        return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
+
     if 'chef_id' not in session or session['chef_naam'] != chef_naam:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
@@ -939,6 +1005,11 @@ def update_dish_ingredient(chef_naam, dish_id, ingredient_id):
 
 @app.route('/chef/<chef_naam>/dish/<int:dish_id>/ingredient/<int:ingredient_id>/remove', methods=['POST'])
 def remove_dish_ingredient(chef_naam, dish_id, ingredient_id):
+    form = FlaskForm()
+    if not form.validate_on_submit():
+        flash("Ongeldige CSRF-token.", "danger")
+        return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
+
     if 'chef_id' not in session or session['chef_naam'] != chef_naam:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
@@ -969,6 +1040,11 @@ def remove_dish_ingredient(chef_naam, dish_id, ingredient_id):
 
 @app.route('/dashboard/<chef_naam>/dish/<int:dish_id>/allergenen', methods=['POST'])
 def update_dish_allergenen(chef_naam, dish_id):
+    form = FlaskForm()  # Add CSRF validation
+    if not form.validate_on_submit():
+        flash("Ongeldige CSRF-token. Probeer het opnieuw.", "danger")
+        return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
+
     if 'chef_id' not in session or session['chef_naam'] != chef_naam:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
@@ -1001,6 +1077,11 @@ def update_dish_allergenen(chef_naam, dish_id):
 
 @app.route('/dashboard/<chef_naam>/dish/<int:dish_id>/dieten', methods=['POST'])
 def update_dish_dieten(chef_naam, dish_id):
+    form = FlaskForm()  # Add CSRF validation
+    if not form.validate_on_submit():
+        flash("Ongeldige CSRF-token. Probeer het opnieuw.", "danger")
+        return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
+
     if 'chef_id' not in session or session['chef_naam'] != chef_naam:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
@@ -1065,13 +1146,20 @@ def all_dishes():
     cur.close()
     conn.close()
 
-    return render_template('all_dishes.html', gerechten=alle_gerechten)
+    return render_template('all_dishes.html', 
+                         gerechten=alle_gerechten,
+                         form=FlaskForm())  # Add form to template context
 
 # -----------------------------------------------------------
 #  Export Dishes to MS Word
 # -----------------------------------------------------------
 @app.route('/export_dishes', methods=['POST'])
 def export_dishes():
+    form = FlaskForm()
+    if not form.validate_on_submit():
+        flash("Ongeldige CSRF-token.", "danger")
+        return redirect(url_for('all_dishes'))
+
     """
     Export selected dishes to a Microsoft Word document.
     """
@@ -1197,7 +1285,12 @@ def export_cookbook():
     """
     Export all dishes to a Microsoft Word document as a cookbook.
     """
-    if 'chef_id' not in session:
+    form = FlaskForm()  # Add CSRF validation
+    if not form.validate_on_submit():
+        flash("Ongeldige CSRF-token. Probeer het opnieuw.", "danger")
+        return redirect(url_for('all_dishes'))
+
+    if 'chef_id' not in session:  # Add this check
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
 
@@ -1333,6 +1426,11 @@ def export_cookbook():
 # -----------------------------------------------------------
 @app.route('/delete_dish/<int:dish_id>', methods=['POST'])
 def delete_dish(dish_id):
+    form = FlaskForm()
+    if not form.validate_on_submit():
+        flash("Ongeldige CSRF-token.", "danger")
+        return redirect(url_for('all_dishes'))
+
     """
     Verwijder een gerecht.
     """
@@ -1428,7 +1526,7 @@ def edit_ingredient(chef_naam, ingredient_id):
     cur.close()
     conn.close()
 
-    return render_template('edit_ingredient.html', chef_naam=chef_naam, ingredient=ingredient)
+    return render_template('edit_ingredient.html', chef_naam=chef_naam, ingredient=ingredient, form=FlaskForm())
 
 # -----------------------------------------------------------
 #  Ingrediënt Verwijderen
@@ -1463,6 +1561,11 @@ def delete_ingredient(chef_naam, ingredient_id):
 # -----------------------------------------------------------
 @app.route('/export_dish/<chef_naam>/<dish_id>', methods=['POST'])
 def export_dish(chef_naam, dish_id):
+    form = FlaskForm()
+    if not form.validate_on_submit():
+        flash("Ongeldige CSRF-token.", "danger") 
+        return redirect(url_for('all_dishes'))
+
     if 'chef_id' not in session or session['chef_naam'] != chef_naam:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
@@ -1593,6 +1696,11 @@ def manage_orderlist():
 
 @app.route('/export_orderlist', methods=['POST'])
 def export_orderlist():
+    form = FlaskForm()  # Add CSRF validation
+    if not form.validate_on_submit():
+        flash("Ongeldige CSRF-token. Probeer het opnieuw.", "danger")
+        return redirect(url_for('manage_orderlist'))
+
     if 'chef_id' not in session:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
@@ -1843,7 +1951,7 @@ def new_haccp_checklist(chef_naam):
             
         return redirect(url_for('haccp_dashboard', chef_naam=chef_naam))
         
-    return render_template('haccp/new_checklist.html', chef_naam=chef_naam)
+    return render_template('haccp/new_checklist.html', chef_naam=chef_naam, form=FlaskForm())
 
 @app.route('/dashboard/<chef_naam>/haccp/checklist/<int:checklist_id>/fill', methods=['GET', 'POST'])
 def fill_haccp_checklist(chef_naam, checklist_id):
@@ -2033,8 +2141,6 @@ def export_haccp_report(metingen, start_date, end_date, compliance):
         else:
             row_cells[4].text = '⚠ Afwijking'
         
-        row_cells[5].text = meting['actie_ondernomen'] or '-'
-
     # Exporteer document
     buffer = io.BytesIO()
     doc.save(buffer)
@@ -2169,6 +2275,11 @@ def delete_haccp_checklist(chef_naam, checklist_id):
 
 @app.route('/dashboard/<chef_naam>/delete_account', methods=['POST'])
 def delete_account(chef_naam):
+    form = FlaskForm()  # Create a form instance for CSRF validation
+    if not form.validate_on_submit():
+        flash("Ongeldige CSRF-token. Probeer het opnieuw.", "danger")
+        return redirect(url_for('profile', chef_naam=chef_naam))
+
     if 'chef_id' not in session or session['chef_naam'] != chef_naam:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
@@ -2209,6 +2320,12 @@ def delete_account(chef_naam):
 
 @app.route('/dashboard/<chef_naam>/profile', methods=['GET', 'POST'])
 def profile(chef_naam):
+    form = FlaskForm()  # Add CSRF validation
+    if request.method == 'POST':
+        if not form.validate_on_submit():
+            flash("Ongeldige CSRF-token. Probeer het opnieuw.", "danger")
+            return redirect(url_for('profile', chef_naam=chef_naam))
+
     if 'chef_id' not in session or session['chef_naam'] != chef_naam:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
@@ -2264,7 +2381,7 @@ def profile(chef_naam):
         cur.close()
         conn.close()
         
-    return render_template('profile.html', chef_naam=chef_naam, chef=chef)
+    return render_template('profile.html', chef_naam=chef_naam, chef=chef, form=form)
 
 # -----------------------------------------------------------
 #  Terms and Conditions

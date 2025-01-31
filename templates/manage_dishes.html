@@ -5,6 +5,7 @@
 
 <div class="create-dish-form">
     <form method="POST" action="{{ url_for('manage_dishes', chef_naam=chef_naam) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="gerechtForm" value="1">
         
         <div class="form-group">

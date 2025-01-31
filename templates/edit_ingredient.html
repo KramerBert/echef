@@ -46,6 +46,7 @@
 </style>
 
 <form method="POST" action="{{ url_for('edit_ingredient', chef_naam=chef_naam, ingredient_id=ingredient.ingredient_id) }}" class="edit-ingredient-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="form-group">
         <label for="naam">Naam ingrediënt:</label><br>
         <input type="text" id="naam" name="naam" value="{{ ingredient.naam }}" class="form-control" required><br><br>

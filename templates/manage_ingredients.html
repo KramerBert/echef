@@ -8,7 +8,7 @@
            placeholder="Zoek ingrediënt..." style="max-width: 300px; display: inline-block;">
     <select id="categoryFilter" class="form-control" style="max-width: 200px; display: inline-block; margin-left: 10px;">
         <option value="">Alle categorieën</option>
-        {% for categorie in unieke_categorieen %}
+        {% for categorie in unieke_categorieen %} 
             <option value="{{ categorie }}">{{ categorie }}</option>
         {% endfor %}
     </select>
@@ -36,6 +36,7 @@
                 <form method="POST" action="{{ url_for('delete_ingredient', chef_naam=chef_naam, ingredient_id=ingredient.ingredient_id) }}" 
                       style="display: inline;" 
                       onsubmit="return confirm('Weet u zeker dat u dit ingrediënt wilt verwijderen?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn-action btn-delete" title="Verwijderen"><i class="fas fa-trash-alt"></i></button>
                 </form>
             </div>
@@ -48,6 +49,7 @@
 <div class="add-ingredient-form" style="margin-top: 20px;">
     <h3>Nieuw Ingrediënt Toevoegen</h3>
     <form method="POST" class="ingredient-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <input type="text" name="naam" placeholder="Naam" required class="form-control">
             <input type="text" name="categorie" placeholder="Categorie" required class="form-control">
@@ -62,6 +64,7 @@
 <div class="csv-import" style="margin-top: 20px;">
     <h3>Bulk Import via CSV</h3>
     <form method="POST" action="{{ url_for('bulk_add_ingredients', chef_naam=chef_naam) }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <input type="file" name="csv_file" accept=".csv" required class="form-control">
         </div>
