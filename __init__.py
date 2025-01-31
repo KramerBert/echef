@@ -12,4 +12,10 @@ def create_app():
     # Register the routes Blueprint
     app.register_blueprint(routes, url_prefix='/')
 
+    # Error handling
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        app.logger.error(f"An error occurred: {e}")
+        return "An internal error occurred.", 500
+
     return app
