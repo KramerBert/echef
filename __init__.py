@@ -4,6 +4,7 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 from .routes import routes  # Add this import statement
+import traceback  # Add this import for detailed error logging
 
 def create_app():
     app = Flask(__name__)
@@ -42,6 +43,7 @@ def create_app():
     @app.errorhandler(Exception)
     def handle_exception(e):
         app.logger.error(f"An error occurred: {e}")
+        app.logger.error(traceback.format_exc())  # Log the stack trace
         return "An internal error occurred.", 500
 
     return app
