@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from .database import (get_db_cursor, PREPARED_STATEMENTS, Error, 
                       get_cached_ingredients, execute_bulk_operation, BULK_STATEMENTS)
 import time
@@ -14,9 +14,15 @@ import os  # Import os voor toegang tot omgevingsvariabelen
 # Blueprint maken
 routes = Blueprint('routes', __name__)
 
-@routes.route('/')
-def home():
-    return render_template('home.html')
+@routes.route('/', methods=['GET'])
+def index():
+    return "Welcome to eChef!"
+
+@routes.route('/submit', methods=['POST'])
+def submit():
+    data = request.get_json()
+    # Process the data...
+    return jsonify({"message": "Data received", "data": data})
 
 @routes.route('/manage_dishes/<chef_naam>', methods=['GET', 'POST'])
 def manage_dishes(chef_naam):
