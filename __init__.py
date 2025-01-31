@@ -30,6 +30,14 @@ def create_app():
         app.logger.error(f"Error registering blueprint: {e}")
         raise
 
+    # Test database connection
+    try:
+        with get_db_connection() as conn:
+            app.logger.info('Database connection established successfully')
+    except Exception as e:
+        app.logger.error(f"Error establishing database connection: {e}")
+        raise
+
     # Error handling
     @app.errorhandler(Exception)
     def handle_exception(e):

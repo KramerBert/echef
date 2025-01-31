@@ -11,6 +11,9 @@ from email.mime.multipart import MIMEMultipart  # Import MIMEMultipart voor e-ma
 from werkzeug.security import generate_password_hash  # Import generate_password_hash voor wachtwoord hashing
 import os  # Import os voor toegang tot omgevingsvariabelen
 
+# Ensure get_db_connection is correctly imported
+from .app import get_db_connection
+
 # Blueprint maken
 routes = Blueprint('routes', __name__)
 
