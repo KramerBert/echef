@@ -23,7 +23,12 @@ def create_app():
         app.logger.info('eChef startup')
 
     # Register the routes Blueprint
-    app.register_blueprint(routes, url_prefix='/')
+    try:
+        app.register_blueprint(routes, url_prefix='/')
+        app.logger.info('Blueprint registered successfully')
+    except Exception as e:
+        app.logger.error(f"Error registering blueprint: {e}")
+        raise
 
     # Error handling
     @app.errorhandler(Exception)
