@@ -1,8 +1,10 @@
+import os
 import mysql.connector
 from mysql.connector import Error, pooling
 from contextlib import contextmanager
 from functools import lru_cache
 import time
+from urllib.parse import urlparse
 
 dbconfig = {
     "host": "localhost",
@@ -18,11 +20,35 @@ connection_pool = mysql.connector.pooling.MySQLConnectionPool(
 )
 
 def get_db_connection():
+    """Creates a new database connection using environment variables"""
     try:
-        return connection_pool.get_connection()
+        # Check for JawsDB URL (Heroku)
+        db_url = os.getenv("JAWSDB_URL")
+        
+        if db_url:  # Production/Heroku
+            url = urlparse(db_url)
+            config = {
+                'host': url.hostname,
+                'database': url.path[1:],
+                'user': url.username,
+                'password': url.password,
+                'port': url.port
+            }
+        else:  # Local development
+            config = {
+                'host': os.getenv("DB_HOST"),
+                'database': os.getenv("DB_NAME"),
+                'user': os.getenv("DB_USER"),
+                'password': os.getenv("DB_PASSWORD"),
+                'port': os.getenv("DB_PORT")
+            }
+        
+        conn = mysql.connector.connect(**config)
+        if conn.is_connected():
+            return conn
+            
     except Error as e:
-        print(f"Error connecting to MySQL Database: {e}")
-        return None
+        raise Exception(f"Database connection failed: {str(e)}")
 
 @contextmanager
 def get_db_cursor(dictionary=True):
