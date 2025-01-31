@@ -33,18 +33,17 @@
             <div class="auth-form">
                 <h2>Inloggen</h2>
                 <form method="POST" action="{{ url_for('login') }}" aria-label="Login form">
+                    {{ form.hidden_tag() }}  <!-- Gebruik alleen deze regel voor CSRF bescherming -->
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
-                        <label for="email" class="form-label">E-mail</label>
-                        <input type="email" class="form-control" id="email" name="email" required>
+                        {{ form.email.label(class="form-label") }}
+                        {{ form.email(class="form-control") }}
                     </div>
                     <div class="mb-3">
-                        <label for="wachtwoord" class="form-label">Wachtwoord</label>
-                        <input type="password" class="form-control" id="wachtwoord" name="wachtwoord" required>
+                        {{ form.wachtwoord.label(class="form-label") }}
+                        {{ form.wachtwoord(class="form-control") }}
                     </div>
-                    <button type="submit" class="btn btn-primary" aria-label="Login">
-                        <i class="fas fa-sign-in-alt"></i> Inloggen
-                    </button>
+                    {{ form.submit(class="btn btn-primary") }}
                     <div class="text-center mt-3">
                         <a href="{{ url_for('forgot_password') }}">Wachtwoord vergeten?</a>
                     </div>
