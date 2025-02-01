@@ -8,13 +8,55 @@ import smtplib  # Import smtplib voor het verzenden van e-mails
 from email.mime.text import MIMEText  # Import MIMEText voor e-mailinhoud
 from email.mime.multipart import MIMEMultipart  # Import MIMEMultipart voor e-mailinhoud
 from werkzeug.security import generate_password_hash  # Import generate_password_hash voor wachtwoord hashing
+from werkzeug.utils import secure_filename  # Import secure_filename voor veilige bestandsnamen
 import os  # Import os voor toegang tot omgevingsvariabelen
+from .forms import RegisterForm, LoginForm, NewForm  # Ensure forms are imported
+import requests  # Import the requests module
+from itsdangerous import URLSafeTimedSerializer  # Import URLSafeTimedSerializer for token generation
 
 # Ensure get_db_connection is correctly imported
 from .database import get_db_connection
 
 # Blueprint maken
 routes = Blueprint('routes', __name__)
+
+def generate_confirmation_token(email):
+    """Generate email confirmation token"""
+    serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    return serializer.dumps(email, salt=current_app.config['SECURITY_PASSWORD_SALT'])
+
+def send_confirmation_email(email, token):
+    """Send confirmation email"""
+    msg = MIMEMultipart()
+    msg['From'] = current_app.config['MAIL_USERNAME']
+    msg['To'] = email
+    msg['Subject'] = "e-Chef Email Verificatie"
+    
+    scheme = 'https' if os.getenv('FLASK_ENV') == 'production' else 'http'
+    verify_url = url_for('verify_email', token=token, _external=True, _scheme=scheme)
+    
+    body = f"""
+    Welkom bij e-Chef!
+    
+    Klik op de onderstaande link om je email adres te verifiëren:
+    
+    {verify_url}
+    
+    Deze link verloopt over 1 uur.
+    """
+    
+    msg.attach(MIMEText(body, 'plain'))
+    
+    try:
+        server = smtplib.SMTP(current_app.config['MAIL_SERVER'], current_app.config['MAIL_PORT'])
+        server.starttls()
+        server.login(current_app.config['MAIL_USERNAME'], current_app.config['MAIL_PASSWORD'])
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        current_app.logger.error(f"Email error: {str(e)}")
+        return False
 
 @routes.route('/', methods=['GET'])
 def index():
@@ -192,12 +234,12 @@ def register():
 
             if not recaptcha_response:
                 flash("Vul de reCAPTCHA in.", "danger")
-                return render_template('register.html', form=form, recaptcha_site_key=current_app.config['RECAPTCHA_SITE_KEY'])
+                return render_template('register.html', form=form, recaptcha_site_key=current_app.config.get('RECAPTCHA_SITE_KEY'))
 
             # Verify reCAPTCHA
             if not verify_recaptcha(recaptcha_response):
                 flash("reCAPTCHA verificatie mislukt. Probeer opnieuw.", "danger")
-                return render_template('register.html', form=form, recaptcha_site_key=current_app.config['RECAPTCHA_SITE_KEY'])
+                return render_template('register.html', form=form, recaptcha_site_key=current_app.config.get('RECAPTCHA_SITE_KEY'))
 
             hashed_pw = generate_password_hash(wachtwoord, method='pbkdf2:sha256')
 
@@ -233,7 +275,19 @@ def register():
             current_app.logger.error(f'Registration error: {str(e)}')
             flash("Er is een fout opgetreden.", "danger")
 
-    return render_template('register.html', form=form, recaptcha_site_key=current_app.config['RECAPTCHA_SITE_KEY'])
+    return render_template('register.html', form=form, recaptcha_site_key=current_app.config.get('RECAPTCHA_SITE_KEY'))
+
+@routes.route('/specific_route', methods=['GET', 'POST'])
+def specific_route():
+    form = NewForm()
+    if form.validate_on_submit():
+        # Process form data
+        field1 = form.field1.data
+        field2 = form.field2.data
+        # ... do something with the data ...
+        flash('Form submitted successfully!', 'success')
+        return redirect(url_for('specific_route'))
+    return render_template('specific_template.html', form=form)
 
 # Verwijder de reset_password route uit de Blueprint
 # @routes.route('/reset-password/<token>', methods=['GET', 'POST'])

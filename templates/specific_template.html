@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Specific Page</h1>
+    <form method="POST" action="{{ url_for('specific_route') }}">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.field1.label }} {{ form.field1(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.field2.label }} {{ form.field2(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+{% endblock %}

@@ -21,6 +21,10 @@ def create_app():
         app.logger.setLevel(logging.INFO)
         app.logger.info('eChef startup')
 
+    # Ensure reCAPTCHA configuration is loaded
+    app.logger.info(f"reCAPTCHA_SITE_KEY: {app.config.get('RECAPTCHA_SITE_KEY')}")
+    app.logger.info(f"reCAPTCHA_SECRET_KEY: {app.config.get('RECAPTCHA_SECRET_KEY')}")
+
     # Import routes after app is created to avoid circular imports
     from .routes import routes
     app.register_blueprint(routes)
