@@ -6,41 +6,23 @@
         <div class="col-md-6">
             <h2>Registreren</h2>
             <form method="POST" action="{{ url_for('register') }}" aria-label="Registration form">
-<<<<<<< HEAD
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 {{ form.hidden_tag() }}
-                <div class="mb-3">
-                    <label for="naam" class="form-label">Naam</label>
-                    {{ form.naam(class="form-control", id="naam") }}
+                <div class="form-group">
+                    {{ form.naam.label }} {{ form.naam(class="form-control") }}
                 </div>
-                <div class="mb-3">
-                    <label for="email" class="form-label">E-mail</label>
-                    {{ form.email(class="form-control", id="email") }}
+                <div class="form-group">
+                    {{ form.email.label }} {{ form.email(class="form-control") }}
                 </div>
-                <div class="mb-3">
-                    <label for="wachtwoord" class="form-label">Wachtwoord</label>
-                    {{ form.wachtwoord(class="form-control", id="wachtwoord") }}
-=======
-                {{ form.hidden_tag() }}  <!-- Gebruik alleen deze regel voor CSRF bescherming -->
-                <div class="mb-3">
-                    {{ form.naam.label(class="form-label") }}
-                    {{ form.naam(class="form-control") }}
+                <div class="form-group">
+                    {{ form.wachtwoord.label }} {{ form.wachtwoord(class="form-control") }}
                 </div>
-                <div class="mb-3">
-                    {{ form.email.label(class="form-label") }}
-                    {{ form.email(class="form-control") }}
+                <div class="form-group">
+                    {{ form.confirm_password.label }} {{ form.confirm_password(class="form-control") }}
                 </div>
-                <div class="mb-3">
-                    {{ form.wachtwoord.label(class="form-label") }}
-                    {{ form.wachtwoord(class="form-control") }}
+                <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+                <div class="form-group">
+                    {{ form.submit(class="btn btn-primary") }}
                 </div>
-                <div class="mb-3">
-                    {{ form.confirm_password.label(class="form-label") }}
-                    {{ form.confirm_password(class="form-control") }}
->>>>>>> 869cdb8e8fc7f57aa73743e6536e9b86a6433c8a
-                </div>
-                <div class="g-recaptcha mb-3" data-sitekey="{{ recaptcha_site_key }}"></div>
-                {{ form.submit(class="btn btn-primary") }}
             </form>
         </div>
     </div>
