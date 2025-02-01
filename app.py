@@ -25,6 +25,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo
+from flask import send_from_directory
 
 load_dotenv()  # Load the values from .env
 
@@ -2420,6 +2421,13 @@ def profile(chef_naam):
 @app.route('/terms')
 def terms():
     return render_template('terms.html', form=FlaskForm())
+
+# -----------------------------------------------------------
+# Static files route
+# -----------------------------------------------------------
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    return send_from_directory('static', filename)
 
 # -----------------------------------------------------------
 # Start de server

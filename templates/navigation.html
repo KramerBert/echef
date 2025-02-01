@@ -1,22 +1,51 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <!-- ...existing code... -->
-    <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-            <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('dashboard', chef_naam=chef_naam) }}">Dashboard</a>
-            </li>
-            <!-- ...existing code... -->
-        </ul>
-        <div class="d-flex gap-2">
-            <a href="{{ url_for('haccp_dashboard', chef_naam=chef_naam) }}" class="btn btn-outline-light">
-                <i class="fas fa-clipboard-check"></i> HACCP
-            </a>
-            <a href="{{ url_for('recepten', chef_naam=chef_naam) }}" class="btn btn-outline-light">
-                <i class="fas fa-book-open"></i> Gerechten Beheren
-            </a>
-            <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">
-                <i class="fas fa-sign-out-alt"></i> Uitloggen
-            </a>
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{{ url_for('home') }}">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="E-chef logo" class="navbar-logo">
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('dashboard', chef_naam=chef_naam) }}">Dashboard</a>
+                </li>
+                <!-- ...existing code... -->
+            </ul>
+            <div class="d-flex flex-column flex-lg-row gap-2">
+                <a href="{{ url_for('haccp_dashboard', chef_naam=chef_naam) }}" class="btn btn-outline-light">
+                    <i class="fas fa-clipboard-check"></i> HACCP
+                </a>
+                <a href="{{ url_for('recepten', chef_naam=chef_naam) }}" class="btn btn-outline-light">
+                    <i class="fas fa-book-open"></i> Gerechten
+                </a>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">
+                    <i class="fas fa-sign-out-alt"></i> Uitloggen
+                </a>
+            </div>
         </div>
     </div>
 </nav>
+
+<style>
+    .navbar-logo {
+        height: 40px;
+        width: auto;
+    }
+
+    @media (max-width: 768px) {
+        .navbar-logo {
+            height: 30px;
+        }
+        
+        .navbar-collapse {
+            margin-top: 1rem;
+        }
+
+        .btn {
+            width: 100%;
+            margin: 0.25rem 0;
+        }
+    }
+</style>

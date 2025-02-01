@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <!-- SEO Meta Tags 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -58,10 +60,23 @@
     <meta name="application-name" content="E-chef">
     <meta name="msapplication-TileImage" content="https://www.e-chef.nl{{ url_for('static', filename='images/logo.png') }}">
     <title>{% block title %}E-chef - MenuEngeneering{% endblock %}</title>
+    
+    <!-- Update CSS loading order -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Roboto&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Add this to verify CSS loading -->
+    <script>
+        window.addEventListener('load', function() {
+            const styleSheets = document.styleSheets;
+            console.log('Loaded stylesheets:', styleSheets.length);
+            for(let i = 0; i < styleSheets.length; i++) {
+                console.log(styleSheets[i].href);
+            }
+        });
+    </script>
+    
     <!-- Verwijder de manifest.json verwijzing -->
     <!-- <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}"> -->
     <link rel="apple-touch-icon" href="/static/images/icon-192x192.png">
@@ -107,7 +122,7 @@
             border: 1px solid #ccc;
             padding: 5px;
             margin-bottom: 5px;
-            background-color: var(--kitchen-steel);
+            background-color: var (--kitchen-steel);
             color: var (--text-dark);
             border-color: var(--kitchen-blue);
         }
