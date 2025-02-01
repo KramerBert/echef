@@ -290,67 +290,58 @@ def forgot_password():
         
     return render_template('forgot_password.html', form=form)
 
-@app.route('/reset-password/<token>', methods=['GET', 'POST'])
-def reset_password(token):
-    if not token or not isinstance(token, str) or len(token) > 128:
-        flash("Ongeldige reset link.", "danger")
-        return redirect(url_for('login'))
-
+@app.route('/reset-password', methods=['GET', 'POST'])
+def reset_password():
+    token = request.form.get('token') if request.method == 'POST' else request.args.get('token')
     form = ResetPasswordForm()
+
+    # Controleer of de token geldig is
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('login'))
     
+    cur = conn.cursor(dictionary=True)
     try:
-        conn = get_db_connection()
-        if conn is None:
-            raise Exception("Database connection error")
-        
-        cur = conn.cursor(dictionary=True)
-        
-        # Valideer token
         cur.execute("""
             SELECT r.*, c.email 
             FROM password_resets r
             JOIN chefs c ON r.chef_id = c.chef_id
-            WHERE r.token = %s AND r.used = 0 
-            AND r.expires_at > NOW()
+            WHERE r.token = %s AND r.used = 0 AND r.expires_at > NOW()
         """, (token,))
         reset = cur.fetchone()
-        
+
         if not reset:
             flash("Ongeldige of verlopen reset link.", "danger")
             return redirect(url_for('login'))
-        
-        if form.validate_on_submit():
-            # Update wachtwoord en markeer token als gebruikt
+
+        # Als er een POST-verzoek is, valideer en wijzig het wachtwoord
+        if request.method == 'POST' and form.validate_on_submit():
             hashed_pw = generate_password_hash(form.password.data, method='pbkdf2:sha256')
-            
+
+            # Update wachtwoord en markeer token als gebruikt
             cur.execute("""
                 UPDATE chefs SET wachtwoord = %s 
                 WHERE chef_id = %s
             """, (hashed_pw, reset['chef_id']))
-            
             cur.execute("""
                 UPDATE password_resets SET used = 1
                 WHERE token = %s
             """, (token,))
-            
             conn.commit()
             flash("Je wachtwoord is succesvol gewijzigd!", "success")
             return redirect(url_for('login'))
-            
-        return render_template('reset_password.html', 
-                             form=form,
-                             token=token)
 
     except Exception as e:
+        conn.rollback()
         logger.error(f"Password reset error: {str(e)}")
-        if conn:
-            conn.rollback()
         flash("Er is een fout opgetreden.", "danger")
-        return redirect(url_for('login'))
     finally:
-        if conn:
-            cur.close()
-            conn.close()
+        cur.close()
+        conn.close()
+
+    return render_template('reset_password.html', form=form)
+
 
 # -----------------------------------------------------------
 #  Homepage (index)
@@ -360,21 +351,21 @@ def home():
     """
     Toon de homepage, met bijvoorbeeld een link naar inloggen/registreren.
     """
-    return render_template('home.html', form=FlaskForm())  # Zorg voor een home.html template
+    return render_template('home.html')  # Zorg voor een home.html template
 
 # -----------------------------------------------------------
 #  Over e-Chef
 # -----------------------------------------------------------
 @app.route('/about')
 def about():
-    return render_template('about.html', form=FlaskForm())
+    return render_template('about.html')
 
 # -----------------------------------------------------------
 #  AVG Privacy Verklaring
 # -----------------------------------------------------------
 @app.route('/privacy')
 def privacy():
-    return render_template('privacy.html', form=FlaskForm())
+    return render_template('privacy.html')
 
 # -----------------------------------------------------------
 #  Registreren
@@ -1687,7 +1678,7 @@ def export_dish(chef_naam, dish_id):
 # -----------------------------------------------------------
 @app.route('/instructions')
 def instructions():
-    return render_template('instructions.html', form=FlaskForm())
+    return render_template('instructions.html')
 
 # -----------------------------------------------------------
 # Voeg error handler toe voor Werkzeug exceptions
@@ -1723,7 +1714,7 @@ def manage_orderlist():
     cur.close()
     conn.close()
 
-    return render_template('manage_orderlist.html', gerechten=alle_gerechten, form=FlaskForm())
+    return render_template('manage_orderlist.html', gerechten=alle_gerechten)
 
 @app.route('/export_orderlist', methods=['POST'])
 def export_orderlist():
@@ -2419,7 +2410,7 @@ def profile(chef_naam):
 # -----------------------------------------------------------
 @app.route('/terms')
 def terms():
-    return render_template('terms.html', form=FlaskForm())
+    return render_template('terms.html')
 
 # -----------------------------------------------------------
 # Start de server
@@ -2428,5 +2419,4 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug_mode = os.environ.get('FLASK_ENV') == 'development'
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
-
 
