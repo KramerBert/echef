@@ -1,15 +1,13 @@
 from flask import Flask
-from dotenv import load_dotenv
 import os
 import logging
 from logging.handlers import RotatingFileHandler
-from .routes import routes
-from .database import get_db_connection  # Add this import
 import traceback
+from .config import Config
 
 def create_app():
     app = Flask(__name__)
-    load_dotenv()
+    app.config.from_object(Config)
     
     # Configure logging
     if not app.debug:
@@ -20,38 +18,12 @@ def create_app():
             '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
         file_handler.setLevel(logging.INFO)
         app.logger.addHandler(file_handler)
-
         app.logger.setLevel(logging.INFO)
         app.logger.info('eChef startup')
 
-    # Configure database
-    try:
-        app.config['DB_HOST'] = os.getenv('DB_HOST')
-        app.config['DB_NAME'] = os.getenv('DB_NAME')
-        app.config['DB_USER'] = os.getenv('DB_USER')
-        app.config['DB_PASSWORD'] = os.getenv('DB_PASSWORD')
-        app.config['DB_PORT'] = os.getenv('DB_PORT')
-        app.logger.info('Database configuration loaded')
-    except Exception as e:
-        app.logger.error(f"Error loading database configuration: {e}")
-        raise
-
-    # Register the routes Blueprint
-    try:
-        app.register_blueprint(routes, url_prefix='/')
-        app.logger.info('Blueprint registered successfully')
-    except Exception as e:
-        app.logger.error(f"Error registering blueprint: {e}")
-        raise
-
-    # Test database connection
-    try:
-        with get_db_connection() as conn:
-            app.logger.info('Database connection established successfully')
-    except Exception as e:
-        app.logger.error(f"Error establishing database connection: {e}")
-        app.logger.error(traceback.format_exc())
-        raise
+    # Import routes after app is created to avoid circular imports
+    from .routes import routes
+    app.register_blueprint(routes)
 
     # Error handling
     @app.errorhandler(Exception)

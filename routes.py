@@ -1,10 +1,9 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from .database import (get_db_cursor, PREPARED_STATEMENTS, Error, 
                       get_cached_ingredients, execute_bulk_operation, BULK_STATEMENTS)
 import time
 from datetime import datetime
 from .models import db, Gerecht, Ingredient, GerechtIngredient
-from .app import app, get_db_connection  # Import app en get_db_connection om de configuratie te gebruiken
 import smtplib  # Import smtplib voor het verzenden van e-mails
 from email.mime.text import MIMEText  # Import MIMEText voor e-mailinhoud
 from email.mime.multipart import MIMEMultipart  # Import MIMEMultipart voor e-mailinhoud
@@ -12,14 +11,19 @@ from werkzeug.security import generate_password_hash  # Import generate_password
 import os  # Import os voor toegang tot omgevingsvariabelen
 
 # Ensure get_db_connection is correctly imported
-from .app import get_db_connection
+from .database import get_db_connection
 
 # Blueprint maken
 routes = Blueprint('routes', __name__)
 
 @routes.route('/', methods=['GET'])
 def index():
-    return "Welcome to eChef!"
+    try:
+        current_app.logger.info('Accessing index route')
+        return "Welcome to eChef!"
+    except Exception as e:
+        current_app.logger.error(f'Error in index route: {str(e)}')
+        return "An error occurred", 500
 
 @routes.route('/submit', methods=['POST'])
 def submit():
@@ -129,7 +133,7 @@ def bulk_update_ingredients(chef_naam, dish_id):
 def send_reset_email(email, token):
     """Stuur een wachtwoord reset email."""
     msg = MIMEMultipart()
-    msg['From'] = app.config['MAIL_USERNAME']
+    msg['From'] = current_app.config['MAIL_USERNAME']
     msg['To'] = email
     msg['Subject'] = "e-Chef Wachtwoord Reset"
     
@@ -143,22 +147,93 @@ def send_reset_email(email, token):
     
     {reset_url}
     
-    Deze link verloopt over {app.config['RESET_TOKEN_EXPIRE_MINUTES']} minuten.
+    Deze link verloopt over {current_app.config['RESET_TOKEN_EXPIRE_MINUTES']} minuten.
     Als je geen reset hebt aangevraagd, kun je deze email negeren.
     """
     
     msg.attach(MIMEText(body, 'plain'))
     
     try:
-        server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
+        server = smtplib.SMTP(current_app.config['MAIL_SERVER'], current_app.config['MAIL_PORT'])
         server.starttls()
-        server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+        server.login(current_app.config['MAIL_USERNAME'], current_app.config['MAIL_PASSWORD'])
         server.send_message(msg)
         server.quit()
         return True
     except Exception as e:
-        app.logger.error(f"Email error: {str(e)}")
+        current_app.logger.error(f"Email error: {str(e)}")
         return False
+
+def verify_recaptcha(response):
+    """Verify the reCAPTCHA response"""
+    verify_url = 'https://www.google.com/recaptcha/api/siteverify'
+    payload = {
+        'secret': current_app.config['RECAPTCHA_SECRET_KEY'],
+        'response': response
+    }
+    try:
+        response = requests.post(verify_url, data=payload)
+        result = response.json()
+        current_app.logger.info(f"reCAPTCHA verification result: {result}")
+        return result.get('success', False)
+    except Exception as e:
+        current_app.logger.error(f"reCAPTCHA verification error: {str(e)}")
+        return False
+
+@routes.route('/register', methods=['GET', 'POST'])
+def register():
+    form = RegisterForm()
+    if form.validate_on_submit():
+        try:
+            naam = secure_filename(form.naam.data)
+            email = form.email.data
+            wachtwoord = form.wachtwoord.data
+            recaptcha_response = request.form.get('g-recaptcha-response')
+
+            if not recaptcha_response:
+                flash("Vul de reCAPTCHA in.", "danger")
+                return render_template('register.html', form=form, recaptcha_site_key=current_app.config['RECAPTCHA_SITE_KEY'])
+
+            # Verify reCAPTCHA
+            if not verify_recaptcha(recaptcha_response):
+                flash("reCAPTCHA verificatie mislukt. Probeer opnieuw.", "danger")
+                return render_template('register.html', form=form, recaptcha_site_key=current_app.config['RECAPTCHA_SITE_KEY'])
+
+            hashed_pw = generate_password_hash(wachtwoord, method='pbkdf2:sha256')
+
+            conn = get_db_connection()
+            if conn is None:
+                raise Exception("Database connection error")
+
+            cur = conn.cursor()
+            try:
+                cur.execute("""
+                    INSERT INTO chefs (naam, email, wachtwoord, email_verified)
+                    VALUES (%s, %s, %s, 0)
+                """, (naam, email, hashed_pw))
+                conn.commit()
+
+                # Generate confirmation token and send email
+                token = generate_confirmation_token(email)
+                if send_confirmation_email(email, token):
+                    flash("Registratie succesvol! Check je email om je account te verifiëren.", "success")
+                    return redirect(url_for('verify_email'))
+                else:
+                    flash("Registratie succesvol, maar er ging iets mis met het versturen van de verificatie email. Neem contact op met support.", "warning")
+
+            except Exception as e:
+                conn.rollback()
+                current_app.logger.error(f'Registration error: {str(e)}')
+                flash("Er is een fout opgetreden bij registratie.", "danger")
+            finally:
+                cur.close()
+                conn.close()
+
+        except Exception as e:
+            current_app.logger.error(f'Registration error: {str(e)}')
+            flash("Er is een fout opgetreden.", "danger")
+
+    return render_template('register.html', form=form, recaptcha_site_key=current_app.config['RECAPTCHA_SITE_KEY'])
 
 # Verwijder de reset_password route uit de Blueprint
 # @routes.route('/reset-password/<token>', methods=['GET', 'POST'])
