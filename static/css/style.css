@@ -3,16 +3,18 @@
 body {
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start; /* Changed from center for better mobile scrolling */
     min-height: 100vh;
     margin: 0;
     font-family: 'Roboto', Arial, sans-serif;
+    padding: 1rem;
 }
 
 .container {
-    width: 80%;
-    max-width: 800px;
-    padding: 20px;
+    width: 95%;
+    max-width: 1400px;
+    padding: 1rem;
+    margin-top: 1rem;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     background-color: #fff;
     animation: fadeIn 1s ease-in-out;
@@ -320,9 +322,15 @@ footer {
 
 /* Mobile-first responsive design */
 @media screen and (max-width: 768px) {
+    body {
+        padding: 0;
+    }
+
     .container {
-        width: 95%;
-        padding: 10px;
+        width: 100%;
+        margin: 0;
+        padding: 0.5rem;
+        box-shadow: none;
     }
 
     /* Navigation */
@@ -347,6 +355,7 @@ footer {
     .usage-table {
         display: block;
         overflow-x: auto;
+        font-size: 0.9rem;
     }
 
     .dish-table th,
@@ -357,6 +366,11 @@ footer {
     .usage-table td {
         min-width: 100px;
         padding: 12px 8px;
+    }
+
+    .dish-table td, 
+    .ingredient-table td {
+        padding: 0.5rem;
     }
 
     /* Forms */
@@ -393,9 +407,10 @@ footer {
 
     /* Buttons */
     .btn-action {
-        padding: 12px;
+        padding: 0.75rem;
+        margin: 0.25rem 0;
         width: 100%;
-        margin-bottom: 10px;
+        display: block;
     }
 
     /* Icons */
@@ -409,6 +424,7 @@ footer {
         width: 2.5em;
         height: 2.5em;
         font-size: 1em;
+        margin: 0.25rem;
     }
 
     /* Legends */
@@ -429,10 +445,42 @@ footer {
 /* Additional tablet breakpoint */
 @media screen and (min-width: 769px) and (max-width: 1024px) {
     .container {
-        width: 90%;
+        width: 95%;
+        padding: 1rem;
     }
 
     .ingredient-form {
         flex-wrap: wrap;
+    }
+
+    .dish-table, 
+    .ingredient-table {
+        font-size: 0.95rem;
+    }
+
+    .btn-action {
+        padding: 0.5rem 1rem;
+    }
+}
+
+/* Larger screens */
+@media screen and (min-width: 1025px) {
+    .container {
+        padding: 2rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .container {
+        width: 100%;
+        max-width: none;
+        padding: 0;
+        margin: 0;
+        box-shadow: none;
+    }
+
+    .no-print {
+        display: none;
     }
 }

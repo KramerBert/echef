@@ -274,6 +274,57 @@
                 padding: 10px;
             }
         }
+
+        /* Verbeterde responsive styling */
+        @media (max-width: 768px) {
+            .container {
+                width: 100%;
+                padding: 10px;
+                margin: 0;
+            }
+            
+            .navbar-brand img {
+                height: 30px;
+            }
+            
+            .navbar-nav {
+                padding: 1rem 0;
+            }
+            
+            .navbar-nav .nav-item {
+                width: 100%;
+                text-align: center;
+                padding: 0.5rem 0;
+            }
+            
+            footer {
+                flex-direction: column;
+                text-align: center;
+                gap: 1rem;
+            }
+            
+            footer div {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .btn {
+                width: 100%;
+                margin: 0.25rem 0;
+            }
+        }
+
+        @media (max-width: 576px) {
+            body {
+                padding: 0;
+            }
+            
+            .container {
+                border-radius: 0;
+                box-shadow: none;
+            }
+        }
     </style>
 </head>
 <body>
