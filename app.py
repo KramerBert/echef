@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, redirect, url_for, render_template, session, flash, send_file, jsonify, send_from_directory
+from flask import Flask, request, redirect, url_for, render_template, session, flash, send_file, jsonify
 from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import Error
@@ -14,7 +14,7 @@ import io
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import csv
-from datetime import datetime, timedelta  # Voeg deze import toe bovenaan bij de andere imports
+from datetime import datetime, timedelta
 import secrets
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -25,6 +25,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo
+from flask import send_from_directory
 from blueprints.main.routes import main
 
 load_dotenv()  # Load the values from .env
