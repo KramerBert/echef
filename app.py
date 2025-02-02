@@ -259,6 +259,10 @@ def forgot_password():
     form = ForgotPasswordForm()
     if form.validate_on_submit():
         email = form.email.data
+        # Controleer of er daadwerkelijk een e-mail is ingevuld
+        if not email:
+            flash("Voer een geldig e-mailadres in.", "danger")
+            return redirect(url_for('forgot_password'))
         
         conn = get_db_connection()
         if conn is None:
