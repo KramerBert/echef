@@ -724,7 +724,7 @@ def download_csv_template():
     Serve a CSV template for bulk adding ingredients.
     """
     csv_content = io.StringIO()
-    csv_writer = csv.writer(csv_content)
+    csv_writer = csv_content
     csv_writer.writerow(['naam', 'categorie', 'eenheid', 'prijs_per_eenheid'])
     csv_writer.writerow(['Voorbeeld Naam', 'Voorbeeld Categorie', 'gram (g)', '0.00'])
 
@@ -2433,6 +2433,14 @@ def profile(chef_naam):
 @app.route('/terms')
 def terms():
     return render_template('terms.html', form=FlaskForm())
+
+# -----------------------------------------------------------
+#  Quickstart Guide
+# -----------------------------------------------------------
+@app.route('/quickstart')
+def quickstart():
+    form = FlaskForm()  # Add CSRF protection
+    return render_template('quickstart.html', form=form)
 
 # -----------------------------------------------------------
 # Static files route
