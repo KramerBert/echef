@@ -26,6 +26,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo
 from flask import send_from_directory
+from blueprints.main.routes import main
 
 load_dotenv()  # Load the values from .env
 
@@ -46,22 +47,30 @@ ch.setFormatter(formatter)
 # Add ch to logger
 logger.addHandler(ch)
 
+# Create the Flask application instance
 app = Flask(__name__)
-app.wsgi_app = ProxyFix(app.wsgi_app)
-app.secret_key = os.getenv("SECRET_KEY")  # Needed for session management
 
-# Voeg deze configuratie toe na app initialisatie
-app.config['SECURITY_PASSWORD_SALT'] = os.getenv("SECURITY_PASSWORD_SALT", "your-default-salt")
+def create_app():
+    """Application factory function"""
+    # Configure the app
+    app.wsgi_app = ProxyFix(app.wsgi_app)
+    app.secret_key = os.getenv("SECRET_KEY")
+    app.config['SECURITY_PASSWORD_SALT'] = os.getenv("SECURITY_PASSWORD_SALT", "your-default-salt")
+    
+    csrf = CSRFProtect(app)
+    
+    # Configure session handling
+    app.config.update(
+        SESSION_COOKIE_SECURE=True,
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE='Lax',
+        PERMANENT_SESSION_LIFETIME=1800
+    )
 
-csrf = CSRFProtect(app)
+    # Register blueprints
+    app.register_blueprint(main)
 
-# Configure session handling
-app.config.update(
-    SESSION_COOKIE_SECURE=True,
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='Lax',
-    PERMANENT_SESSION_LIFETIME=1800  # 30 minutes
-)
+    return app
 
 # Improved error handlers
 @app.errorhandler(404)
@@ -2175,6 +2184,8 @@ def export_haccp_report(metingen, start_date, end_date, compliance):
         
     # Exporteer document
     buffer = io.BytesIO()
+    # Exporteer document
+    buffer = io.BytesIO()
     doc.save(buffer)
     buffer.seek(0)
 
@@ -2433,8 +2444,9 @@ def static_files(filename):
 # Start de server
 # -----------------------------------------------------------
 if __name__ == '__main__':
+    application = create_app()
     port = int(os.environ.get('PORT', 5000))
     debug_mode = os.environ.get('FLASK_ENV') == 'development'
-    app.run(host='0.0.0.0', port=port, debug=debug_mode)
+    application.run(host='0.0.0.0', port=port, debug=debug_mode)
 
 

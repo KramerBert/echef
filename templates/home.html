@@ -7,6 +7,26 @@
         <img src="{{ url_for('static', filename='images/logo.png') }}" alt="E-chef Logo" class="img-fluid mb-4" style="max-width: 200px;">
         <h2 class="card-title">Menu Engineering</h2>
         <div class="accordion" id="featureAccordion">
+
+ <!-- Voor wie is e-Chef -->
+ <div class="accordion-item bg-dark text-white">
+    <h2 class="accordion-header">
+        <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseVoorWie">
+            <i class="fas fa-book-open"></i> Voor wie is e-Chef</button>
+    </h2>
+    <div id="collapseVoorWie" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
+        <div class="accordion-body">
+
+            <h2>e-Chef: Gemaakt door kookprofessionals, voor kookprofessionals en gepassioneerde hobbykoks</h2>
+            <p>
+                Verplaats je van werkplek? Geen zorgen—je neemt eenvoudig je complete 
+                <strong>portfolio</strong>, <strong>recepten</strong> en <strong>menukaarten</strong> overal mee naartoe. ✨👨‍🍳👩‍🍳
+            </p>
+
+
+        </div>
+    </div>
+</div>
             <!-- Recepten Beherenn -->
             
             
@@ -20,7 +40,13 @@
                
                 <div id="collapseRecepten" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
                     <div class="accordion-body">
-                        Beheer al je recepten op één centrale plek met gedetailleerde ingrediëntenlijsten en bereidingswijzen.
+                        <h2>🍴 Beheer Je Recepten Slimmer</h2>
+                        <p>
+                            Houd al je recepten overzichtelijk op één centrale plek met uitgebreide 
+                            <strong>ingrediëntenlijsten</strong> en stap-voor-stap <strong>bereidingswijzen</strong>.
+                        </p>
+                    
+                    
                     </div>
                 </div>
             </div>
@@ -35,7 +61,13 @@
               
                 <div id="collapseKostprijs" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
                     <div class="accordion-body">
-                        Automatische berekening van kostprijzen per gerecht, inclusief ingrediënten en overhead kosten.
+                        <h2>📊 Slimme Kostprijsberekening</h2>
+                        <p>
+                            Laat e-Chef automatisch de <strong>kostprijs per gerecht</strong> berekenen, inclusief alle ingrediënten en overheadkosten.
+                        </p>
+
+
+
                     </div>
                 </div>
             </div>
@@ -49,7 +81,10 @@
                 </h2>
                 <div id="collapseMenukaarten" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
                     <div class="accordion-body">
-                        Exporteer in 1 muisklik professioneel opgemaakte menukaarten en print ze uit voor je gasten.
+                        <h1>Menukaarten Exporteren</h1>
+                        <p>🍽️ Exporteer in 1 muisklik professioneel opgemaakte menukaarten en print ze uit voor je gasten of de drukker.</p>
+                  
+
                     </div>
                 </div>
             </div>
@@ -63,7 +98,11 @@
                 </h2>
                 <div id="collapseKookboek" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
                     <div class="accordion-body">
-                        Creëer je eigen professionele kookboek met al je recepten en technieken.
+                        <h1>Jouw Professionele Kookboek</h1>
+                        <p>📖 Creëer je eigen professionele kookboek met al je recepten en technieken.</p>
+                     
+
+
                     </div>
                 </div>
             </div>
@@ -75,23 +114,28 @@
                     </h2>
                     <div id="collapseBestellijst" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
                         <div class="accordion-body">
-                            Selecteer je gerechten, geef de aantallen op en print met 1 muisklik je bestellijst per leverancier.
+                            <h1>Gemakkelijk Bestellen</h1>
+                            <p>🛒 Selecteer je gerechten, geef de aantallen op en print met 1 muisklik je bestellijst per leverancier.</p>
                         </div>
                     </div>
                </div>
- <!-- Voor wie is e-Chef -->
- <div class="accordion-item bg-dark text-white">
+
+<!-- Quickstart Guide -->
+<div class="accordion-item bg-dark text-white">
     <h2 class="accordion-header">
-        <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseVoorWie">
-            <i class="fas fa-book-open"></i> Voor wie is e-Chef</button>
+        <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseQuickstart">
+            <i class="fas fa-bolt"></i> Quickstart Guide
+        </button>
     </h2>
-    <div id="collapseVoorWie" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
+    <div id="collapseQuickstart" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
         <div class="accordion-body">
-            e-Chef is van kookprofessionals voor kookprofessionals of voor de hardcore kookhobbyist. Verplaats je van werkplek? Dan neem je je e-Chef portfolio, je recepten en menukaarten mee. 
+            <p>Snel aan de slag met e-Chef? Bekijk onze quickstart guide!</p>
+            <a href="{{ url_for('main.quickstart') }}" class="btn btn-info mt-2">
+                <i class="fas fa-arrow-right"></i> Naar de Quickstart Guide
+            </a>
         </div>
     </div>
 </div>
-
 
         </div>
 
