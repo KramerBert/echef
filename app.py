@@ -26,7 +26,6 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo
 from flask import send_from_directory
-from blueprints.main.routes import main
 
 load_dotenv()  # Load the values from .env
 
@@ -67,12 +66,7 @@ def create_app():
         PERMANENT_SESSION_LIFETIME=1800
     )
 
-    # Register blueprints
-    from blueprints.main.routes import main
-    from blueprints.quickstart.routes import bp as quickstart_bp
-    
-    app.register_blueprint(main, url_prefix='/main')  # Add URL prefix
-    app.register_blueprint(quickstart_bp)  # This already has url_prefix='/quickstart'
+    # Removed blueprint registration; routes are defined below instead.
 
     return app
 
@@ -2399,9 +2393,14 @@ def terms():
 # -----------------------------------------------------------
 #  Quickstart Guide
 # -----------------------------------------------------------
-@app.route('/quickstart')
-def quickstart():
-    return redirect(url_for('quickstart'))
+@app.route('/quickstart/')
+def quickstart_index():
+    return render_template('quickstart.html', form=FlaskForm())
+
+# Add alias for backward compatibility of 'quickstart' endpoint:
+@app.route('/quickstart', endpoint='quickstart')
+def quickstart_alias():
+    return quickstart_index()
 
 # -----------------------------------------------------------
 # Static files route
