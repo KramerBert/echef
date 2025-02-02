@@ -2409,6 +2409,12 @@ def quickstart_alias():
 def static_files(filename):
     return send_from_directory('static', filename)
 
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static', 'images'),
+                               'favicon.png',
+                               mimetype='image/png')
+
 # -----------------------------------------------------------
 # Start de server
 # -----------------------------------------------------------
