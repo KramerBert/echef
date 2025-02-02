@@ -55,7 +55,6 @@ def create_app():
     """Application factory function"""
     # Configure the app
     app.wsgi_app = ProxyFix(app.wsgi_app)
-    # Verwijder app.secret_key = os.getenv("SECRET_KEY") hier
     app.config['SECURITY_PASSWORD_SALT'] = os.getenv("SECURITY_PASSWORD_SALT", "your-default-salt")
     
     csrf = CSRFProtect(app)
@@ -69,7 +68,11 @@ def create_app():
     )
 
     # Register blueprints
+    from blueprints.main.routes import main
+    from blueprints.quickstart.routes import bp as quickstart_bp
+    
     app.register_blueprint(main)
+    app.register_blueprint(quickstart_bp)
 
     return app
 
@@ -517,14 +520,21 @@ def login():
                         return redirect(url_for('verify_email'))
                     
                     session.clear()
-                    # Add type checking/conversion for chef_id
-                    session['chef_id'] = int(chef['chef_id']) if chef['chef_id'] is not None else None
+
+                    # Safer type conversion with validation
+                    try:
+                        chef_id = chef.get('chef_id')
+                        if chef_id is None:
+                            raise ValueError("Invalid chef_id: value is None")
+                        session['chef_id'] = int(chef_id)
+                    except (ValueError, TypeError) as e:
+                        logger.error(f"Error processing chef_id: {str(e)}")
+                        flash("Er is een fout opgetreden bij inloggen.", "danger")
+                        return redirect(url_for('login'))
+
                     session['chef_naam'] = chef['naam']
                     session.permanent = True
                     
-                    if session['chef_id'] is None:
-                        raise ValueError("Invalid chef_id")
-                        
                     flash("Succesvol ingelogd!", "success")
                     return redirect(url_for('dashboard', chef_naam=chef['naam']))
                 else:
@@ -537,7 +547,6 @@ def login():
             flash("Er is een fout opgetreden bij inloggen.", "danger")
 
     return render_template('login.html', form=form)
-
 
 # -----------------------------------------------------------
 #  Uitloggen
@@ -2445,8 +2454,8 @@ def terms():
 # -----------------------------------------------------------
 @app.route('/quickstart')
 def quickstart():
-    form = FlaskForm()  # Add CSRF protection
-    return render_template('quickstart.html', form=form)
+    """Redirect to the blueprint's quickstart route"""
+    return redirect(url_for('main.quickstart'))
 
 # -----------------------------------------------------------
 # Static files route
