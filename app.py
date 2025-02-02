@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, redirect, url_for, render_template, session, flash, send_file, jsonify
+from flask import Flask, request, redirect, url_for, render_template, session, flash, send_file, jsonify, send_from_directory
 from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import Error
@@ -23,9 +23,8 @@ import requests
 from itsdangerous import URLSafeTimedSerializer
 from flask_wtf.csrf import CSRFProtect
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, SubmitField
+from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo
-from flask import send_from_directory
 from blueprints.main.routes import main
 
 load_dotenv()  # Load the values from .env
@@ -71,16 +70,15 @@ def create_app():
     from blueprints.main.routes import main
     from blueprints.quickstart.routes import bp as quickstart_bp
     
-    app.register_blueprint(main)
-    app.register_blueprint(quickstart_bp)
+    app.register_blueprint(main, url_prefix='/main')  # Add URL prefix
+    app.register_blueprint(quickstart_bp)  # This already has url_prefix='/quickstart'
 
     return app
 
 # Improved error handlers
 @app.errorhandler(404)
 def not_found_error(error):
-    if "manifest.json" not in request.url:
-        logger.error(f'Page not found: {request.url}')
+    logger.error(f'Page not found: {request.url}')
     return render_template('error.html', error=error), 404
 
 @app.errorhandler(500)
@@ -491,11 +489,6 @@ def verify_email(token=None):
 # -----------------------------------------------------------
 #  Inloggen
 # -----------------------------------------------------------
-class LoginForm(FlaskForm):
-    email = StringField('Email', validators=[DataRequired(), Email()])
-    wachtwoord = PasswordField('Wachtwoord', validators=[DataRequired()])
-    submit = SubmitField('Inloggen')
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -510,28 +503,21 @@ def login():
 
             cur = conn.cursor(dictionary=True)
             try:
-                # Add error handling for database lookup
                 cur.execute("SELECT * FROM chefs WHERE email = %s", (email,))
                 chef = cur.fetchone()
                 
                 if chef and check_password_hash(chef['wachtwoord'], wachtwoord):
-                    if not chef['email_verified']:
+                    if not chef.get('email_verified', False):
                         flash("Verifieer eerst je email adres voordat je inlogt.", "warning")
                         return redirect(url_for('verify_email'))
                     
                     session.clear()
-
-                    # Safer type conversion with validation
-                    try:
-                        chef_id = chef.get('chef_id')
-                        if chef_id is None:
-                            raise ValueError("Invalid chef_id: value is None")
-                        session['chef_id'] = int(chef_id)
-                    except (ValueError, TypeError) as e:
-                        logger.error(f"Error processing chef_id: {str(e)}")
-                        flash("Er is een fout opgetreden bij inloggen.", "danger")
-                        return redirect(url_for('login'))
-
+                    chef_id = chef.get('chef_id')
+                    
+                    if chef_id is None:
+                        raise ValueError("Invalid chef_id")
+                        
+                    session['chef_id'] = int(chef_id)
                     session['chef_naam'] = chef['naam']
                     session.permanent = True
                     
@@ -2199,7 +2185,7 @@ def export_haccp_report(metingen, start_date, end_date, compliance):
             row_cells[4].text = '⚠ Afwijking'
         
     # Exporteer document
-    buffer = io.BytesIO()
+    # Exporteer document
     # Exporteer document
     buffer = io.BytesIO()
     doc.save(buffer)
@@ -2455,7 +2441,7 @@ def terms():
 @app.route('/quickstart')
 def quickstart():
     """Redirect to the blueprint's quickstart route"""
-    return redirect(url_for('main.quickstart'))
+    return redirect(url_for('quickstart.index'))  # Fix: redirect naar quickstart blueprint index
 
 # -----------------------------------------------------------
 # Static files route
@@ -2472,5 +2458,3 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug_mode = os.environ.get('FLASK_ENV') == 'development'
     application.run(host='0.0.0.0', port=port, debug=debug_mode)
-
-

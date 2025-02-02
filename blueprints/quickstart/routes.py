@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template
 from flask_wtf import FlaskForm
 
-bp = Blueprint('quickstart', __name__)
+# Verwijder template_folder omdat we relative paths gebruiken
+bp = Blueprint('quickstart', __name__, url_prefix='/quickstart')
 
 @bp.route('/')
 def index():

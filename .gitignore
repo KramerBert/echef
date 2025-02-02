@@ -1,4 +1,15 @@
-.env
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
+*.env
+venv/
+
+# Database
+/Database/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
