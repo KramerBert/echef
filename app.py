@@ -2444,8 +2444,7 @@ def terms():
 # -----------------------------------------------------------
 @app.route('/quickstart')
 def quickstart():
-    """Redirect to the blueprint's quickstart route"""
-    return redirect(url_for('quickstart.index'))  # Fix: redirect naar quickstart blueprint index
+    return redirect(url_for('quickstart'))
 
 # -----------------------------------------------------------
 # Static files route
