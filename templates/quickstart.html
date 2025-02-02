@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Quickstart Guide - E-chef{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="text-center mb-4">Quickstart Guide</h1>
+    
+    <div class="card bg-dark text-white mb-4">
+        <div class="card-body">
+            <h2 class="card-title">Snel aan de slag met e-Chef</h2>
+            <p class="card-text">Volg deze stappen om direct te beginnen:</p>
+            
+            <ol class="list-group list-group-numbered">
+                <li class="list-group-item bg-dark text-white">
+                    <h3>Account aanmaken</h3>
+                    <p>Begin met het <a href="{{ url_for('register') }}" class="text-info">registreren</a> van een account.</p>
+                </li>
+                
+                <li class="list-group-item bg-dark text-white">
+                    <h3>Ingrediënten toevoegen</h3>
+                    <p>Voeg je ingrediënten toe met prijzen om kostprijsberekeningen mogelijk te maken.</p>
+                </li>
+                
+                <li class="list-group-item bg-dark text-white">
+                    <h3>Recepten maken</h3>
+                    <p>Maak je eerste recepten aan en voeg ingrediënten, bereidingswijzen en foto's toe.</p>
+                </li>
+                
+                <li class="list-group-item bg-dark text-white">
+                    <h3>Menukaart samenstellen</h3>
+                    <p>Selecteer recepten om in je menukaart op te nemen en exporteer deze als PDF.</p>
+                </li>
+            </ol>
+        </div>
+    </div>
+    
+    <div class="text-center">
+        <a href="{{ url_for('register') }}" class="btn btn-info">
+            <i class="fas fa-user-plus"></i> Nu Registreren
+        </a>
+        <a href="{{ url_for('instructions') }}" class="btn btn-outline-info">
+            <i class="fas fa-book"></i> Uitgebreide handleiding
+        </a>
+    </div>
+</div>
+{% endblock %}
