@@ -266,43 +266,31 @@ def forgot_password():
         
         conn = get_db_connection()
         if conn is None:
-            flash("Database connection error.", "danger")
+            flash("Databaseverbinding mislukt.", "danger")
             return redirect(url_for('forgot_password'))
         
         cur = conn.cursor(dictionary=True)
         try:
-            # Check of email bestaat
+            # Controleer of het e-mailadres bestaat in de database
             cur.execute("SELECT chef_id FROM chefs WHERE email = %s", (email,))
             chef = cur.fetchone()
+            if chef is None:
+                flash("E-mailadres niet gevonden.", "danger")
+                return redirect(url_for('forgot_password'))
             
-            if chef:
-                # Genereer token en sla op
-                token = secrets.token_urlsafe(32)
-                expires = datetime.now() + timedelta(minutes=app.config['RESET_TOKEN_EXPIRE_MINUTES'])
-                
-                cur.execute("""
-                    INSERT INTO password_resets (chef_id, token, expires_at)
-                    VALUES (%s, %s, %s)
-                """, (chef['chef_id'], token, expires))
-                conn.commit()
-                
-                # Stuur reset email
-                if send_reset_email(email, token):
-                    flash("Check je email voor de wachtwoord reset link.", "success")
-                else:
-                    flash("Er is een fout opgetreden bij het verzenden van de email.", "danger")
+            # Genereer reset token en stuur reset e-mail
+            token = generate_confirmation_token(email)
+            if send_reset_email(email, token):
+                flash("Een reset link is naar je e-mailadres gestuurd.", "info")
             else:
-                # Voorkom email enumeration door altijd succes te tonen
-                flash("Check je email voor de wachtwoord reset link.", "success")
-                
+                flash("Er is een fout opgetreden bij het versturen van de e-mail.", "danger")
         except Exception as e:
-            conn.rollback()
-            logger.error(f"Password reset error: {str(e)}")
+            logger.error(f"Error in forgot_password: {str(e)}")
             flash("Er is een fout opgetreden.", "danger")
         finally:
             cur.close()
             conn.close()
-            
+        
         return redirect(url_for('login'))
         
     return render_template('forgot_password.html', form=form)
@@ -312,62 +300,31 @@ def reset_password(token):
     if not token or not isinstance(token, str) or len(token) > 128:
         flash("Ongeldige reset link.", "danger")
         return redirect(url_for('login'))
-
     form = ResetPasswordForm()
-    
-    try:
-        conn = get_db_connection()
-        if conn is None:
-            raise Exception("Database connection error")
-        
-        cur = conn.cursor(dictionary=True)
-        
-        # Valideer token
-        cur.execute("""
-            SELECT r.*, c.email 
-            FROM password_resets r
-            JOIN chefs c ON r.chef_id = c.chef_id
-            WHERE r.token = %s AND r.used = 0 
-            AND r.expires_at > NOW()
-        """, (token,))
-        reset = cur.fetchone()
-        
-        if not reset:
-            flash("Ongeldige of verlopen reset link.", "danger")
-            return redirect(url_for('login'))
-        
-        if form.validate_on_submit():
-            # Update wachtwoord en markeer token als gebruikt
-            hashed_pw = generate_password_hash(form.password.data, method='pbkdf2:sha256')
-            
-            cur.execute("""
-                UPDATE chefs SET wachtwoord = %s 
-                WHERE chef_id = %s
-            """, (hashed_pw, reset['chef_id']))
-            
-            cur.execute("""
-                UPDATE password_resets SET used = 1
-                WHERE token = %s
-            """, (token,))
-            
-            conn.commit()
-            flash("Je wachtwoord is succesvol gewijzigd!", "success")
-            return redirect(url_for('login'))
-            
-        return render_template('reset_password.html', 
-                             form=form,
-                             token=token)
-
-    except Exception as e:
-        logger.error(f"Password reset error: {str(e)}")
-        if conn:
-            conn.rollback()
-        flash("Er is een fout opgetreden.", "danger")
+    email = confirm_token(token)
+    if not email:
+        flash("Reset token is ongeldig of verlopen.", "danger")
         return redirect(url_for('login'))
-    finally:
-        if conn:
-            cur.close()
-            conn.close()
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('login'))
+    cur = conn.cursor(dictionary=True)
+    cur.execute("SELECT chef_id FROM chefs WHERE email = %s", (email,))
+    chef = cur.fetchone()
+    if chef is None:
+        flash("E-mailadres niet gevonden.", "danger")
+        cur.close()
+        conn.close()
+        return redirect(url_for('login'))
+    if form.validate_on_submit():
+        new_password = form.password.data
+        cur.execute("UPDATE chefs SET wachtwoord = %s WHERE chef_id = %s",
+                    (generate_password_hash(new_password), chef['chef_id']))
+        conn.commit()
+        flash("Je wachtwoord is succesvol gewijzigd!", "success")
+        return redirect(url_for('login'))
+    return render_template('reset_password.html', form=form, token=token)
 
 # -----------------------------------------------------------
 #  Homepage (index)
