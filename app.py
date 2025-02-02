@@ -49,12 +49,13 @@ logger.addHandler(ch)
 
 # Create the Flask application instance
 app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY")  # Verplaats dit naar hier, voor create_app()
 
 def create_app():
     """Application factory function"""
     # Configure the app
     app.wsgi_app = ProxyFix(app.wsgi_app)
-    app.secret_key = os.getenv("SECRET_KEY")
+    # Verwijder app.secret_key = os.getenv("SECRET_KEY") hier
     app.config['SECURITY_PASSWORD_SALT'] = os.getenv("SECURITY_PASSWORD_SALT", "your-default-salt")
     
     csrf = CSRFProtect(app)
