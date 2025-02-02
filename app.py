@@ -514,10 +514,9 @@ def login():
                     
                     session.clear()
                     chef_id = chef.get('chef_id')
-                    
                     if chef_id is None:
-                        raise ValueError("Invalid chef_id")
-                        
+                        flash("Er is een fout opgetreden bij het inloggen: ongeldige accountgegevens.", "danger")
+                        return redirect(url_for('login'))
                     session['chef_id'] = int(chef_id)
                     session['chef_naam'] = chef['naam']
                     session.permanent = True
