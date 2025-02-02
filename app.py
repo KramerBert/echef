@@ -496,7 +496,7 @@ class LoginForm(FlaskForm):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
-    if (form.validate_on_submit()):
+    if form.validate_on_submit():
         try:
             email = form.email.data
             wachtwoord = form.wachtwoord.data
@@ -507,6 +507,7 @@ def login():
 
             cur = conn.cursor(dictionary=True)
             try:
+                # Add error handling for database lookup
                 cur.execute("SELECT * FROM chefs WHERE email = %s", (email,))
                 chef = cur.fetchone()
                 
@@ -516,9 +517,14 @@ def login():
                         return redirect(url_for('verify_email'))
                     
                     session.clear()
-                    session['chef_id'] = chef['chef_id']
+                    # Add type checking/conversion for chef_id
+                    session['chef_id'] = int(chef['chef_id']) if chef['chef_id'] is not None else None
                     session['chef_naam'] = chef['naam']
                     session.permanent = True
+                    
+                    if session['chef_id'] is None:
+                        raise ValueError("Invalid chef_id")
+                        
                     flash("Succesvol ingelogd!", "success")
                     return redirect(url_for('dashboard', chef_naam=chef['naam']))
                 else:
