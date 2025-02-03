@@ -353,8 +353,8 @@ footer {
 
     .container {
         width: 100%;
+        padding: 10px;
         margin: 0;
-        padding: 0;
         box-shadow: none;
     }
 
@@ -364,23 +364,25 @@ footer {
     }
 
     .card-body {
-        padding: 1rem;
+        padding: 1rem 0.5rem;
     }
 
     /* Navigation */
     nav ul {
         flex-direction: column;
-        gap: 10px;
+        gap: 5px; /* Reduced gap between menu items */
+        text-align: center;
     }
 
     nav ul li {
-        margin-right: 0;
+        margin-right: 0; /* Remove extra margin */
         width: 100%;
+        margin-bottom: 5px; /* Consistent small spacing */
     }
 
     nav ul li a button {
         width: 100%;
-        padding: 15px; /* Larger touch target */
+        padding: 10px 15px; /* Adjust button padding as needed */
     }
 
     /* Tables */
@@ -473,6 +475,25 @@ footer {
         width: 100%;
         margin-right: 0;
         margin-bottom: 10px;
+    }
+
+    /* Navbar brand image */
+    .navbar-brand img {
+        height: 30px;
+    }
+
+    /* Card, accordion and other common mobile elements */
+    .accordion {
+        width: 100%;
+        margin: 1rem 0;
+    }
+    .accordion-button {
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+    .accordion-body {
+        padding: 1rem;
+        font-size: 0.9rem;
     }
 }
 

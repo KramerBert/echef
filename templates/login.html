@@ -42,6 +42,9 @@
                         {{ form.wachtwoord.label(class="form-label") }}
                         {{ form.wachtwoord(class="form-control") }}
                     </div>
+                    <div class="mb-3">
+                        {{ form.recaptcha }}
+                    </div>
                     {{ form.submit(class="btn btn-primary") }}
                     <div class="text-center mt-3">
                         <a href="{{ url_for('forgot_password') }}">Wachtwoord vergeten?</a>

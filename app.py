@@ -22,7 +22,7 @@ import smtplib
 import requests
 from itsdangerous import URLSafeTimedSerializer
 from flask_wtf.csrf import CSRFProtect, generate_csrf
-from flask_wtf import FlaskForm
+from flask_wtf import FlaskForm, RecaptchaField
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo
 from flask import send_from_directory
@@ -67,6 +67,9 @@ if app.config.get('SECURITY_PASSWORD_SALT'):
     logger.debug("SECURITY_PASSWORD_SALT loaded successfully")
 else:
     logger.error("SECURITY_PASSWORD_SALT is missing")
+
+app.config['RECAPTCHA_PUBLIC_KEY'] = os.getenv('RECAPTCHA_SITE_KEY')
+app.config['RECAPTCHA_PRIVATE_KEY'] = os.getenv('RECAPTCHA_SECRET_KEY')
 
 def create_app():
     """Application factory function"""
@@ -258,6 +261,7 @@ class RegistrationForm(FlaskForm):
 class LoginForm(FlaskForm):
     email = StringField('E-mail', validators=[DataRequired(), Email()])
     wachtwoord = PasswordField('Wachtwoord', validators=[DataRequired()])
+    recaptcha = RecaptchaField()
     submit = SubmitField('Inloggen')
 
 class ResetPasswordForm(FlaskForm):
@@ -269,6 +273,7 @@ class ResetPasswordForm(FlaskForm):
 
 class ForgotPasswordForm(FlaskForm):
     email = StringField('E-mail', validators=[DataRequired(), Email()])
+    recaptcha = RecaptchaField()
     submit = SubmitField('Reset Link Versturen')
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
@@ -382,6 +387,7 @@ class RegisterForm(FlaskForm):
     confirm_password = PasswordField('Bevestig Wachtwoord', 
                                    validators=[DataRequired(), 
                                              EqualTo('wachtwoord', message='Wachtwoorden moeten overeenkomen')])
+    recaptcha = RecaptchaField()
     submit = SubmitField('Registreren')
 
 @app.route('/register', methods=['GET', 'POST'])

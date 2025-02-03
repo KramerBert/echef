@@ -264,6 +264,7 @@
             height: 40px;
             width: auto;
             margin-right: 10px;
+            animation: slideIn 1s ease-out forwards;
         }
 
         /* Voor kleinere schermen */
@@ -282,10 +283,12 @@
                 text-align: center;
             }
             .navbar-nav .nav-item {
-                margin-bottom: 10px;
+                /* Reduced margin-bottom from 10px to 5px */
+                margin-bottom: 5px;
             }
             .navbar-nav .nav-link {
-                padding: 10px;
+                /* Reduced padding from 10px to 5px */
+                padding: 5px;
             }
         }
 
@@ -338,6 +341,12 @@
                 border-radius: 0;
                 box-shadow: none;
             }
+        }
+
+        /* Added for logo incoming animation */
+        @keyframes slideIn {
+            0% { opacity: 0; transform: translateX(-100px); }
+            100% { opacity: 1; transform: translateX(0); }
         }
     </style>
 </head>
