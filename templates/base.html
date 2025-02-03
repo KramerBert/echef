@@ -412,11 +412,12 @@
 
         <footer class="mt-4" aria-label="Footer">
             <hr>
-            <p class="text-start flex-fill">&copy; 2025 E-chef - Menu Engeneering</p>
+            <p class="text-start flex-fill">&copy; 2025 e-Chef - Menu Engeneering - versie 0.2</p>
             <div class="text-end flex-fill">
-                <small>Versie 0.1</small>
-                <a href="{{ url_for('privacy') }}" class="me-3">AVG privacy verklaring</a>
-                <a href="{{ url_for('terms') }}">Algemene Voorwaarden</a>
+                <div class="d-flex flex-column flex-md-row justify-content-center justify-content-md-end">
+                    <a href="{{ url_for('privacy') }}" class="me-md-3 mb-2 mb-md-0 text-center">AVG privacy verklaring</a>
+                    <a href="{{ url_for('terms') }}" class="text-center">Algemene Voorwaarden</a>
+                </div>
             </div>
         </footer>
         <p class="wcag-indicator text-start flex-fill"></p>
