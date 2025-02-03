@@ -21,7 +21,7 @@ from email.mime.multipart import MIMEMultipart
 import smtplib
 import requests
 from itsdangerous import URLSafeTimedSerializer
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, generate_csrf
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo
@@ -2417,6 +2417,10 @@ def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static', 'images'),
                                'favicon.png',
                                mimetype='image/png')
+
+@app.context_processor
+def inject_csrf_token():
+    return dict(csrf_token=generate_csrf())  # Geef het token direct terug
 
 # -----------------------------------------------------------
 # Start de server

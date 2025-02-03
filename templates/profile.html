@@ -15,7 +15,7 @@
                     
                     <!-- E-mail Wijzigen -->
                     <form method="POST" action="{{ url_for('profile', chef_naam=chef_naam) }}" class="email-form mt-4">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <input type="hidden" name="update_email" value="1">
                         <h4>E-mail Wijzigen</h4>
                         <div class="mb-3">
@@ -31,7 +31,7 @@
                 <div class="card-body">
                     <!-- Wachtwoord Wijzigen -->
                     <form method="POST" action="{{ url_for('profile', chef_naam=chef_naam) }}" class="password-form">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <input type="hidden" name="update_password" value="1">
                         <h4>Wachtwoord Wijzigen</h4>
                         <div class="mb-3">
@@ -58,7 +58,7 @@
                     <p>Let op: Deze actie kan niet ongedaan worden gemaakt.</p>
                     <form action="{{ url_for('delete_account', chef_naam=chef_naam) }}" method="post" 
                           onsubmit="return confirm('Weet je zeker dat je je account wilt verwijderen? Dit kan niet ongedaan worden gemaakt.');">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <button type="submit" class="btn btn-danger">Account Permanent Verwijderen</button>
                     </form>
                 </div>
