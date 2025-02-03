@@ -332,7 +332,7 @@ def reset_password(token):
     if form.validate_on_submit():
         new_password = form.password.data
         cur.execute("UPDATE chefs SET wachtwoord = %s WHERE chef_id = %s",
-                    (generate_password_hash(new_password), chef['chef_id']))
+                    (generate_password_hash(new_password, method='pbkdf2:sha256'), chef['chef_id']))
         conn.commit()
         flash("Je wachtwoord is succesvol gewijzigd!", "success")
         return redirect(url_for('login'))
