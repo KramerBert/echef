@@ -50,6 +50,13 @@ logger.addHandler(ch)
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")  # Verplaats dit naar hier, voor create_app()
 
+# Set the salt early so it is available for later checks
+app.config['SECURITY_PASSWORD_SALT'] = os.getenv("SECURITY_PASSWORD_SALT", "your-default-salt")
+if os.getenv("SECURITY_PASSWORD_SALT"):
+    logger.debug("SECURITY_PASSWORD_SALT loaded successfully")
+else:
+    logger.warning("SECURITY_PASSWORD_SALT not set in environment; using default value")
+
 # Stap 1: Log het bestaan van de environment variabelen (geen gevoelige data)
 if app.secret_key:
     logger.debug("SECRET_KEY loaded successfully")
@@ -482,6 +489,11 @@ def login():
             try:
                 cur.execute("SELECT * FROM chefs WHERE email = %s", (email,))
                 chef = cur.fetchone()
+                
+                # Check for unsupported scrypt hash and advise password reset
+                if chef and chef.get('wachtwoord','').startswith("scrypt:"):
+                    flash("Je account maakt gebruik van een wachtwoord hash (scrypt) die niet langer ondersteund wordt. Reset je wachtwoord.", "danger")
+                    return redirect(url_for('forgot_password'))
                 
                 if chef and check_password_hash(chef['wachtwoord'], wachtwoord):
                     if not chef.get('email_verified', False):

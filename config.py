@@ -5,4 +5,7 @@ from flask import Flask  # Toegevoegd
 app = Flask(__name__)  # Toegevoegd
 
 # Voeg deze regel toe om SECURITY_PASSWORD_SALT in te stellen
-app.config['SECURITY_PASSWORD_SALT'] = os.environ['SECURITY_PASSWORD_SALT']
+SECURITY_PASSWORD_SALT = os.getenv('SECURITY_PASSWORD_SALT')
+
+if not SECURITY_PASSWORD_SALT:
+    print("Error: SECURITY_PASSWORD_SALT is missing")
