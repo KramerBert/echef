@@ -19,6 +19,9 @@
                 <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}" class="btn btn-secondary p-3 btn-action" aria-label="Manage ingredients">
                     <i class="fas fa-carrot"></i> Ingrediënten beheren
                 </a>
+                <a href="{{ url_for('manage_suppliers', chef_naam=chef_naam) }}" class="btn btn-secondary p-3 btn-action" aria-label="Manage suppliers">
+                    <i class="fas fa-truck"></i> Leveranciers beheren
+                </a>
                 <a href="{{ url_for('manage_dishes', chef_naam=chef_naam) }}" class="btn btn-secondary p-3 btn-action" aria-label="Create new dish">
                     <i class="fas fa-utensils"></i> Nieuw gerecht opvoeren
                 </a>

@@ -20,6 +20,7 @@
         <th>Ingrediënt</th>
         <th>Categorie</th>
         <th>Eenheid</th>
+        <th>Leverancier</th>
         <th class="col-price">Prijs per eenheid</th>
         <th class="col-actions">Acties</th>
     </tr>
@@ -28,6 +29,7 @@
         <td>{{ ingredient.naam }}</td>
         <td>{{ ingredient.categorie }}</td>
         <td>{{ ingredient.eenheid }}</td>
+        <td>{{ ingredient.leverancier_naam or 'Geen leverancier' }}</td>
         <td class="col-price">€ {{ "%.2f"|format(ingredient.prijs_per_eenheid|float) }}</td>
         <td class="col-actions">
             <div class="ingredient-actions">
@@ -55,11 +57,16 @@
             <input type="text" name="categorie" placeholder="Categorie" required class="form-control">
             <input type="text" name="eenheid" placeholder="Eenheid (bijv. gram, ml)" required class="form-control">
             <input type="number" name="prijs_per_eenheid" placeholder="Prijs per eenheid" step="0.01" required class="form-control">
+            <select name="leverancier" class="form-control">
+                <option value="">Kies leverancier (optioneel)</option>
+                {% for leverancier in leveranciers %}
+                    <option value="{{ leverancier.naam }}">{{ leverancier.naam }}</option>
+                {% endfor %}
+            </select>
         </div>
         <button type="submit" class="btn-action"><i class="fas fa-plus"></i> Toevoegen</button>
     </form>
 </div>
-
 <!-- CSV import sectie -->
 <div class="csv-import" style="margin-top: 20px;">
     <h3>Bulk Import via CSV</h3>

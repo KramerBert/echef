@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Leveranciers Beheren</h2>
+    
+    <form method="POST" class="mb-4">
+        {{ form.csrf_token }}
+        <div class="card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="naam" class="form-label">Naam</label>
+                    <input type="text" class="form-control" id="naam" name="naam" required>
+                </div>
+                <div class="mb-3">
+                    <label for="contact" class="form-label">Contactpersoon</label>
+                    <input type="text" class="form-control" id="contact" name="contact">
+                </div>
+                <div class="mb-3">
+                    <label for="telefoon" class="form-label">Telefoonnummer</label>
+                    <input type="tel" class="form-control" id="telefoon" name="telefoon">
+                </div>
+                <div class="mb-3">
+                    <label for="email" class="form-label">E-mail</label>
+                    <input type="email" class="form-control" id="email" name="email">
+                </div>
+                <button type="submit" class="btn btn-primary">Leverancier Toevoegen</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="card">
+        <div class="card-body">
+            <h3>Huidige Leveranciers</h3>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Naam</th>
+                            <th>Contact</th>
+                            <th>Telefoon</th>
+                            <th>E-mail</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leverancier in leveranciers %}
+                        <tr>
+                            <td>{{ leverancier.naam }}</td>
+                            <td>{{ leverancier.contact }}</td>
+                            <td>{{ leverancier.telefoon }}</td>
+                            <td>{{ leverancier.email }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

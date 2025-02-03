@@ -599,6 +599,11 @@ def manage_ingredients(chef_naam):
             categorie = request.form.get('categorie')
             eenheid = request.form.get('eenheid')
             prijs_per_eenheid = request.form.get('prijs_per_eenheid')
+            leverancier_id = request.form.get('leverancier_id')
+            
+            # Convert empty leverancier_id to None
+            if not leverancier_id:
+                leverancier_id = None
 
             # Check for duplicate ingredient
             cur.execute("""
@@ -612,9 +617,9 @@ def manage_ingredients(chef_naam):
             else:
                 try:
                     cur.execute("""
-                        INSERT INTO ingredients (chef_id, naam, categorie, eenheid, prijs_per_eenheid)
-                        VALUES (%s, %s, %s, %s, %s)
-                    """, (session['chef_id'], naam, categorie, eenheid, prijs_per_eenheid))
+                        INSERT INTO ingredients (chef_id, naam, categorie, eenheid, prijs_per_eenheid, leverancier_id)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (session['chef_id'], naam, categorie, eenheid, prijs_per_eenheid, leverancier_id))
                     conn.commit()
                     flash("Ingrediënt toegevoegd!", "success")
                 except Exception as e:
@@ -633,25 +638,36 @@ def manage_ingredients(chef_naam):
         filter_categorie = request.args.get('filter_categorie')
         if filter_categorie:
             cur.execute("""
-                SELECT * 
-                FROM ingredients 
-                WHERE chef_id = %s AND categorie = %s
-                ORDER BY ingredient_id DESC
+                SELECT i.*, l.naam as leverancier_naam
+                FROM ingredients i
+                LEFT JOIN leveranciers l ON i.leverancier_id = l.leverancier_id
+                WHERE i.chef_id = %s AND i.categorie = %s
+                ORDER BY i.ingredient_id DESC
             """, (session['chef_id'], filter_categorie))
         else:
             cur.execute("""
-                SELECT * 
-                FROM ingredients 
-                WHERE chef_id = %s
-                ORDER BY ingredient_id DESC
+                SELECT i.*, l.naam as leverancier_naam
+                FROM ingredients i
+                LEFT JOIN leveranciers l ON i.leverancier_id = l.leverancier_id
+                WHERE i.chef_id = %s
+                ORDER BY i.ingredient_id DESC
             """, (session['chef_id'],))
         alle_ingredienten = cur.fetchall()
+
+        # Haal alle leveranciers op voor de dropdown
+        cur.execute("""
+            SELECT * FROM leveranciers
+            WHERE chef_id = %s
+            ORDER BY naam
+        """, (session['chef_id'],))
+        leveranciers = cur.fetchall()
 
         return render_template('manage_ingredients.html',
                            chef_naam=chef_naam,
                            ingredienten=alle_ingredienten,
                            unieke_categorieen=unieke_categorieen,
                            filter_categorie=filter_categorie,
+                           leveranciers=leveranciers,
                            form=form)
 
     except Exception as e:
@@ -1511,8 +1527,12 @@ def edit_ingredient(chef_naam, ingredient_id):
     cur = conn.cursor(dictionary=True)
 
     # Haal info over het ingrediënt op (check of het bij deze chef hoort)
-    cur.execute("SELECT * FROM ingredients WHERE ingredient_id = %s AND chef_id = %s",
-                (ingredient_id, session['chef_id']))
+    cur.execute("""
+        SELECT i.*, l.naam as leverancier_naam 
+        FROM ingredients i
+        LEFT JOIN leveranciers l ON i.leverancier_id = l.leverancier_id
+        WHERE i.ingredient_id = %s AND i.chef_id = %s
+    """, (ingredient_id, session['chef_id']))
     ingredient = cur.fetchone()
     if not ingredient:
         cur.close()
@@ -1525,14 +1545,21 @@ def edit_ingredient(chef_naam, ingredient_id):
         categorie = request.form.get('categorie')
         eenheid = request.form.get('eenheid')
         prijs_per_eenheid = request.form.get('prijs_per_eenheid')
+        leverancier_id = request.form.get('leverancier_id')
+
+        # Convert empty leverancier_id to None
+        if not leverancier_id:
+            leverancier_id = None
 
         try:
             # Update het ingrediënt
             cur.execute("""
                 UPDATE ingredients
-                SET naam = %s, categorie = %s, eenheid = %s, prijs_per_eenheid = %s
+                SET naam = %s, categorie = %s, eenheid = %s, 
+                    prijs_per_eenheid = %s, leverancier_id = %s
                 WHERE ingredient_id = %s AND chef_id = %s
-            """, (naam, categorie, eenheid, prijs_per_eenheid, ingredient_id, session['chef_id']))
+            """, (naam, categorie, eenheid, prijs_per_eenheid, 
+                 leverancier_id, ingredient_id, session['chef_id']))
 
             # Update alle gekoppelde gerechten
             cur.execute("""
@@ -1560,10 +1587,18 @@ def edit_ingredient(chef_naam, ingredient_id):
         conn.close()
         return redirect(url_for('edit_ingredient', chef_naam=chef_naam, ingredient_id=ingredient_id))
 
+    # Haal alle leveranciers op voor de dropdown
+    cur.execute("""
+        SELECT * FROM leveranciers
+        WHERE chef_id = %s
+        ORDER BY naam
+    """, (session['chef_id'],))
+    leveranciers = cur.fetchall()
+
     cur.close()
     conn.close()
 
-    return render_template('edit_ingredient.html', chef_naam=chef_naam, ingredient=ingredient, form=FlaskForm())
+    return render_template('edit_ingredient.html', chef_naam=chef_naam, ingredient=ingredient, leveranciers=leveranciers, form=FlaskForm())
 
 # -----------------------------------------------------------
 #  Ingrediënt Verwijderen
@@ -1791,63 +1826,47 @@ def export_orderlist():
                         SELECT di.hoeveelheid, 
                                i.naam AS ingredient_naam, 
                                i.eenheid, 
-                               i.prijs_per_eenheid
+                               i.prijs_per_eenheid,
+                               l.leverancier_id,
+                               l.naam AS leverancier_naam
                         FROM dish_ingredients di
                         JOIN ingredients i ON di.ingredient_id = i.ingredient_id
+                        LEFT JOIN leveranciers l ON i.leverancier_id = l.leverancier_id
                         WHERE di.dish_id = %s
                     """, (dish_id,))
                     
                     ingredients = cur.fetchall()
                     for ing in ingredients:
-                        key = (
-                            ing['ingredient_naam'],
-                            ing['eenheid'],
-                            float(ing['prijs_per_eenheid'] or 0)
-                        )
-                        if key not in total_ingredients:
-                            total_ingredients[key] = 0
-                        total_ingredients[key] += float(ing['hoeveelheid']) * quantity
+                        supplier_key = ing['leverancier_naam'] or 'Geen leverancier'
+                        if supplier_key not in total_ingredients:
+                            total_ingredients[supplier_key] = []
+                        total_ingredients[supplier_key].append({
+                            'naam': ing['ingredient_naam'],
+                            'hoeveelheid': float(ing['hoeveelheid']) * quantity,
+                            'eenheid': ing['eenheid'],
+                            'prijs': float(ing['prijs_per_eenheid'] or 0)
+                        })
                 except Exception as e:
                     logger.error(f'Error processing ingredients for dish {dish_id}: {str(e)}')
                     continue
 
         # Maak Word document
         doc = Document()
-        doc.add_heading('Bestellijst', 0)
+        doc.add_heading('Bestellijst per Leverancier', 0)
 
-        # Voeg bestelde gerechten toe
-        doc.add_heading('Verwachtte verkoop:', level=1)
-        for dish_info in dishes_info.values():
-            doc.add_paragraph(f"{dish_info['naam']}: {dish_info['aantal']}x @ €{dish_info['verkoopprijs']:.2f}")
-
-        # Voeg totale ingrediëntenlijst toe
-        doc.add_heading('Benodigde Ingrediënten:', level=1)
-        table = doc.add_table(rows=1, cols=5)
-        table.style = 'Table Grid'
-        
-        # Headers
-        header_cells = table.rows[0].cells
-        header_cells[0].text = 'Ingrediënt'
-        header_cells[1].text = 'Totaal'
-        header_cells[2].text = 'Eenheid'
-        header_cells[3].text = 'Prijs per eenheid'
-        header_cells[4].text = 'Totaalprijs'
-
-        # Voeg ingrediënten toe met foutafhandeling
-        ingredient_total = 0
-        for (naam, eenheid, prijs_per_eenheid), hoeveelheid in sorted(total_ingredients.items()):
-            try:
-                row_cells = table.add_row().cells
-                row_cells[0].text = str(naam)
-                row_cells[1].text = f"{hoeveelheid:.2f}"
-                row_cells[2].text = str(eenheid)
-                row_cells[3].text = f"€{prijs_per_eenheid:.2f}"
-                subtotal = hoeveelheid * prijs_per_eenheid
-                row_cells[4].text = f"€{subtotal:.2f}"
-                ingredient_total += subtotal
-            except Exception as e:
-                logger.error(f'Error adding ingredient {naam} to table: {str(e)}')
-                continue
+        for supplier, ingredients in total_ingredients.items():
+            doc.add_heading(f'Leverancier: {supplier}', level=1)
+            table = doc.add_table(rows=1, cols=4)
+            table.style = 'Table Grid'
+            
+            for ingredient in ingredients:
+                row = table.add_row().cells
+                row[0].text = ingredient['naam']
+                row[1].text = f"{ingredient['hoeveelheid']:.2f}"
+                row[2].text = ingredient['eenheid']
+                row[3].text = f"€{ingredient['prijs']:.2f}"
+            
+            doc.add_paragraph()
 
         # Voeg financieel overzicht toe
         doc.add_heading('Financieel Overzicht:', level=1)
@@ -2427,6 +2446,58 @@ def favicon():
 @app.context_processor
 def inject_csrf_token():
     return dict(csrf_token=generate_csrf)  # Retourneer de functie zodat templates de token kunnen ophalen via csrf_token()
+
+# -----------------------------------------------------------
+#  Leveranciers Beheren
+# -----------------------------------------------------------
+@app.route('/dashboard/<chef_naam>/suppliers', methods=['GET', 'POST'])
+def manage_suppliers(chef_naam):
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('login'))
+
+    form = FlaskForm()
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('dashboard', chef_naam=chef_naam))
+    
+    cur = conn.cursor(dictionary=True)
+
+    try:
+        if request.method == 'POST' and form.validate_on_submit():
+            naam = request.form.get('naam')
+            contact = request.form.get('contact')
+            telefoon = request.form.get('telefoon')
+            email = request.form.get('email')
+
+            cur.execute("""
+                INSERT INTO leveranciers (chef_id, naam, contact, telefoon, email)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (session['chef_id'], naam, contact, telefoon, email))
+            conn.commit()
+            flash("Leverancier toegevoegd!", "success")
+
+        # Haal alle leveranciers op
+        cur.execute("""
+            SELECT * FROM leveranciers 
+            WHERE chef_id = %s
+            ORDER BY naam
+        """, (session['chef_id'],))
+        leveranciers = cur.fetchall()
+
+        return render_template('manage_suppliers.html',
+                           chef_naam=chef_naam,
+                           leveranciers=leveranciers,
+                           form=form)
+
+    except Exception as e:
+        conn.rollback()
+        flash(f"Fout bij leveranciersbeheer: {str(e)}", "danger")
+        return redirect(url_for('dashboard', chef_naam=chef_naam))
+    finally:
+        cur.close()
+        conn.close()
 
 # -----------------------------------------------------------
 # Start de server

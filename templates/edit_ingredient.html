@@ -83,12 +83,25 @@
         <input type="number" step="0.01" id="prijs_per_eenheid" name="prijs_per_eenheid" value="{{ ingredient.prijs_per_eenheid }}" class="form-control" required><br><br>
     </div>
 
+    <div class="form-group">
+        <label for="leverancier_id">Leverancier:</label><br>
+        <select id="leverancier_id" name="leverancier_id" class="form-control">
+            <option value="">Geen leverancier</option>
+            {% for leverancier in leveranciers %}
+                <option value="{{ leverancier.leverancier_id }}" 
+                    {% if ingredient.leverancier_id == leverancier.leverancier_id %}selected{% endif %}>
+                    {{ leverancier.naam }}
+                </option>
+            {% endfor %}
+        </select><br><br>
+    </div>
+
     <button type="submit" class="btn-action">Bijwerken</button>
 </form>
 
 {% if gerechten_met_ingredient %}
 <hr>
-<h3>Dit ingrediënt wordt gebruikt in de volgende gerechten:</h3>
+<h3>Dit ingrediënt wordt gebruikt in d</select>e volgende gerechten:</h3>
 <table border="1" cellpadding="5" cellspacing="0" class="usage-table">
     <tr>
         <th>Gerecht</th>
