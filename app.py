@@ -50,6 +50,17 @@ logger.addHandler(ch)
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")  # Verplaats dit naar hier, voor create_app()
 
+# Stap 1: Log het bestaan van de environment variabelen (geen gevoelige data)
+if app.secret_key:
+    logger.debug("SECRET_KEY loaded successfully")
+else:
+    logger.error("SECRET_KEY is missing")
+
+if app.config.get('SECURITY_PASSWORD_SALT'):
+    logger.debug("SECURITY_PASSWORD_SALT loaded successfully")
+else:
+    logger.error("SECURITY_PASSWORD_SALT is missing")
+
 def create_app():
     """Application factory function"""
     # Configure the app
@@ -180,7 +191,8 @@ def generate_confirmation_token(email):
     return serializer.dumps(email, salt=app.config['SECURITY_PASSWORD_SALT'])
 
 def confirm_token(token, expiration=3600):
-    """Verify email confirmation token"""
+    """Verify email confirmation token met extra logging voor debugging op Heroku."""
+    logger.debug(f"Attempting to confirm token: {token}")
     serializer = URLSafeTimedSerializer(app.secret_key)
     try:
         email = serializer.loads(
@@ -188,8 +200,12 @@ def confirm_token(token, expiration=3600):
             salt=app.config['SECURITY_PASSWORD_SALT'],
             max_age=expiration
         )
+        logger.debug(f"Token confirmed successfully. Email: {email}")
         return email
-    except:
+    except Exception as e:
+        logger.error(f"Token confirmation failed: {str(e)}")
+        # Debug logging: toon de huidige secret_key en salt, let op dat je deze informatie later weer verwijdert!
+        logger.error(f"Token bevestiging mislukt: {str(e)}. SECRET_KEY: {app.secret_key}, SALT: {app.config['SECURITY_PASSWORD_SALT']}")
         return False
 
 def send_confirmation_email(email, token):
@@ -291,6 +307,7 @@ def forgot_password():
 
 @app.route('/reset-password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
+    logger.debug(f"Received reset token: {token}")
     if not token or not isinstance(token, str) or len(token) > 128:
         flash("Ongeldige reset link.", "danger")
         return redirect(url_for('login'))
@@ -298,6 +315,7 @@ def reset_password(token):
     email = confirm_token(token)
     if not email:
         flash("Reset token is ongeldig of verlopen.", "danger")
+        logger.error(f"Reset token invalid or expired for token: {token}")
         return redirect(url_for('login'))
     conn = get_db_connection()
     if conn is None:
@@ -1661,9 +1679,10 @@ def instructions():
 
 # -----------------------------------------------------------
 # Voeg error handler toe voor Werkzeug exceptions
-@app.errorhandler(HTTPException)
-def handle_exception(e):
-    return render_template('error.html', error=e), e.code
+# @app.errorhandler(HTTPException)
+# def handle_exception(e):
+#     return
+# ...existing code...
 
 # -----------------------------------------------------------
 #  Bestellijst Beheren
