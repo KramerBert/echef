@@ -2420,7 +2420,7 @@ def favicon():
 
 @app.context_processor
 def inject_csrf_token():
-    return dict(csrf_token=generate_csrf())  # Geef het token direct terug
+    return dict(csrf_token=generate_csrf)  # Retourneer de functie zodat templates de token kunnen ophalen via csrf_token()
 
 # -----------------------------------------------------------
 # Start de server
