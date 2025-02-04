@@ -1,9 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container mt-4">
+    <div class="navigation-buttons mb-4">
+        <a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}" class="btn-action">
+            <i class="fas fa-arrow-left"></i> Dashboard
+        </a>
+    </div>
+
     <h2>Leveranciers Beheren</h2>
     
-    <form method="POST" class="mb-4">
+    <form method="POST" class="supplier-form">
         {{ form.csrf_token }}
         <div class="card">
             <div class="card-body">
@@ -23,7 +29,7 @@
                     <label for="email" class="form-label">E-mail</label>
                     <input type="email" class="form-control" id="email" name="email">
                 </div>
-                <button type="submit" class="btn btn-primary">Leverancier Toevoegen</button>
+                <button type="submit" class="btn-action">Leverancier Toevoegen</button>
             </div>
         </div>
     </form>
@@ -32,7 +38,7 @@
         <div class="card-body">
             <h3>Huidige Leveranciers</h3>
             <div class="table-responsive">
-                <table class="table">
+                <table class="suppliers-table">
                     <thead>
                         <tr>
                             <th>Naam</th>

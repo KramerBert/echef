@@ -2496,11 +2496,17 @@ def manage_suppliers(chef_naam):
         cur.close()
         conn.close()
 
+
+
+
 # -----------------------------------------------------------
-# Start de server
+# Start de server alleen lokaal
 # -----------------------------------------------------------
 if __name__ == '__main__':
     application = create_app()
-    port = int(os.environ.get('PORT', 5000))
-    debug_mode = os.environ.get('FLASK_ENV') == 'development'
-    application.run(host='0.0.0.0', port=port, debug=debug_mode)
+    application.run(
+        host='0.0.0.0',
+        port=int(os.environ.get('PORT', 5000)),
+        debug=os.environ.get('FLASK_ENV') == 'development'
+    )
+

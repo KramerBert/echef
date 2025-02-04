@@ -3,43 +3,43 @@
 {% block content %}
 <div class="container mt-5">
     <div class="row">
-        <div class="col-12 d-flex justify-content-between align-items-center mb-4">
+        <div class="col-12">
             <h1>Dashboard van {{ chef_naam }}</h1>
-            <a href="{{ url_for('profile', chef_naam=chef_naam) }}" class="btn btn-outline-secondary">
-                <i class="fas fa-user-cog"></i> Profiel Instellingen
-            </a>
         </div>
-    </div>
+    <div class="container mt-5"></div>
     <div class="row mb-4">
         <div class="col-12">
-            <div class="d-flex flex-wrap gap-3" role="group" aria-label="Primary dashboard actions">
-                <a href="{{ url_for('instructions') }}" class="btn btn-secondary p-3 btn-action" aria-label="Instructions">
+            <div class="dashboard-grid" role="group" aria-label="Primary dashboard actions">
+                <a href="{{ url_for('instructions') }}" class="dashboard-btn" aria-label="Instructions">
                     <i class="fas fa-book"></i> E-chef Werkinstructie
                 </a>
-                <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}" class="btn btn-secondary p-3 btn-action" aria-label="Manage ingredients">
+                <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Manage ingredients">
                     <i class="fas fa-carrot"></i> Ingrediënten beheren
                 </a>
-                <a href="{{ url_for('manage_suppliers', chef_naam=chef_naam) }}" class="btn btn-secondary p-3 btn-action" aria-label="Manage suppliers">
+                <a href="{{ url_for('manage_suppliers', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Manage suppliers">
                     <i class="fas fa-truck"></i> Leveranciers beheren
                 </a>
-                <a href="{{ url_for('manage_dishes', chef_naam=chef_naam) }}" class="btn btn-secondary p-3 btn-action" aria-label="Create new dish">
+                <a href="{{ url_for('manage_dishes', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Create new dish">
                     <i class="fas fa-utensils"></i> Nieuw gerecht opvoeren
                 </a>
-                <a href="{{ url_for('all_dishes') }}" class="btn btn-secondary p-3 btn-action" aria-label="Manage dishes">
+                <a href="{{ url_for('all_dishes') }}" class="dashboard-btn" aria-label="Manage dishes">
                     <i class="fas fa-list"></i> Gerechten beheren
                 </a>
-                <a href="{{ url_for('haccp_dashboard', chef_naam=chef_naam) }}" class="btn btn-secondary p-3 btn-action" aria-label="HACCP Dashboard">
+                <a href="{{ url_for('haccp_dashboard', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="HACCP Dashboard">
                     <i class="fas fa-clipboard-check"></i> HACCP automatiseren
                 </a>
-                <a href="{{ url_for('manage_orderlist') }}" class="btn btn-secondary p-3 btn-action" aria-label="Order list">
+                <a href="{{ url_for('manage_orderlist') }}" class="dashboard-btn" aria-label="Order list">
                     <i class="fas fa-clipboard-list"></i> Bestellijst samenstellen
                 </a>
-                <form method="POST" action="{{ url_for('export_cookbook') }}" class="btn-action" aria-label="Export cookbook form">
+                <form method="POST" action="{{ url_for('export_cookbook') }}" class="dashboard-btn-wrapper" aria-label="Export cookbook form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-secondary p-3 w-100" aria-label="Export to cookbook">
+                    <button type="submit" class="dashboard-btn" aria-label="Export to cookbook">
                         <i class="fas fa-file-export"></i> Exporteer je kookboek
                     </button>
                 </form>
+                <a href="{{ url_for('profile', chef_naam=chef_naam) }}" class="dashboard-btn">
+                    <i class="fas fa-user-cog"></i> Profiel Instellingen
+                </a>
             </div>
         </div>
     </div>

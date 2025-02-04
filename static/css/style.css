@@ -39,10 +39,24 @@ body {
     flex: 1;
     width: 100%; /* Changed from 95% */
     max-width: 1400px;
-    padding: 0.5rem;
+    padding: 1rem;
     margin: 0 auto;
     background-color: var(--kitchen-dark);
     box-shadow: none; /* Remove shadow on mobile */
+}
+
+/* Content alignment fixes */
+h2, p, .navigation-buttons, .search-filter, form, .card {
+    max-width: 1200px;
+    margin-left: 0;
+    margin-right: auto;
+}
+
+.table-responsive {
+    max-width: 1200px;
+    margin-left: 0;
+    margin-right: auto;
+    overflow-x: auto;
 }
 
 nav ul {
@@ -154,8 +168,8 @@ footer {
 }
 
 .dish-table th {
-    background-color: #073642;
-    color: white;
+    background-color: var(--kitchen-dark); /* Verander van #073642 naar de variabele */
+    color: var(--text-light);
     padding: 10px;
 }
 
@@ -192,7 +206,7 @@ footer {
 .edit-section {
     margin-bottom: 2rem;
     padding: 1.5rem;
-    background-color: #073642;
+    background-color: var(--kitchen-dark); /* Verander van #073642 naar de variabele */
     border-radius: 4px;
 }
 
@@ -202,10 +216,39 @@ footer {
 }
 
 .ingredient-form {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(200px, 3fr) minmax(150px, 1fr) minmax(100px, 1fr) auto;
     gap: 1rem;
-    align-items: center;
+    align-items: end;
     margin-bottom: 1.5rem;
+    width: 100%;
+}
+
+.ingredient-form select,
+.ingredient-form input {
+    width: 100%;
+    min-width: 0; /* Reset min-width to prevent overflow */
+}
+
+.ingredient-form .btn-action {
+    white-space: nowrap;
+    height: 38px; /* Match input height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Responsive aanpassingen */
+@media (max-width: 768px) {
+    .ingredient-form {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    .ingredient-form .btn-action {
+        margin-top: 0.5rem;
+        width: 100%;
+    }
 }
 
 .ingredient-form select {
@@ -228,8 +271,8 @@ footer {
 }
 
 .ingredient-table th {
-    background-color: #002b36;
-    color: #fff;
+    background-color: var(--kitchen-dark); /* Verander van #002b36 naar de variabele */
+    color: var(--text-light);
     padding: 0.75rem;
 }
 
@@ -244,16 +287,10 @@ footer {
 }
 
 .price-section {
-    background-color: #002b36;
+    background-color: var(--kitchen-dark); /* Verander van #002b36 naar de variabele */
     padding: 1rem;
     margin: 1rem 0;
     border-radius: 4px;
-}
-
-.price-section input {
-    width: 150px;
-    display: inline-block;
-    margin-right: 1rem;
 }
 
 .allergeen-icon {
@@ -416,8 +453,8 @@ footer {
     }
 
     .ingredient-form {
-        flex-direction: column;
-        gap: 15px;
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
     }
 
     .ingredient-form select,
@@ -425,6 +462,16 @@ footer {
         width: 100%;
         max-width: none;
         padding: 12px;
+    }
+
+    .ingredient-form .btn-action {
+        margin-top: 1rem;
+        margin-bottom: 0;
+        width: 100%;
+    }
+
+    .ingredient-form input[type="number"] {
+        min-width: 0;
     }
 
     /* Search and filters */
@@ -623,9 +670,9 @@ footer {
 
 /* Enhanced Form Styling */
 .form-control {
-    background-color: var(--kitchen-steel);
-    color: var(--text-dark);
-    border: 1px solid var(--kitchen-blue);
+    background-color: var(--kitchen-black);
+    color: var(--text-light);
+    border: 1px solid var(--kitchen-steel);
     border-radius: 4px;
     padding: 0.5rem;
     width: 100%;
@@ -633,24 +680,44 @@ footer {
 }
 
 .form-control:focus {
-    background-color: var(--text-light);
+    background-color: var(--kitchen-black);
     border-color: var(--kitchen-highlight);
     outline: none;
     box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.25);
+    color: var(--text-light);
 }
 
-/* Enhanced Button Styling */
-.btn {
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    border: none;
-    cursor: pointer;
-    transition: all 0.3s ease;
+.form-control::placeholder {
+    color: var(--text-muted);
 }
 
-.btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+/* Specifieke styling voor verschillende input types */
+input[type="text"].form-control,
+input[type="email"].form-control,
+input[type="tel"].form-control,
+input[type="number"].form-control,
+input[type="password"].form-control,
+select.form-control,
+textarea.form-control {
+    background-color: var(--kitchen-black);
+    color: var(--text-light);
+}
+
+/* Dropdown (Select) Styling */
+select.form-control option {
+    background-color: var(--kitchen-black);
+    color: var(--text-light);
+}
+
+select.form-control:focus option:checked {
+    background-color: var(--kitchen-highlight);
+    color: var(--text-light);
+}
+
+select.form-control option:hover,
+select.form-control option:focus {
+    background-color: var(--kitchen-blue);
+    color: var(--text-light);
 }
 
 /* Print Optimization */
@@ -738,4 +805,297 @@ footer {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
+}
+
+/* Manage Ingredients Form Styling */
+.add-ingredient-form,
+.create-dish-form {
+    background-color: var(--kitchen-dark);
+    padding: 20px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.ingredient-form .form-group,
+.create-dish-form .form-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.ingredient-form .form-group input,
+.ingredient-form .form-group select {
+    flex: 1;
+    min-width: 200px;
+}
+
+/* Voeg deze nieuwe styling toe */
+.ingredient-form .form-group select[name="leverancier"] {
+    max-width: 300px;
+    flex: 0 0 300px;
+}
+
+.ingredient-form select[name="leverancier"] {
+    max-width: none;
+}
+
+.ingredient-form input[type="number"] {
+    width: 100%;
+    min-width: 100px;
+}
+
+.ingredient-form .btn-action {
+    align-self: flex-end;
+    margin-bottom: 1.25rem; /* Align with inputs considering their labels */
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .ingredient-form {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    .ingredient-form .btn-action {
+        margin-top: 1rem;
+        margin-bottom: 0;
+        width: 100%;
+    }
+
+    .ingredient-form input[type="number"] {
+        min-width: 0;
+    }
+}
+
+.search-filter {
+    background-color: var(--kitchen-dark);
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.search-filter input,
+.search-filter select {
+    max-width: 300px;
+    display: inline-block;
+}
+
+/* CSV Import Section */
+.csv-import {
+    background-color: var(--kitchen-dark);
+    padding: 20px;
+    border-radius: 4px;
+    margin-top: 20px;
+}
+
+/* Form Labels */
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-muted);
+}
+
+/* Textarea specific styling */
+textarea.form-control {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* Navigation buttons */
+.navigation-buttons {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+/* All Dishes Page Styles */
+.search-filter {
+    background-color: var(--kitchen-dark);
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.search-filter input,
+.search-filter select {
+    background-color: var(--kitchen-black);
+    color: var(--text-light);
+    border: 1px solid var(--kitchen-steel);
+    padding: 8px;
+    max-width: 300px;
+    display: inline-block;
+}
+
+.search-filter input {
+    max-width: 300px;
+}
+
+.search-filter select {
+    max-width: 200px;
+}
+
+.dish-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background-color: var(--kitchen-dark);
+}
+
+.dish-table th {
+    background-color: var(--kitchen-blue);
+    padding: 12px;
+    text-align: left;
+}
+
+.dish-table td {
+    padding: 10px;
+    border: 1px solid #586e75;
+}
+
+.col-price {
+    text-align: right;
+    width: 100px;
+}
+
+.col-actions {
+    width: 150px;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .search-filter input,
+    .search-filter select {
+        width: 100%;
+        margin: 5px 0;
+        display: block;
+    }
+    
+    .col-actions {
+        width: auto;
+    }
+    
+    .btn-action {
+        padding: 8px;
+        margin: 2px;
+    }
+}
+
+/* Manage Suppliers Page Styles */
+.suppliers-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    background-color: var(--kitchen-dark);
+}
+
+.suppliers-table th {
+    background-color: var(--kitchen-blue);
+    color: var(--text-light);
+    padding: 12px;
+    text-align: left;
+}
+
+.suppliers-table td {
+    padding: 10px;
+    border: 1px solid var(--kitchen-steel);
+}
+
+.supplier-form {
+    max-width: 800px;
+    margin-bottom: 2rem;
+}
+
+.supplier-form .form-label {
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.supplier-form .form-control {
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .suppliers-table {
+        font-size: 0.9rem;
+    }
+    
+    .suppliers-table th,
+    .suppliers-table td {
+        padding: 8px;
+    }
+    
+    .supplier-form {
+        padding: 0 1rem;
+    }
+}
+
+/* Dashboard Grid Layout */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    width: 100%;
+    margin: 1rem 0;
+}
+
+.dashboard-btn,
+.dashboard-btn-wrapper {
+    width: 100%;
+    height: 100%;
+}
+
+.dashboard-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background-color: var(--kitchen-blue);
+    color: var(--text-light);
+    border: 1px solid var(--kitchen-steel);
+    border-radius: 4px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    text-align: center;
+    font-size: 1rem;
+    min-height: 80px;
+}
+
+.dashboard-btn:hover {
+    background-color: var(--kitchen-highlight);
+    color: var(--text-light);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-btn i {
+    margin-right: 0.5rem;
+    font-size: 1.2em;
+}
+
+.dashboard-btn-wrapper {
+    margin: 0;
+    border: 1px solid var(--text-light);
+    border-radius: 4px;
+}
+
+.dashboard-btn-wrapper button {
+    width: 100%;
+    height: 100%;
+    border: none;
+    cursor: pointer;
+    border-radius: 3px; /* Slightly smaller than wrapper to prevent edge issues */
+}
+
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    .dashboard-btn {
+        padding: 1rem;
+        min-height: 60px;
+    }
 }

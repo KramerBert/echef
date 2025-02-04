@@ -3,6 +3,12 @@
 <h2>Gerechten Samenstellen</h2>
 <p>Voeg hier nieuwe gerechten toe of bekijk de lijst van bestaande gerechten.</p>
 
+<div class="navigation-buttons">
+    <a href="{{ url_for('dashboard', chef_naam=chef_naam) }}" class="btn-action">
+        <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+</div>
+
 <div class="create-dish-form">
     <form method="POST" action="{{ url_for('manage_dishes', chef_naam=chef_naam) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -51,91 +57,7 @@
 <div class="navigation-buttons">
     <a href="{{ url_for('all_dishes') }}" class="btn-action">
         <i class="fas fa-list"></i> Gerechten Overzicht
-    </a>
-    <a href="{{ url_for('dashboard', chef_naam=chef_naam) }}" class="btn-action">
-        <i class="fas fa-arrow-left"></i> Dashboard
-    </a>
+
 </div>
 
-<style>
-    .create-dish-form {
-        background-color: var(--kitchen-dark);
-        padding: 20px;
-        border-radius: 4px;
-        margin-bottom: 20px;
-    }
-
-    .form-group {
-        margin-bottom: 1.5rem;
-    }
-
-    .form-group label {
-        display: block;
-        margin-bottom: 0.5rem;
-        color: var(--text-muted);
-    }
-
-    .form-control {
-        width: 100%;
-        padding: 8px;
-        background-color: var(--kitchen-black);
-        color: var(--text-light);
-        border: 1px solid var(--kitchen-steel);
-        border-radius: 4px;
-    }
-
-    .form-control:focus {
-        background-color: var(--kitchen-steel);
-        border-color: var(--kitchen-highlight);
-        color: var(--text-dark);
-    }
-
-    textarea.form-control {
-        min-height: 100px;
-        resize: vertical;
-    }
-
-    .btn-action {
-        display: inline-block;
-        padding: 8px 16px;
-        background-color: var(--kitchen-blue);
-        color: var(--text-light);
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        text-decoration: none;
-        margin: 0 5px;
-    }
-
-    .btn-action:hover {
-        background-color: var(--kitchen-highlight);
-        color: var(--text-light);
-    }
-
-    .navigation-buttons {
-        margin-top: 20px;
-        display: flex;
-        gap: 10px;
-    }
-
-    /* Responsieve aanpassingen */
-    @media (max-width: 768px) {
-        .create-dish-form {
-            padding: 15px;
-        }
-        
-        .form-control {
-            font-size: 16px; /* Voorkomt inzoomen op mobiel */
-        }
-        
-        .btn-action {
-            width: 100%;
-            margin: 5px 0;
-        }
-        
-        .navigation-buttons {
-            flex-direction: column;
-        }
-    }
-</style>
 {% endblock %}

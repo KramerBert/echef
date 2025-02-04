@@ -3,10 +3,16 @@
 <h2>Gerechten Overzicht</h2>
 <p>Hier kunt u alle gerechten bekijken en beheren.</p>
 
+<div class="navigation-buttons">
+    <a href="{{ url_for('dashboard', chef_naam=chef_naam) }}" class="btn-action">
+        <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+</div>
+
 <div class="search-filter" style="margin-bottom: 20px;">
     <input type="text" id="dishSearch" class="form-control" 
            placeholder="Zoek gerecht..." style="max-width: 300px; display: inline-block;">
-    <select id="categoryFilter" class="form-control" style="max-width: 200px; display: inline-block; margin-left: 10px;">
+    <select id="categoryFilter" class="form-control" style="max-width: 200px; display: inline-block;">
         <option value="">Alle categorieën</option>
         {% for categorie in gerechten|map(attribute='categorie')|unique %}
         <option value="{{ categorie }}">{{ categorie }}</option>
@@ -72,10 +78,6 @@
 </form>
 
 <div class="navigation-buttons" style="margin-top: 20px;">
-    <a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}" 
-       class="btn-action" title="Terug naar Dashboard">
-        <i class="fas fa-arrow-left"></i> Dashboard
-    </a>
     <a href="{{ url_for('manage_dishes', chef_naam=session.get('chef_naam')) }}" 
        class="btn-action" style="margin-left: 10px;" title="Voeg nieuw gerecht toe">
         <i class="fas fa-plus"></i> Nieuw Gerecht

@@ -3,11 +3,39 @@
 <h2>Ingrediënten Beheren</h2>
 <p>Voeg nieuwe ingrediënten toe of bekijk bestaande ingrediënten.</p>
 
+<div class="navigation-buttons" style="margin-bottom: 20px;">
+    <a href="{{ url_for('dashboard', chef_naam=chef_naam) }}" class="btn-action">
+        <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+</div>
+
+<!-- Nieuw ingrediënt formulier -->
+<div class="add-ingredient-form" style="margin-top: 20px;">
+    <h3>Nieuw Ingrediënt Toevoegen</h3>
+    <form method="POST" class="ingredient-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+            <input type="text" name="naam" placeholder="Naam" required class="form-control">
+            <input type="text" name="categorie" placeholder="Categorie" required class="form-control">
+            <input type="text" name="eenheid" placeholder="Eenheid (bijv. gram, ml)" required class="form-control">
+            <input type="number" name="prijs_per_eenheid" placeholder="Prijs per eenheid" step="0.01" required class="form-control">
+            <select name="leverancier" class="form-control">
+                <option value="">Leverancier (optioneel)</option>
+                {% for leverancier in leveranciers %}
+                    <option value="{{ leverancier.naam }}">{{ leverancier.naam }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn-action"><i class="fas fa-plus"></i> Toevoegen</button>
+    </form>
+</div>
+
+
 <div class="search-filter">
     <input type="text" id="ingredientSearch" class="form-control" 
            placeholder="Zoek ingrediënt..." style="max-width: 300px; display: inline-block;">
-    <select id="categoryFilter" class="form-control" style="max-width: 200px; display: inline-block; margin-left: 10px;">
-        <option value="">Alle categorieën</option>
+    <select id="categoryFilter" class="form-control" style="max-width: 300px; display: inline-block">
+        <option value="">In alle categorieën</option>
         {% for categorie in unieke_categorieen %} 
             <option value="{{ categorie }}">{{ categorie }}</option>
         {% endfor %}
@@ -47,26 +75,7 @@
     {% endfor %}
 </table>
 
-<!-- Nieuw ingrediënt formulier -->
-<div class="add-ingredient-form" style="margin-top: 20px;">
-    <h3>Nieuw Ingrediënt Toevoegen</h3>
-    <form method="POST" class="ingredient-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="form-group">
-            <input type="text" name="naam" placeholder="Naam" required class="form-control">
-            <input type="text" name="categorie" placeholder="Categorie" required class="form-control">
-            <input type="text" name="eenheid" placeholder="Eenheid (bijv. gram, ml)" required class="form-control">
-            <input type="number" name="prijs_per_eenheid" placeholder="Prijs per eenheid" step="0.01" required class="form-control">
-            <select name="leverancier" class="form-control">
-                <option value="">Kies leverancier (optioneel)</option>
-                {% for leverancier in leveranciers %}
-                    <option value="{{ leverancier.naam }}">{{ leverancier.naam }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <button type="submit" class="btn-action"><i class="fas fa-plus"></i> Toevoegen</button>
-    </form>
-</div>
+
 <!-- CSV import sectie -->
 <div class="csv-import" style="margin-top: 20px;">
     <h3>Bulk Import via CSV</h3>
@@ -82,73 +91,6 @@
     </form>
 </div>
 
-<div class="navigation-buttons">
-    <a href="{{ url_for('dashboard', chef_naam=chef_naam) }}" class="btn-action">
-        <i class="fas fa-arrow-left"></i> Dashboard
-    </a>
-</div>
-
-<style>
-    /* Hergebruik bestaande stijlen van all_dishes.html */
-    .search-filter {
-        background-color: #073642;
-        padding: 15px;
-        border-radius: 4px;
-        margin-bottom: 20px;
-    }
-    
-    .search-filter input,
-    .search-filter select,
-    .form-control {
-        background-color: #002b36;
-        color: #fff;
-        border: 1px solid #586e75;
-        padding: 8px;
-        margin: 5px 0;
-    }
-
-    .ingredient-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-    }
-
-    .ingredient-table th {
-        background-color: #073642;
-        padding: 12px;
-        text-align: left;
-    }
-
-    .ingredient-table td {
-        padding: 10px;
-        border: 1px solid #586e75;
-    }
-
-    /* Extra stijlen voor formulieren */
-    .form-group {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-
-    .form-group input {
-        flex: 1;
-        min-width: 200px;
-    }
-
-    .add-ingredient-form,
-    .csv-import {
-        background-color: #073642;
-        padding: 20px;
-        border-radius: 4px;
-        margin-top: 20px;
-    }
-
-    h3 {
-        margin-top: 0;
-        color: #93a1a1;
-    }
-</style>
 
 <script>
     // Zoek en filter functionaliteit
