@@ -1335,13 +1335,10 @@ def export_dishes():
 # -----------------------------------------------------------
 @app.route('/export_cookbook', methods=['POST'])
 def export_cookbook():
-    """
-    Export all dishes to a Microsoft Word document as a cookbook.
-    """
     form = FlaskForm()  # Add CSRF validation
     if not form.validate_on_submit():
         flash("Ongeldige CSRF-token. Probeer het opnieuw.", "danger")
-        return redirect(url_for('all_dishes'))
+        return redirect(url_for('dashboard', chef_naam=session.get('chef_naam')))
 
     if 'chef_id' not in session:  # Add this check
         flash("Geen toegang. Log opnieuw in.", "danger")

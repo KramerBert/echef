@@ -35,8 +35,7 @@
                     <i class="fas fa-clipboard-list"></i> Bestellijst samenstellen
                 </a>
                 <form method="POST" action="{{ url_for('export_cookbook') }}" class="btn-action" aria-label="Export cookbook form">
-                    <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
-                    <input type="hidden" name="exportForm" value="1">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-secondary p-3 w-100" aria-label="Export to cookbook">
                         <i class="fas fa-file-export"></i> Exporteer je kookboek
                     </button>
