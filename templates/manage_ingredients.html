@@ -16,13 +16,27 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <input type="text" name="naam" placeholder="Naam" required class="form-control">
-            <input type="text" name="categorie" placeholder="Categorie" required class="form-control">
-            <input type="text" name="eenheid" placeholder="Eenheid (bijv. gram, ml)" required class="form-control">
+            
+            <select name="categorie" required class="form-control">
+                <option value="">Kies een categorie...</option>
+                {% for categorie in categorieen %}
+                    <option value="{{ categorie.naam }}">{{ categorie.naam }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="eenheid" required class="form-control">
+                <option value="">Kies een eenheid...</option>
+                {% for eenheid in eenheden %}
+                    <option value="{{ eenheid.naam }}">{{ eenheid.naam }}</option>
+                {% endfor %}
+            </select>
+
             <input type="number" name="prijs_per_eenheid" placeholder="Prijs per eenheid" step="0.01" required class="form-control">
-            <select name="leverancier" class="form-control">
+            
+            <select name="leverancier_id" class="form-control">
                 <option value="">Leverancier (optioneel)</option>
                 {% for leverancier in leveranciers %}
-                    <option value="{{ leverancier.naam }}">{{ leverancier.naam }}</option>
+                    <option value="{{ leverancier.leverancier_id }}">{{ leverancier.naam }}</option>
                 {% endfor %}
             </select>
         </div>

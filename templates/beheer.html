@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <div class="navigation-buttons mb-4">
+        <a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}" class="btn-action">
+            <i class="fas fa-arrow-left"></i> Dashboard
+        </a>
+    </div>
+
+    <h2>Beheer Stamgegevens</h2>
+
+    <!-- Leveranciers Sectie -->
+    <div class="manage-section">
+        <h3>Leveranciers</h3>
+        <!-- ...existing leveranciers code... -->
+    </div>
+
+    <!-- Eenheden Sectie -->
+    <div class="manage-section">
+        <h3>Eenheden</h3>
+        <div class="table-responsive">
+            <table class="management-table">
+                <thead>
+                    <tr>
+                        <th>Naam</th>
+                        <th>Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for eenheid in eenheden %}
+                    <tr id="eenheid-row-{{ eenheid.eenheid_id }}">
+                        <td>
+                            <span class="display-value">{{ eenheid.naam }}</span>
+                            <input type="text" class="edit-input form-control" 
+                                   value="{{ eenheid.naam }}" style="display: none;">
+                        </td>
+                        <td>
+                            <button class="btn-action btn-edit" onclick="toggleEdit(this, 'eenheid', {{ eenheid.eenheid_id }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-action btn-save" onclick="saveEdit(this, 'eenheid', {{ eenheid.eenheid_id }})" 
+                                    style="display: none;">
+                                <i class="fas fa-save"></i>
+                            </button>
+                            <button class="btn-action btn-delete" 
+                                    onclick="verwijderEenheid({{ eenheid.eenheid_id }}, '{{ eenheid.naam|e }}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <form method="POST" class="add-form">
+            {{ form.csrf_token }}
+            <select name="nieuwe_eenheid" class="form-control" required>
+                <option value="">Kies een standaard eenheid...</option>
+                {% for eenheid in standaard_eenheden %}
+                <option value="{{ eenheid }}">{{ eenheid }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn-action">Eenheid Toevoegen</button>
+        </form>
+    </div>
+
+    <!-- Categorieën Sectie -->
+    <div class="manage-section">
+        <h3>Categorieën</h3>
+        <div class="table-responsive">
+            <table class="management-table">
+                <thead>
+                    <tr>
+                        <th>Naam</th>
+                        <th>Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for categorie in categorieen %}
+                    <tr>
+                        <td>{{ categorie.naam }}</td>
+                        <td>
+                            <button class="btn-action btn-edit" onclick="toggleEdit(this, 'categorie', {{ categorie.categorie_id }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-action btn-save" onclick="saveEdit(this, 'categorie', {{ categorie.categorie_id }})" 
+                                    style="display: none;">
+                                <i class="fas fa-save"></i>
+                            </button>
+                            <button class="btn-action btn-delete" 
+                                    onclick="verwijderCategorie({{ categorie.categorie_id }}, '{{ categorie.naam|e }}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <form method="POST" class="add-form">
+            {{ form.csrf_token }}
+            <select name="nieuwe_categorie" class="form-control" required>
+                <option value="">Kies een standaard categorie...</option>
+                {% for categorie in standaard_categorieen %}
+                <option value="{{ categorie }}">{{ categorie }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn-action">Categorie Toevoegen</button>
+        </form>
+    </div>
+</div>
+
+<style>
+    .manage-section {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-blue));
+        border: 1px solid var(--kitchen-steel);
+        border-radius: 8px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .management-table {
+        width: 100%;
+        margin-bottom: 1.5rem;
+    }
+
+    .add-form {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .manage-section {
+            padding: 1rem;
+        }
+
+        .add-form {
+            flex-direction: column;
+        }
+
+        .btn-action {
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+function toggleEdit(button, type, id) {
+    const row = button.closest('tr');
+    const displayValue = row.querySelector('.display-value');
+    const editInput = row.querySelector('.edit-input');
+    const saveButton = row.querySelector('.btn-save');
+    
+    displayValue.style.display = 'none';
+    editInput.style.display = 'block';
+    button.style.display = 'none';
+    saveButton.style.display = 'inline-block';
+}
+
+async function saveEdit(button, type, id) {
+    const row = button.closest('tr');
+    const editInput = row.querySelector('.edit-input');
+    const displayValue = row.querySelector('.display-value');
+    const newValue = editInput.value;
+    
+    try {
+        const response = await fetch(`/dashboard/{{ chef_naam }}/${type}/${id}/update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ naam: newValue })
+        });
+        
+        if (response.ok) {
+            displayValue.textContent = newValue;
+            displayValue.style.display = 'block';
+            editInput.style.display = 'none';
+            button.style.display = 'none';
+            row.querySelector('.btn-edit').style.display = 'inline-block';
+        } else {
+            throw new Error('Update mislukt');
+        }
+    } catch (error) {
+        alert('Er is een fout opgetreden bij het opslaan van de wijzigingen.');
+    }
+}
+
+async function verwijderEenheid(id, naam) {
+    if (confirm(`Weet je zeker dat je eenheid "${naam}" wilt verwijderen?`)) {
+        try {
+            const response = await fetch(`/dashboard/{{ chef_naam }}/eenheid/${id}/delete`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            });
+            
+            if (response.ok) {
+                document.querySelector(`#eenheid-row-${id}`).remove();
+            } else {
+                throw new Error('Verwijderen mislukt');
+            }
+        } catch (error) {
+            alert('Er is een fout opgetreden bij het verwijderen van de eenheid.');
+        }
+    }
+}
+
+async function verwijderCategorie(id, naam) {
+    if (confirm(`Weet je zeker dat je categorie "${naam}" wilt verwijderen?`)) {
+        try {
+            const response = await fetch(`/dashboard/{{ chef_naam }}/categorie/${id}/delete`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            });
+            
+            if (response.ok) {
+                document.querySelector(`#categorie-row-${id}`).remove();
+            } else {
+                throw new Error('Verwijderen mislukt');
+            }
+        } catch (error) {
+            alert('Er is een fout opgetreden bij het verwijderen van de categorie.');
+        }
+    }
+}
+</script>
+{% endblock %}

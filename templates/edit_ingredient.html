@@ -18,27 +18,25 @@
 
             <div class="form-group">
                 <label for="categorie">Categorie</label>
-                <input type="text" id="categorie" name="categorie" value="{{ ingredient.categorie }}" class="form-control" required>
+                <select id="categorie" name="categorie" class="form-control" required>
+                    <option value="">Kies een categorie...</option>
+                    {% for categorie in categorieen %}
+                        <option value="{{ categorie.naam }}" {% if ingredient.categorie == categorie.naam %}selected{% endif %}>
+                            {{ categorie.naam }}
+                        </option>
+                    {% endfor %}
+                </select>
             </div>
 
             <div class="form-group">
                 <label for="eenheid">Eenheid</label>
                 <select id="eenheid" name="eenheid" class="form-control" required>
-                    <option value="gram (g)" {% if ingredient.eenheid == 'gram (g)' %}selected{% endif %}>gram (g)</option>
-                    <option value="kilogram (kg)" {% if ingredient.eenheid == 'kilogram (kg)' %}selected{% endif %}>kilogram (kg)</option>
-                    <option value="milliliter (ml)" {% if ingredient.eenheid == 'milliliter (ml)' %}selected{% endif %}>milliliter (ml)</option>
-                    <option value="centiliter (cl)" {% if ingredient.eenheid == 'centiliter (cl)' %}selected{% endif %}>centiliter (cl)</option>
-                    <option value="deciliter (dl)" {% if ingredient.eenheid == 'deciliter (dl)' %}selected{% endif %}>deciliter (dl)</option>
-                    <option value="liter (l)" {% if ingredient.eenheid == 'liter (l)' %}selected{% endif %}>liter (l)</option>
-                    <option value="theelepel (tl or tsp)" {% if ingredient.eenheid == 'theelepel (tl or tsp)' %}selected{% endif %}>theelepel (tl or tsp) – ca. 5 ml</option>
-                    <option value="eetlepel (el or tbsp)" {% if ingredient.eenheid == 'eetlepel (el or tbsp)' %}selected{% endif %}>eetlepel (el or tbsp) – ca. 15 ml</option>
-                    <option value="mespuntje" {% if ingredient.eenheid == 'mespuntje' %}selected{% endif %}>mespuntje</option>
-                    <option value="snufje" {% if ingredient.eenheid == 'snufje' %}selected{% endif %}>snufje</option>
-                    <option value="scheutje" {% if ingredient.eenheid == 'scheutje' %}selected{% endif %}>scheutje</option>
-                    <option value="kopje" {% if ingredient.eenheid == 'kopje' %}selected{% endif %}>kopje ±125–150 ml</option>
-                    <option value="mok" {% if ingredient.eenheid == 'mok' %}selected{% endif %}>mok (200–300 ml of meer)</option>
-                    <option value="stuk/stuks" {% if ingredient.eenheid == 'stuk/stuks' %}selected{% endif %}>stuk/stuks</option>
-                    <option value="pak" {% if ingredient.eenheid == 'pak' %}selected{% endif %}>pak</option>
+                    <option value="">Kies een eenheid...</option>
+                    {% for eenheid in eenheden %}
+                        <option value="{{ eenheid.naam }}" {% if ingredient.eenheid == eenheid.naam %}selected{% endif %}>
+                            {{ eenheid.naam }}
+                        </option>
+                    {% endfor %}
                 </select>
             </div>
 
