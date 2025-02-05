@@ -89,6 +89,10 @@ def create_app():
 
     # Removed blueprint registration; routes are defined below instead.
 
+    # Registreer de AI blueprint
+    from blueprints.ai import ai_blueprint
+    app.register_blueprint(ai_blueprint)
+
     return app
 
 # Improved error handlers

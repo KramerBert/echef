@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h1>Gegenereerd Recept</h1>
+    
+    <div class="recipe-container">
+        <div class="recipe-content">
+            {{ recipe|nl2br }}
+        </div>
+
+        <div class="action-buttons mt-4">
+            <button class="btn btn-primary" onclick="saveRecipe()">
+                <i class="fas fa-save"></i> Opslaan als Gerecht
+            </button>
+            <a href="{{ url_for('ai.generate_recipe') }}" class="btn btn-secondary">
+                <i class="fas fa-redo"></i> Nieuw Recept Genereren
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .recipe-container {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-blue));
+        padding: 2rem;
+        border-radius: 8px;
+        margin-top: 2rem;
+    }
+
+    .recipe-content {
+        background-color: rgba(0, 0, 0, 0.2);
+        padding: 1.5rem;
+        border-radius: 4px;
+        white-space: pre-line;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+    }
+</style>
+
+<script>
+async function saveRecipe() {
+    try {
+        const response = await fetch('/ai/save_recipe', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                recipe_text: document.querySelector('.recipe-content').innerText
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            alert('Recept succesvol opgeslagen!');
+            // Redirect naar het bewerken van het gerecht
+            window.location.href = `/dashboard/{{ session.chef_naam }}/dishes/${data.dish_id}`;
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (error) {
+        alert(`Fout bij opslaan: ${error.message}`);
+    }
+}
+</script>
+{% endblock %}

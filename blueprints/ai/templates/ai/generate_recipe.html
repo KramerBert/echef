@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h1>Genereer een Recept met AI</h1>
+    
+    <div class="recipe-form-container">
+        <form method="POST" class="ai-form">
+            {{ form.csrf_token }}
+            
+            <div class="form-group">
+                {{ form.prompt.label }}
+                {{ form.prompt(class="form-control", rows=4) }}
+            </div>
+
+            <div class="form-group">
+                {{ form.cuisine.label }}
+                {{ form.cuisine(class="form-control") }}
+            </div>
+
+            <div class="form-group">
+                {{ form.dietary.label }}
+                {{ form.dietary(class="form-control") }}
+            </div>
+
+            {{ form.submit(class="btn btn-primary mt-3") }}
+        </form>
+    </div>
+</div>
+
+<style>
+    .recipe-form-container {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-blue));
+        padding: 2rem;
+        border-radius: 8px;
+        margin-top: 2rem;
+    }
+
+    .ai-form {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        color: var(--text-light);
+        margin-bottom: 0.5rem;
+        display: block;
+        font-weight: bold;
+    }
+
+    .form-control {
+        background-color: rgba(255, 255, 255, 0.9);
+        border: 1px solid var(--kitchen-steel);
+        color: var(--kitchen-dark);
+        padding: 0.75rem;
+        border-radius: 4px;
+        width: 100%;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        background-color: #ffffff;
+        border-color: var(--kitchen-highlight);
+        box-shadow: 0 0 0 2px rgba(var(--kitchen-highlight-rgb), 0.25);
+        color: #000000;
+    }
+
+    .form-control::placeholder {
+        color: #666;
+        opacity: 0.7;
+    }
+
+    textarea.form-control {
+        min-height: 120px;
+        resize: vertical;
+    }
+
+    .btn-primary {
+        background-color: var(--kitchen-highlight);
+        border: none;
+        padding: 0.75rem 1.5rem;
+        color: white;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background-color: var(--kitchen-highlight-dark);
+    }
+</style>
+{% endblock %}
