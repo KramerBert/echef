@@ -226,7 +226,7 @@ def send_confirmation_email(email, token):
     msg['Subject'] = "e-Chef Email Verificatie"
     
     scheme = 'https' if os.getenv('FLASK_ENV') == 'production' else 'http'
-    verify_url = url_for('verify_email', token=token, _external=True, _scheme='https')
+    verify_url = url_for('verify_email', token=token, _external=True, _scheme=scheme)
     
     body = f"""
     Welkom bij e-Chef!
@@ -590,21 +590,6 @@ def manage_ingredients(chef_naam):
     cur = conn.cursor(dictionary=True)
 
     try:
-        # Haal eenheden en categorieën op
-        cur.execute("""
-            SELECT * FROM eenheden 
-            WHERE chef_id = %s 
-            ORDER BY naam
-        """, (session['chef_id'],))
-        eenheden = cur.fetchall()
-
-        cur.execute("""
-            SELECT * FROM categorieen 
-            WHERE chef_id = %s 
-            ORDER BY naam
-        """, (session['chef_id'],))
-        categorieen = cur.fetchall()
-
         if request.method == 'POST':
             if not form.validate_on_submit():  # Add CSRF validation
                 flash("Ongeldige CSRF-token. Probeer het opnieuw.", "danger")
@@ -683,8 +668,6 @@ def manage_ingredients(chef_naam):
                            unieke_categorieen=unieke_categorieen,
                            filter_categorie=filter_categorie,
                            leveranciers=leveranciers,
-                           eenheden=eenheden,
-                           categorieen=categorieen,
                            form=form)
 
     except Exception as e:
@@ -1540,53 +1523,32 @@ def edit_ingredient(chef_naam, ingredient_id):
         return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
     cur = conn.cursor(dictionary=True)
 
-    try:
-        # Haal info over het ingrediënt op (check of het bij deze chef hoort)
-        cur.execute("""
-            SELECT i.*, l.naam as leverancier_naam 
-            FROM ingredients i
-            LEFT JOIN leveranciers l ON i.leverancier_id = l.leverancier_id
-            WHERE i.ingredient_id = %s AND i.chef_id = %s
-        """, (ingredient_id, session['chef_id']))
-        ingredient = cur.fetchone()
-        if not ingredient:
-            flash("Ingrediënt niet gevonden of je hebt geen toestemming.", "danger")
-            return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
+    # Haal info over het ingrediënt op (check of het bij deze chef hoort)
+    cur.execute("""
+        SELECT i.*, l.naam as leverancier_naam 
+        FROM ingredients i
+        LEFT JOIN leveranciers l ON i.leverancier_id = l.leverancier_id
+        WHERE i.ingredient_id = %s AND i.chef_id = %s
+    """, (ingredient_id, session['chef_id']))
+    ingredient = cur.fetchone()
+    if not ingredient:
+        cur.close()
+        conn.close()
+        flash("Ingrediënt niet gevonden of je hebt geen toestemming.", "danger")
+        return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
 
-        # Haal eenheden en categorieën op
-        cur.execute("""
-            SELECT * FROM eenheden 
-            WHERE chef_id = %s 
-            ORDER BY naam
-        """, (session['chef_id'],))
-        eenheden = cur.fetchall()
+    if request.method == 'POST':
+        naam = request.form.get('naam')
+        categorie = request.form.get('categorie')
+        eenheid = request.form.get('eenheid')
+        prijs_per_eenheid = request.form.get('prijs_per_eenheid')
+        leverancier_id = request.form.get('leverancier_id')
 
-        cur.execute("""
-            SELECT * FROM categorieen 
-            WHERE chef_id = %s 
-            ORDER BY naam
-        """, (session['chef_id'],))
-        categorieen = cur.fetchall()
+        # Convert empty leverancier_id to None
+        if not leverancier_id:
+            leverancier_id = None
 
-        # Haal alle leveranciers op voor de dropdown
-        cur.execute("""
-            SELECT * FROM leveranciers
-            WHERE chef_id = %s
-            ORDER BY naam
-        """, (session['chef_id'],))
-        leveranciers = cur.fetchall()
-
-        if request.method == 'POST':
-            naam = request.form.get('naam')
-            categorie = request.form.get('categorie')
-            eenheid = request.form.get('eenheid')
-            prijs_per_eenheid = request.form.get('prijs_per_eenheid')
-            leverancier_id = request.form.get('leverancier_id')
-
-            # Convert empty leverancier_id to None
-            if not leverancier_id:
-                leverancier_id = None
-
+        try:
             # Update het ingrediënt
             cur.execute("""
                 UPDATE ingredients
@@ -1605,24 +1567,35 @@ def edit_ingredient(chef_naam, ingredient_id):
             
             conn.commit()
             flash("Ingrediënt en alle gekoppelde gerechten bijgewerkt!", "success")
-            return redirect(url_for('edit_ingredient', chef_naam=chef_naam, ingredient_id=ingredient_id))
+        except Exception as e:
+            conn.rollback()
+            flash(f"Fout bij bijwerken ingrediënt: {str(e)}", "danger")
 
-        return render_template('edit_ingredient.html', 
-                            chef_naam=chef_naam, 
-                            ingredient=ingredient, 
-                            leveranciers=leveranciers,
-                            eenheden=eenheden,
-                            categorieen=categorieen,
-                            form=FlaskForm())
+        # Haal alle gerechten op waarin dit ingrediënt wordt gebruikt
+        cur.execute("""
+            SELECT d.naam, di.hoeveelheid, di.prijs_totaal
+            FROM dishes d
+            JOIN dish_ingredients di ON d.dish_id = di.dish_id
+            WHERE di.ingredient_id = %s
+        """, (ingredient_id,))
+        gerechten_met_ingredient = cur.fetchall()
 
-    except Exception as e:
-        conn.rollback()
-        logger.error(f'Error in edit_ingredient: {str(e)}')
-        flash("Er is een fout opgetreden.", "danger")
-        return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
-    finally:
         cur.close()
         conn.close()
+        return redirect(url_for('edit_ingredient', chef_naam=chef_naam, ingredient_id=ingredient_id))
+
+    # Haal alle leveranciers op voor de dropdown
+    cur.execute("""
+        SELECT * FROM leveranciers
+        WHERE chef_id = %s
+        ORDER BY naam
+    """, (session['chef_id'],))
+    leveranciers = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template('edit_ingredient.html', chef_naam=chef_naam, ingredient=ingredient, leveranciers=leveranciers, form=FlaskForm())
 
 # -----------------------------------------------------------
 #  Ingrediënt Verwijderen
@@ -2495,6 +2468,7 @@ def manage_suppliers(chef_naam):
             telefoon = request.form.get('telefoon')
             email = request.form.get('email')
 
+            # Verwijder de verwijzing naar Leverancier en gebruik direct een SQL query
             cur.execute("""
                 INSERT INTO leveranciers (chef_id, naam, contact, telefoon, email)
                 VALUES (%s, %s, %s, %s, %s)
@@ -2568,23 +2542,9 @@ def delete_supplier(chef_naam, leverancier_id):
         cur.close()
         conn.close()
 
-# ...existing code...
-
-# Voeg deze lijsten toe aan het begin van het bestand
-STANDAARD_EENHEDEN = [
-    "gram (g)", "kilogram (kg)", "milligram (mg)", "milliliter (ml)", 
-    "liter (l)", "theelepel (tl)", "eetlepel (el)", "stuk(s)", 
-    "plak(ken)", "snufje", "bosje", "takje", "teentje", "schijfje(s)"
-]
-
-STANDAARD_CATEGORIEEN = [
-    "Kruiden en Specerijen", "Conserven en Ingeblikte Producten",
-    "Groenten en Fruit", "Vlees", "Vis en Zeevruchten",
-    "Zuivel en Eieren", "Granen en Zetmeelproducten",
-    "Peulvruchten en Noten", "Oliën en Vetten", "Dranken",
-    "Bakproducten en Desserts", "Diepvriesproducten", "Speciaal Dieet"
-]
-
+# -----------------------------------------------------------
+#  Beheer Module (Stamgegevens)
+# -----------------------------------------------------------
 @app.route('/dashboard/<chef_naam>/beheer', methods=['GET', 'POST'])
 def beheer(chef_naam):
     if 'chef_id' not in session or session['chef_naam'] != chef_naam:
@@ -2593,10 +2553,14 @@ def beheer(chef_naam):
 
     form = FlaskForm()
     conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('dashboard', chef_naam=chef_naam))
+    
     cur = conn.cursor(dictionary=True)
 
     try:
-        # Haal bestaande gegevens op
+        # Haal bestaande stamgegevens op
         cur.execute("""
             SELECT * FROM leveranciers 
             WHERE chef_id = %s
@@ -2618,7 +2582,7 @@ def beheer(chef_naam):
         """, (session['chef_id'],))
         categorieen = cur.fetchall()
 
-        if request.method == 'POST':
+        if request.method == 'POST' and form.validate_on_submit():
             if 'nieuwe_eenheid' in request.form:
                 naam = request.form.get('nieuwe_eenheid')
                 cur.execute("""
@@ -2642,8 +2606,6 @@ def beheer(chef_naam):
                            leveranciers=leveranciers,
                            eenheden=eenheden,
                            categorieen=categorieen,
-                           standaard_eenheden=STANDAARD_EENHEDEN,
-                           standaard_categorieen=STANDAARD_CATEGORIEEN,
                            form=form)
 
     except Exception as e:
@@ -2654,165 +2616,14 @@ def beheer(chef_naam):
         cur.close()
         conn.close()
 
-# Voeg deze routes toe voor het verwijderen van items
-@app.route('/dashboard/<chef_naam>/eenheid/<int:eenheid_id>/delete', methods=['POST'])
-def delete_eenheid(chef_naam, eenheid_id):
-    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
-        return jsonify({'success': False, 'error': 'Geen toegang'}), 403
-
-    conn = get_db_connection()
-    if conn is None:
-        return jsonify({'success': False, 'error': 'Database verbindingsfout'}), 500
-
-    cur = conn.cursor()
-    try:
-        # Controleer of de eenheid bestaat en bij deze chef hoort
-        cur.execute("""
-            SELECT eenheid_id 
-            FROM eenheden 
-            WHERE eenheid_id = %s AND chef_id = %s
-        """, (eenheid_id, session['chef_id']))
-        
-        if not cur.fetchone():
-            return jsonify({'success': False, 'error': 'Eenheid niet gevonden'}), 404
-
-        # Verwijder de eenheid
-        cur.execute("""
-            DELETE FROM eenheden 
-            WHERE eenheid_id = %s AND chef_id = %s
-        """, (eenheid_id, session['chef_id']))
-        
-        conn.commit()
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        conn.rollback()
-        logger.error(f'Error deleting unit: {str(e)}')
-        return jsonify({'success': False, 'error': str(e)}), 500
-    finally:
-        cur.close()
-        conn.close()
-
-@app.route('/dashboard/<chef_naam>/categorie/<int:categorie_id>/delete', methods=['POST'])
-def delete_categorie(chef_naam, categorie_id):
-    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
-        return jsonify({'success': False, 'error': 'Geen toegang'}), 403
-
-    conn = get_db_connection()
-    if conn is None:
-        return jsonify({'success': False, 'error': 'Database verbindingsfout'}), 500
-
-    cur = conn.cursor()
-    try:
-        # Controleer of de categorie bestaat en bij deze chef hoort
-        cur.execute("""
-            SELECT categorie_id 
-            FROM categorieen 
-            WHERE categorie_id = %s AND chef_id = %s
-        """, (categorie_id, session['chef_id']))
-        
-        if not cur.fetchone():
-            return jsonify({'success': False, 'error': 'Categorie niet gevonden'}), 404
-
-        # Verwijder de categorie
-        cur.execute("""
-            DELETE FROM categorieen 
-            WHERE categorie_id = %s AND chef_id = %s
-        """, (categorie_id, session['chef_id']))
-        
-        conn.commit()
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        conn.rollback()
-        logger.error(f'Error deleting category: {str(e)}')
-        return jsonify({'success': False, 'error': str(e)}), 500
-    finally:
-        cur.close()
-        conn.close()
-
-# Voeg nieuwe routes toe voor het updaten van eenheden en categorieën
-
-@app.route('/dashboard/<chef_naam>/eenheid/<int:eenheid_id>/update', methods=['POST'])
-def update_eenheid(chef_naam, eenheid_id):
-    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
-        return jsonify({'success': False, 'error': 'Geen toegang'}), 403
-
-    data = request.get_json()
-    if not data or 'naam' not in data:
-        return jsonify({'success': False, 'error': 'Geen naam opgegeven'}), 400
-
-    conn = get_db_connection()
-    if conn is None:
-        return jsonify({'success': False, 'error': 'Database verbindingsfout'}), 500
-
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            UPDATE eenheden 
-            SET naam = %s 
-            WHERE eenheid_id = %s AND chef_id = %s
-        """, (data['naam'], eenheid_id, session['chef_id']))
-        
-        conn.commit()
-        return jsonify({'success': True})
-    except Exception as e:
-        conn.rollback()
-        logger.error(f'Error updating unit: {str(e)}')
-        return jsonify({'success': False, 'error': str(e)}), 500
-    finally:
-        cur.close()
-        conn.close()
-
-@app.route('/dashboard/<chef_naam>/categorie/<int:categorie_id>/update', methods=['POST'])
-def update_categorie(chef_naam, categorie_id):
-    # Implementatie vergelijkbaar met update_eenheid
-    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
-        return jsonify({'success': False, 'error': 'Geen toegang'}), 403
-
-    data = request.get_json()
-    if not data or 'naam' not in data:
-        return jsonify({'success': False, 'error': 'Geen naam opgegeven'}), 400
-
-    conn = get_db_connection()
-    if conn is None:
-        return jsonify({'success': False, 'error': 'Database verbindingsfout'}), 500
-
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            UPDATE categorieen 
-            SET naam = %s 
-            WHERE categorie_id = %s AND chef_id = %s
-        """, (data['naam'], categorie_id, session['chef_id']))
-        
-        conn.commit()
-        return jsonify({'success': True})
-    except Exception as e:
-        conn.rollback()
-        logger.error(f'Error updating category: {str(e)}')
-        return jsonify({'success': False, 'error': str(e)}), 500
-    finally:
-        cur.close()
-        conn.close()
-
 # -----------------------------------------------------------
 # Start de server alleen lokaal
 # -----------------------------------------------------------
 if __name__ == '__main__':
     application = create_app()
-    ssl_context = None
-    
-    if os.environ.get('FLASK_ENV') == 'development':
-        cert_path = os.path.join(app.root_path, 'ssl', 'cert.pem')
-        key_path = os.path.join(app.root_path, 'ssl', 'key.pem')
-        if os.path.exists(cert_path) and os.path.exists(key_path):
-            ssl_context = (cert_path, key_path)
-    
     application.run(
         host='0.0.0.0',
         port=int(os.environ.get('PORT', 5000)),
-        debug=os.environ.get('FLASK_ENV') == 'development',
-        ssl_context=ssl_context
+        debug=os.environ.get('FLASK_ENV') == 'development'
     )
 

@@ -1,13 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Dashboard - E-chef{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1 class="dashboard-title">Dashboard van {{ chef_naam }}</h1>
-        </div>
-    </div>
+<div class="container mt-5">
     <div class="row">
+      <h1>Dashboard van {{ chef_naam }}</h1>
+    <div class="row mb-4">
         <div class="col-12">
             <div class="dashboard-grid" role="group" aria-label="Primary dashboard actions">
                 <a href="{{ url_for('instructions') }}" class="dashboard-btn" aria-label="Instructions">
@@ -15,9 +12,6 @@
                 </a>
                 <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Manage ingredients">
                     <i class="fas fa-carrot"></i> Ingrediënten beheren
-                </a>
-                <a href="{{ url_for('manage_suppliers', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Manage suppliers">
-                    <i class="fas fa-truck"></i> Leveranciers beheren
                 </a>
                 <a href="{{ url_for('manage_dishes', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Create new dish">
                     <i class="fas fa-utensils"></i> Nieuw gerecht opvoeren
@@ -41,7 +35,7 @@
                     <i class="fas fa-user-cog"></i> Profiel Instellingen
                 </a>
                 <a href="{{ url_for('beheer', chef_naam=chef_naam) }}" class="dashboard-btn">
-                    <i class="fas fa-tools"></i> Stamgegevens Beheren
+                    <i class="fas fa-cog"></i> Beheer Stamgegevens
                 </a>
             </div>
         </div>

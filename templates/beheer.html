@@ -12,7 +12,44 @@
     <!-- Leveranciers Sectie -->
     <div class="manage-section">
         <h3>Leveranciers</h3>
-        <!-- ...existing leveranciers code... -->
+        <div class="table-responsive">
+            <table class="management-table">
+                <thead>
+                    <tr>
+                        <th>Naam</th>
+                        <th>Contact</th>
+                        <th>Telefoon</th>
+                        <th>Email</th>
+                        <th>Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for leverancier in leveranciers %}
+                    <tr id="leverancier-row-{{ leverancier.leverancier_id }}"
+                        data-id="{{ leverancier.leverancier_id }}"
+                        data-naam="{{ leverancier.naam|tojson|safe }}"
+                        data-type="leverancier">
+                        <td>{{ leverancier.naam }}</td>
+                        <td>{{ leverancier.contact }}</td>
+                        <td>{{ leverancier.telefoon }}</td>
+                        <td>{{ leverancier.email }}</td>
+                        <td>
+                            <button class="btn-action btn-delete"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <form method="POST" class="add-form">
+            {{ form.csrf_token }}
+            <input type="text" name="naam" class="form-control" placeholder="Naam" required>
+            <input type="text" name="contact" class="form-control" placeholder="Contactpersoon">
+            <input type="tel" name="telefoon" class="form-control" placeholder="Telefoonnummer">
+            <input type="email" name="email" class="form-control" placeholder="E-mail">
+            <button type="submit" class="btn-action">Leverancier Toevoegen</button>
+        </form>
     </div>
 
     <!-- Eenheden Sectie -->
@@ -28,24 +65,19 @@
                 </thead>
                 <tbody>
                     {% for eenheid in eenheden %}
-                    <tr id="eenheid-row-{{ eenheid.eenheid_id }}">
+                    <tr id="eenheid-row-{{ eenheid.eenheid_id }}"
+                        data-id="{{ eenheid.eenheid_id }}"
+                        data-naam="{{ eenheid.naam|tojson|safe }}"
+                        data-type="eenheid">
                         <td>
                             <span class="display-value">{{ eenheid.naam }}</span>
                             <input type="text" class="edit-input form-control" 
                                    value="{{ eenheid.naam }}" style="display: none;">
                         </td>
                         <td>
-                            <button class="btn-action btn-edit" onclick="toggleEdit(this, 'eenheid', {{ eenheid.eenheid_id }})">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn-action btn-save" onclick="saveEdit(this, 'eenheid', {{ eenheid.eenheid_id }})" 
-                                    style="display: none;">
-                                <i class="fas fa-save"></i>
-                            </button>
-                            <button class="btn-action btn-delete" 
-                                    onclick="verwijderEenheid({{ eenheid.eenheid_id }}, '{{ eenheid.naam|e }}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            <button class="btn-action btn-edit"><i class="fas fa-edit"></i></button>
+                            <button class="btn-action btn-save" style="display: none;"><i class="fas fa-save"></i></button>
+                            <button class="btn-action btn-delete"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -55,12 +87,8 @@
         
         <form method="POST" class="add-form">
             {{ form.csrf_token }}
-            <select name="nieuwe_eenheid" class="form-control" required>
-                <option value="">Kies een standaard eenheid...</option>
-                {% for eenheid in standaard_eenheden %}
-                <option value="{{ eenheid }}">{{ eenheid }}</option>
-                {% endfor %}
-            </select>
+            <input type="text" name="nieuwe_eenheid" class="form-control" 
+                   placeholder="Voer een nieuwe eenheid in..." required>
             <button type="submit" class="btn-action">Eenheid Toevoegen</button>
         </form>
     </div>
@@ -78,20 +106,19 @@
                 </thead>
                 <tbody>
                     {% for categorie in categorieen %}
-                    <tr>
-                        <td>{{ categorie.naam }}</td>
+                    <tr id="categorie-row-{{ categorie.categorie_id }}"
+                        data-id="{{ categorie.categorie_id }}"
+                        data-naam="{{ categorie.naam|tojson|safe }}"
+                        data-type="categorie">
                         <td>
-                            <button class="btn-action btn-edit" onclick="toggleEdit(this, 'categorie', {{ categorie.categorie_id }})">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn-action btn-save" onclick="saveEdit(this, 'categorie', {{ categorie.categorie_id }})" 
-                                    style="display: none;">
-                                <i class="fas fa-save"></i>
-                            </button>
-                            <button class="btn-action btn-delete" 
-                                    onclick="verwijderCategorie({{ categorie.categorie_id }}, '{{ categorie.naam|e }}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            <span class="display-value">{{ categorie.naam }}</span>
+                            <input type="text" class="edit-input form-control" 
+                                   value="{{ categorie.naam }}" style="display: none;">
+                        </td>
+                        <td>
+                            <button class="btn-action btn-edit"><i class="fas fa-edit"></i></button>
+                            <button class="btn-action btn-save" style="display: none;"><i class="fas fa-save"></i></button>
+                            <button class="btn-action btn-delete"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -101,12 +128,8 @@
         
         <form method="POST" class="add-form">
             {{ form.csrf_token }}
-            <select name="nieuwe_categorie" class="form-control" required>
-                <option value="">Kies een standaard categorie...</option>
-                {% for categorie in standaard_categorieen %}
-                <option value="{{ categorie }}">{{ categorie }}</option>
-                {% endfor %}
-            </select>
+            <input type="text" name="nieuwe_categorie" class="form-control" 
+                   placeholder="Voer een nieuwe categorie in..." required>
             <button type="submit" class="btn-action">Categorie Toevoegen</button>
         </form>
     </div>
@@ -148,6 +171,35 @@
 </style>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Event delegation voor alle knoppen
+    document.addEventListener('click', function(e) {
+        const button = e.target.closest('button');
+        if (!button) return;
+        
+        const row = button.closest('tr');
+        if (!row) return;
+        
+        const id = row.dataset.id;
+        const naam = row.dataset.naam;
+        const type = row.dataset.type;
+
+        if (button.classList.contains('btn-edit')) {
+            toggleEdit(button, type, id);
+        } else if (button.classList.contains('btn-save')) {
+            saveEdit(button, type, id);
+        } else if (button.classList.contains('btn-delete')) {
+            if (type === 'eenheid') {
+                verwijderEenheid(id, naam);
+            } else if (type === 'categorie') {
+                verwijderCategorie(id, naam);
+            } else if (type === 'leverancier') {
+                verwijderLeverancier(id, naam);
+            }
+        }
+    });
+});
+
 function toggleEdit(button, type, id) {
     const row = button.closest('tr');
     const displayValue = row.querySelector('.display-value');
@@ -228,6 +280,27 @@ async function verwijderCategorie(id, naam) {
             }
         } catch (error) {
             alert('Er is een fout opgetreden bij het verwijderen van de categorie.');
+        }
+    }
+}
+
+async function verwijderLeverancier(id, naam) {
+    if (confirm(`Weet je zeker dat je leverancier "${naam}" wilt verwijderen?`)) {
+        try {
+            const response = await fetch(`/dashboard/{{ chef_naam }}/suppliers/${id}/delete`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            });
+            
+            if (response.ok) {
+                document.querySelector(`#leverancier-row-${id}`).remove();
+            } else {
+                throw new Error('Verwijderen mislukt');
+            }
+        } catch (error) {
+            alert('Er is een fout opgetreden bij het verwijderen van de leverancier.');
         }
     }
 }
