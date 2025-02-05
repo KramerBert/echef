@@ -2496,8 +2496,50 @@ def manage_suppliers(chef_naam):
         cur.close()
         conn.close()
 
+@app.route('/dashboard/<chef_naam>/suppliers/<leverancier_id>/delete', methods=['POST'])
+def delete_supplier(chef_naam, leverancier_id):
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        return jsonify({'success': False, 'error': 'Geen toegang'}), 403
 
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({'success': False, 'error': 'Database verbindingsfout'}), 500
 
+    cur = conn.cursor()
+    try:
+        # Controleer of de leverancier bestaat en bij deze chef hoort
+        cur.execute("""
+            SELECT leverancier_id 
+            FROM leveranciers 
+            WHERE leverancier_id = %s AND chef_id = %s
+        """, (leverancier_id, session['chef_id']))
+        
+        if not cur.fetchone():
+            return jsonify({'success': False, 'error': 'Leverancier niet gevonden'}), 404
+
+        # Update eerst alle ingrediënten die deze leverancier gebruiken
+        cur.execute("""
+            UPDATE ingredients 
+            SET leverancier_id = NULL 
+            WHERE leverancier_id = %s
+        """, (leverancier_id,))
+
+        # Verwijder dan de leverancier
+        cur.execute("""
+            DELETE FROM leveranciers 
+            WHERE leverancier_id = %s AND chef_id = %s
+        """, (leverancier_id, session['chef_id']))
+        
+        conn.commit()
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        conn.rollback()
+        logger.error(f'Error deleting supplier: {str(e)}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
 
 # -----------------------------------------------------------
 # Start de server alleen lokaal

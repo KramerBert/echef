@@ -2,68 +2,144 @@
 {% block title %}Profiel - {{ chef_naam }}{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
+<div class="container mt-4">
     <div class="row">
         <div class="col-12 col-md-8 offset-md-2">
-            <h1>Profiel Instellingen</h1>
+            <h1 class="dashboard-title">Profiel Instellingen</h1>
             
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h3>Profiel Informatie</h3>
+            <div class="profile-card">
+                <h3>Profiel Informatie</h3>
+                <div class="profile-info">
                     <p><strong>Naam:</strong> {{ chef.naam }}</p>
                     <p><strong>E-mail:</strong> {{ chef.email }}</p>
-                    
-                    <!-- E-mail Wijzigen -->
-                    <form method="POST" action="{{ url_for('profile', chef_naam=chef_naam) }}" class="email-form mt-4">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}) ">
-                        <input type="hidden" name="update_email" value="1">
-                        <h4>E-mail Wijzigen</h4>
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Nieuw E-mailadres</label>
-                            <input type="email" class="form-control" id="email" name="email" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary">E-mail Bijwerken</button>
-                    </form>
                 </div>
+                
+                <form method="POST" action="{{ url_for('profile', chef_naam=chef_naam) }}" class="profile-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}) ">
+                    <input type="hidden" name="update_email" value="1">
+                    <h4>E-mail Wijzigen</h4>
+                    <div class="form-group">
+                        <label for="email">Nieuw E-mailadres</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <button type="submit" class="dashboard-btn">
+                        <i class="fas fa-envelope"></i> E-mail Bijwerken
+                    </button>
+                </form>
             </div>
 
-            <div class="card mb-4">
-                <div class="card-body">
-                    <!-- Wachtwoord Wijzigen -->
-                    <form method="POST" action="{{ url_for('profile', chef_naam=chef_naam) }}" class="password-form">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}) ">
-                        <input type="hidden" name="update_password" value="1">
-                        <h4>Wachtwoord Wijzigen</h4>
-                        <div class="mb-3">
-                            <label for="current_password" class="form-label">Huidig Wachtwoord</label>
-                            <input type="password" class="form-control" id="current_password" name="current_password" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="new_password" class="form-label">Nieuw Wachtwoord</label>
-                            <input type="password" class="form-control" id="new_password" name="new_password" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="confirm_password" class="form-label">Bevestig Nieuw Wachtwoord</label>
-                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Wachtwoord Wijzigen</button>
-                    </form>
-                </div>
+            <div class="profile-card">
+                <form method="POST" action="{{ url_for('profile', chef_naam=chef_naam) }}" class="profile-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}) ">
+                    <input type="hidden" name="update_password" value="1">
+                    <h4>Wachtwoord Wijzigen</h4>
+                    <div class="form-group">
+                        <label for="current_password">Huidig Wachtwoord</label>
+                        <input type="password" class="form-control" id="current_password" name="current_password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new_password">Nieuw Wachtwoord</label>
+                        <input type="password" class="form-control" id="new_password" name="new_password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm_password">Bevestig Nieuw Wachtwoord</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    </div>
+                    <button type="submit" class="dashboard-btn">
+                        <i class="fas fa-key"></i> Wachtwoord Wijzigen
+                    </button>
+                </form>
             </div>
 
-            <div class="card mb-4 border-danger">
-                <div class="card-body">
-                    <h4 class="text-danger">Gevaarlijke zone:</h4>
-                    <h4 class="text-danger">Account Verwijderen</h4>
-                    <p>Let op: Deze actie kan niet ongedaan worden gemaakt.</p>
+            <div class="profile-card danger-zone">
+                <h4>Gevaarlijke zone</h4>
+                <div class="danger-content">
+                    <p class="warning-text">Let op: Deze actie kan niet ongedaan worden gemaakt.</p>
                     <form action="{{ url_for('delete_account', chef_naam=chef_naam) }}" method="post" 
                           onsubmit="return confirm('Weet je zeker dat je je account wilt verwijderen? Dit kan niet ongedaan worden gemaakt.');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}) ">
-                        <button type="submit" class="btn btn-danger">Account Permanent Verwijderen</button>
+                        <button type="submit" class="dashboard-btn danger">
+                            <i class="fas fa-trash"></i> Account Permanent Verwijderen
+                        </button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .profile-card {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-blue));
+        border: 1px solid var(--kitchen-steel);
+        border-radius: 8px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .profile-info {
+        background-color: rgba(0, 0, 0, 0.2);
+        padding: 1.5rem;
+        border-radius: 4px;
+        margin-bottom: 1.5rem;
+    }
+
+    .profile-form {
+        background-color: rgba(0, 0, 0, 0.2);
+        padding: 1.5rem;
+        border-radius: 4px;
+    }
+
+    .profile-card h3, 
+    .profile-card h4 {
+        color: var(--text-light);
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid var(--kitchen-highlight);
+        padding-bottom: 0.5rem;
+    }
+
+    .danger-zone {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-danger));
+    }
+
+    .danger-content {
+        background-color: rgba(0, 0, 0, 0.3);
+        padding: 1.5rem;
+        border-radius: 4px;
+        text-align: center;
+    }
+
+    .warning-text {
+        color: var(--kitchen-warning);
+        margin-bottom: 1rem;
+        font-weight: bold;
+    }
+
+    .dashboard-btn.danger {
+        background: linear-gradient(145deg, var(--kitchen-danger), var(--kitchen-dark));
+    }
+
+    .dashboard-btn.danger:hover {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-danger));
+    }
+
+    @media (max-width: 768px) {
+        .profile-card {
+            padding: 1rem;
+        }
+
+        .profile-info,
+        .profile-form,
+        .danger-content {
+            padding: 1rem;
+        }
+
+        .profile-card h3, 
+        .profile-card h4 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+    }
+</style>
 {% endblock %}

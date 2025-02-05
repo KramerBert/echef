@@ -8,11 +8,50 @@
     </div>
 
     <h2>Leveranciers Beheren</h2>
-    
+
+    <div class="card">
+        <div class="card-body">
+            <h3>Huidige Leveranciers</h3>
+            <div class="table-responsive">
+                <table class="suppliers-table">
+                    <thead>
+                        <tr>
+                            <th>Naam</th>
+                            <th>Contact</th>
+                            <th>Telefoon</th>
+                            <th>E-mail</th>
+                            <th style="width: 100px;">Acties</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leverancier in leveranciers %}
+                        <tr>
+                            <td data-label="Naam">{{ leverancier.naam }}</td>
+                            <td data-label="Contact">{{ leverancier.contact }}</td>
+                            <td data-label="Telefoon">{{ leverancier.telefoon }}</td>
+                            <td data-label="E-mail">{{ leverancier.email }}</td>
+                            <td data-label="Acties" class="text-center">
+                                <div class="dish-actions">
+                                    <button class="btn-action btn-delete" 
+                                            onclick="verwijderLeverancier('{{ leverancier.leverancier_id }}', '{{ leverancier.naam|e }}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <h2>Nieuwe Leverancier</h2>
     <form method="POST" class="supplier-form">
         {{ form.csrf_token }}
         <div class="card">
             <div class="card-body">
+
                 <div class="mb-3">
                     <label for="naam" class="form-label">Naam</label>
                     <input type="text" class="form-control" id="naam" name="naam" required>
@@ -34,32 +73,208 @@
         </div>
     </form>
 
-    <div class="card">
-        <div class="card-body">
-            <h3>Huidige Leveranciers</h3>
-            <div class="table-responsive">
-                <table class="suppliers-table">
-                    <thead>
-                        <tr>
-                            <th>Naam</th>
-                            <th>Contact</th>
-                            <th>Telefoon</th>
-                            <th>E-mail</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for leverancier in leveranciers %}
-                        <tr>
-                            <td>{{ leverancier.naam }}</td>
-                            <td>{{ leverancier.contact }}</td>
-                            <td>{{ leverancier.telefoon }}</td>
-                            <td>{{ leverancier.email }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
 </div>
+
+<script>
+function verwijderLeverancier(leverancierId, leverancierNaam) {
+    if (confirm(`Weet je zeker dat je leverancier "${leverancierNaam}" wilt verwijderen? Let op! De leveranciers worden ook verwijderd bij de ingredienten en de bestellijst. Deze wijziging is niet meer te herstellen.`)) {
+        fetch(`/dashboard/{{ session.get('chef_naam') }}/suppliers/${leverancierId}/delete`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'  // Voeg CSRF token toe
+            },
+            credentials: 'same-origin'  // Belangrijk voor CSRF beveiliging
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'Er is een fout opgetreden bij het verwijderen van de leverancier.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Er is een fout opgetreden bij het verwijderen van de leverancier.');
+        });
+    }
+}
+
+// Add data labels to table cells for mobile view
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.querySelector('.suppliers-table');
+    const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
+    
+    table.querySelectorAll('tbody tr').forEach(row => {
+        row.querySelectorAll('td').forEach((cell, index) => {
+            if (index < headers.length - 1) { // Skip the last column (actions)
+                cell.setAttribute('data-label', headers[index]);
+            }
+        });
+    });
+});
+</script>
+
+<style>
+    .card {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-blue));
+        border: 1px solid var(--kitchen-steel);
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .suppliers-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .suppliers-table th {
+        background: linear-gradient(145deg, var(--kitchen-blue), var(--kitchen-dark));
+        color: var(--text-light);
+        padding: 1rem;
+        text-align: left;
+    }
+
+    .suppliers-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--kitchen-steel);
+    }
+
+    .dashboard-btn.danger.small {
+        padding: 0.4rem;
+        width: 2.5rem;  /* Vaste breedte voor consistente grootte */
+        height: 2.5rem; /* Vaste hoogte voor vierkante knop */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto; /* Centreert de knop horizontaal */
+        font-size: 0.9rem;
+        background: linear-gradient(145deg, var(--kitchen-danger), var(--kitchen-dark));
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .dashboard-btn.danger.small:hover {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-danger));
+        transform: translateY(-1px);
+    }
+
+    .dish-actions {
+        display: flex;
+        gap: 5px;
+        justify-content: center;
+    }
+
+    .btn-action {
+        padding: 0.5rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 2.5rem;
+        height: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-delete {
+        background: linear-gradient(145deg, var(--kitchen-danger), var(--kitchen-dark));
+        color: var(--text-light);
+    }
+
+    .btn-delete:hover {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-danger));
+        transform: translateY(-1px);
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            padding: 0.5rem;
+        }
+
+        .card {
+            margin: 0.5rem -0.5rem;
+            border-radius: 0;
+        }
+
+        .table-responsive {
+            margin: 0 -0.5rem;
+        }
+
+        .suppliers-table {
+            font-size: 0.9rem;
+        }
+
+        .suppliers-table th,
+        .suppliers-table td {
+            padding: 0.75rem 0.5rem;
+        }
+
+        /* Stack table on mobile */
+        .suppliers-table thead {
+            display: none;
+        }
+
+        .suppliers-table tr {
+            display: block;
+            margin-bottom: 1rem;
+            border: 1px solid var(--kitchen-steel);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .suppliers-table td {
+            display: block;
+            text-align: right;
+            padding: 0.5rem;
+            border: none;
+            position: relative;
+            padding-left: 50%;
+        }
+
+        .suppliers-table td:before {
+            content: attr(data-label);
+            position: absolute;
+            left: 0.5rem;
+            width: 45%;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        .dashboard-btn.danger.small {
+            padding: 0.35rem;
+            width: 2.2rem;  /* Iets kleiner op mobiel */
+            height: 2.2rem;
+            font-size: 0.8rem;
+        }
+
+        .suppliers-table td:last-child {
+            text-align: center;  /* Centreert de cel-inhoud */
+            padding: 0.5rem;
+        }
+
+        /* Form styling */
+        .supplier-form .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .supplier-form .form-control {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn-action {
+            width: 100%;
+            margin: 0.25rem 0;
+            height: 2.2rem;
+        }
+
+        .dish-actions {
+            justify-content: flex-end;
+        }
+    }
+</style>
 {% endblock %}

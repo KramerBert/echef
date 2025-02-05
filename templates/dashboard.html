@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Dashboard - E-chef{% endblock %}
 {% block content %}
-<div class="container mt-5">
-    <div class="row">
-        <div class="col-12">
-            <h1>Dashboard van {{ chef_naam }}</h1>
-        </div>
-    <div class="container mt-5"></div>
+<div class="container mt-4">
     <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="dashboard-title">Dashboard van {{ chef_naam }}</h1>
+        </div>
+    </div>
+    <div class="row">
         <div class="col-12">
             <div class="dashboard-grid" role="group" aria-label="Primary dashboard actions">
                 <a href="{{ url_for('instructions') }}" class="dashboard-btn" aria-label="Instructions">
