@@ -17,19 +17,22 @@
     --kitchen-success: #27AE60;
     --kitchen-warning: #E67E22;
     --kitchen-danger: #E74C3C;
-    --text-light: #ECF0F1;
+    --text-light: #ffffff; /* Adjusted for better readability */
     --text-dark: #2C3E50;
     --text-muted: #95A5A6;
+    --focus-bg-color: #444;
+    --focus-text-color: #fff;
+    --border-color: #ccc;
+    --table-header-bg: #f8f9fa;
 }
 
 body {
     display: flex;
     justify-content: center;
-    align-items: flex-start; /* Changed from center for better mobile scrolling */
+    align-items: flex-start;
     min-height: 100vh;
     margin: 0;
     font-family: 'Roboto', Arial, sans-serif;
-    padding: 0; /* Removed padding */
     background-color: var(--kitchen-black);
     color: var(--text-light);
     overflow-x: hidden;
@@ -37,16 +40,20 @@ body {
 
 .container {
     flex: 1;
-    width: 100%; /* Changed from 95% */
+    width: 100%;
     max-width: 1400px;
-    padding: 1rem;
     margin: 0 auto;
+    padding: 1rem;
     background-color: var(--kitchen-dark);
-    box-shadow: none; /* Remove shadow on mobile */
 }
 
 /* Content alignment fixes */
-h2, p, .navigation-buttons, .search-filter, form, .card {
+h2,
+p,
+.navigation-buttons,
+.search-filter,
+form,
+.card {
     max-width: 1200px;
     margin-left: 0;
     margin-right: auto;
@@ -101,6 +108,7 @@ footer {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -111,13 +119,14 @@ footer {
         transform: translateY(-20px);
         opacity: 0;
     }
+
     to {
         transform: translateY(0);
         opacity: 1;
     }
 }
 
-/* Tabel styling */
+/* Table styling */
 .dish-actions {
     display: flex;
     gap: 5px;
@@ -126,31 +135,35 @@ footer {
 }
 
 .btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 6px 12px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
     transition: background-color 0.3s ease;
-}
-
-.btn-edit {
-    background-color: #007bff;
-    color: white;
-}
-
-.btn-export {
-    background-color: #17a2b8;
-    color: white;
-}
-
-.btn-delete {
-    background-color: #dc3545;
-    color: white;
+    text-decoration: none;
 }
 
 .btn-action:hover {
     opacity: 0.9;
+}
+
+.btn-edit {
+    background-color: var(--kitchen-blue);
+    color: white;
+}
+
+.btn-export {
+    background-color: var(--kitchen-success);
+    color: white;
+}
+
+.btn-delete {
+    background-color: var(--kitchen-danger);
+    color: white;
 }
 
 /* Checkbox styling */
@@ -165,26 +178,32 @@ footer {
 .dish-table {
     width: 100%;
     margin-bottom: 20px;
+    background-color: var(--kitchen-dark);
+    border-collapse: collapse;
 }
 
 .dish-table th {
-    background-color: var(--kitchen-dark); /* Verander van #073642 naar de variabele */
+    background-color: var(--kitchen-blue);
     color: var(--text-light);
     padding: 10px;
+    text-align: left;
 }
 
 .dish-table td {
     padding: 8px;
     vertical-align: middle;
+    border: 1px solid #586e75;
 }
 
 /* Specifieke kolom breedtes */
 .col-actions {
     width: 250px;
+    text-align: center;
 }
 
 .col-price {
     width: 100px;
+    text-align: right;
 }
 
 .col-amount {
@@ -211,15 +230,15 @@ footer {
 }
 
 .edit-section h3 {
-    color: #eee8d5;
+    color: var(--text-light);
     margin-bottom: 1rem;
 }
 
 .ingredient-form {
-    display: grid;
-    grid-template-columns: minmax(200px, 3fr) minmax(150px, 1fr) minmax(100px, 1fr) auto;
+    display: flex;
+    flex-wrap: wrap;
     gap: 1rem;
-    align-items: end;
+    align-items: center;
     margin-bottom: 1.5rem;
     width: 100%;
 }
@@ -227,12 +246,12 @@ footer {
 .ingredient-form select,
 .ingredient-form input {
     width: 100%;
-    min-width: 0; /* Reset min-width to prevent overflow */
+    min-width: 0;
 }
 
 .ingredient-form .btn-action {
     white-space: nowrap;
-    height: 38px; /* Match input height */
+    height: 38px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -244,7 +263,7 @@ footer {
         grid-template-columns: 1fr;
         gap: 0.5rem;
     }
-    
+
     .ingredient-form .btn-action {
         margin-top: 0.5rem;
         width: 100%;
@@ -271,14 +290,16 @@ footer {
 }
 
 .ingredient-table th {
-    background-color: var(--kitchen-dark); /* Verander van #002b36 naar de variabele */
+    background-color: var(--kitchen-dark);
     color: var(--text-light);
     padding: 0.75rem;
+    text-align: left;
 }
 
 .ingredient-table td {
     padding: 0.5rem;
     vertical-align: middle;
+    border: 1px solid #586e75;
 }
 
 .ingredient-table input[type="number"] {
@@ -287,7 +308,7 @@ footer {
 }
 
 .price-section {
-    background-color: var(--kitchen-dark); /* Verander van #002b36 naar de variabele */
+    background-color: var(--kitchen-dark);
     padding: 1rem;
     margin: 1rem 0;
     border-radius: 4px;
@@ -297,11 +318,12 @@ footer {
     font-size: 1.2em;
     margin-right: 5px;
 }
+
 .allergenen-icons {
-    margin-top: 10px;
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+    margin-top: 10px;
 }
 
 .allergeen-icon {
@@ -350,7 +372,8 @@ footer {
     width: 2em;
     height: 2em;
     border-radius: 50%;
-    background-color: #28a745;  /* Groen in plaats van rood voor diëten */
+    background-color: #28a745;
+    /* Groen in plaats van rood voor diëten */
     color: white;
     font-weight: bold;
     font-size: 0.8em;
@@ -385,7 +408,8 @@ footer {
 @media screen and (max-width: 768px) {
     body {
         padding: 0;
-        min-height: auto; /* Remove min-height on mobile */
+        min-height: auto;
+        /* Remove min-height on mobile */
     }
 
     .container {
@@ -407,23 +431,27 @@ footer {
     /* Navigation */
     nav ul {
         flex-direction: column;
-        gap: 5px; /* Reduced gap between menu items */
+        gap: 5px;
+        /* Reduced gap between menu items */
         text-align: center;
     }
 
     nav ul li {
-        margin-right: 0; /* Remove extra margin */
+        margin-right: 0;
+        /* Remove extra margin */
         width: 100%;
-        margin-bottom: 5px; /* Consistent small spacing */
+        margin-bottom: 5px;
+        /* Consistent small spacing */
     }
 
     nav ul li a button {
         width: 100%;
-        padding: 10px 15px; /* Adjust button padding as needed */
+        padding: 10px 15px;
+        /* Adjust button padding as needed */
     }
 
     /* Tables */
-    .dish-table, 
+    .dish-table,
     .ingredient-table,
     .usage-table {
         display: block;
@@ -441,7 +469,7 @@ footer {
         padding: 12px 8px;
     }
 
-    .dish-table td, 
+    .dish-table td,
     .ingredient-table td {
         padding: 0.5rem;
     }
@@ -534,10 +562,12 @@ footer {
         width: 100%;
         margin: 1rem 0;
     }
+
     .accordion-button {
         padding: 0.75rem;
         font-size: 0.9rem;
     }
+
     .accordion-body {
         padding: 1rem;
         font-size: 0.9rem;
@@ -555,7 +585,7 @@ footer {
         flex-wrap: wrap;
     }
 
-    .dish-table, 
+    .dish-table,
     .ingredient-table {
         font-size: 0.95rem;
     }
@@ -669,14 +699,20 @@ footer {
 }
 
 /* Enhanced Form Styling */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
 .form-control {
+    display: block;
+    width: 100%;
+    padding: 0.5rem;
     background-color: var(--kitchen-black);
     color: var(--text-light);
     border: 1px solid var(--kitchen-steel);
     border-radius: 4px;
-    padding: 0.5rem;
-    width: 100%;
     transition: all 0.3s ease;
+    box-sizing: border-box;
 }
 
 .form-control:focus {
@@ -699,14 +735,43 @@ input[type="number"].form-control,
 input[type="password"].form-control,
 select.form-control,
 textarea.form-control {
-    background-color: var(--kitchen-black);
-    color: var(--text-light);
+    background-color: var(--kitchen-steel);
+    color: var(--kitchen-black);
+    text-align: left;
+}
+
+/* Styling for disabled state */
+input[type="text"].form-control:disabled,
+input[type="email"].form-control:disabled,
+input[type="tel"].form-control:disabled,
+input[type="number"].form-control:disabled,
+input[type="password"].form-control:disabled,
+select.form-control:disabled,
+textarea.form-control:disabled {
+    background-color: var(--kitchen-steel);
+    color: var(--text-dark);
+    border-color: var(--border-color);
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Styling for readonly state */
+input[type="text"].form-control[readonly],
+input[type="email"].form-control[readonly],
+input[type="tel"].form-control[readonly],
+input[type="number"].form-control[readonly],
+input[type="password"].form-control[readonly],
+select.form-control[readonly],
+textarea.form-control[readonly] {
+    background-color: var(--kitchen-steel);
+    color: var(--text-dark);
+    border-color: var(--border-color);
 }
 
 /* Dropdown (Select) Styling */
 select.form-control option {
-    background-color: var(--kitchen-black);
-    color: var(--text-light);
+    background-color: var(--kitchen-steel);
+    color: var(--text-dark);
 }
 
 select.form-control:focus option:checked {
@@ -847,7 +912,8 @@ select.form-control option:focus {
 
 .ingredient-form .btn-action {
     align-self: flex-end;
-    margin-bottom: 1.25rem; /* Align with inputs considering their labels */
+    margin-bottom: 1.25rem;
+    /* Align with inputs considering their labels */
     white-space: nowrap;
 }
 
@@ -856,7 +922,7 @@ select.form-control option:focus {
         grid-template-columns: 1fr;
         gap: 0.5rem;
     }
-    
+
     .ingredient-form .btn-action {
         margin-top: 1rem;
         margin-bottom: 0;
@@ -970,11 +1036,11 @@ textarea.form-control {
         margin: 5px 0;
         display: block;
     }
-    
+
     .col-actions {
         width: auto;
     }
-    
+
     .btn-action {
         padding: 8px;
         margin: 2px;
@@ -1020,12 +1086,12 @@ textarea.form-control {
     .suppliers-table {
         font-size: 0.9rem;
     }
-    
+
     .suppliers-table th,
     .suppliers-table td {
         padding: 8px;
     }
-    
+
     .supplier-form {
         padding: 0 1rem;
     }
@@ -1085,7 +1151,8 @@ textarea.form-control {
     height: 100%;
     border: none;
     cursor: pointer;
-    border-radius: 3px; /* Slightly smaller than wrapper to prevent edge issues */
+    border-radius: 3px;
+    /* Slightly smaller than wrapper to prevent edge issues */
 }
 
 @media (max-width: 768px) {
@@ -1093,7 +1160,7 @@ textarea.form-control {
         grid-template-columns: 1fr;
         gap: 0.5rem;
     }
-    
+
     .dashboard-btn {
         padding: 1rem;
         min-height: 60px;

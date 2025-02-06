@@ -1,152 +1,204 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-    .form-group {
-        margin-bottom: 1.5rem;
-        width: 100%;
-    }
-    .form-control {
-        width: 100%;
-        padding: 8px;
-        box-sizing: border-box;
-    }
-    input[type="text"],
-    input[type="number"], 
-    textarea, 
-    select {
-        width: 100%;
-        min-width: 300px;
-        max-width: 800px;
-        padding: 8px;
-        margin-top: 5px;
-    }
-    textarea {
-        min-height: 100px;
-    }
-    .ingredient-form {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        max-width: 1200px;  /* Verhoog maximum breedte */
-        margin-bottom: 20px;
-    }
-    .ingredient-form select#categorie_filter {
-        flex: 1;  /* Categorie filter neemt normaal deel */
-    }
-    .ingredient-form select#ingredient_id {
-        flex: 3;  /* Ingrediënt selector krijgt 3x zoveel ruimte */
-    }
-    .ingredient-form input {
-        flex: 0.25;  /* Verkleind van 0.5 naar 0.25 */
-        max-width: 50px;  /* Verkleind van 100px naar 50px */
-        min-width: unset;  /* Override de algemene min-width */
-    }
-    .ingredient-form button {
-        white-space: nowrap;
-        flex: 0.5;  /* Knop krijgt ook maar half deel */
+.form-group {
+    margin-bottom: 1.5rem;
+    width: 100%;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    color: var(--text-light);
+}
+
+input[type="text"],
+input[type="number"],
+textarea,
+select {
+    width: 100%;
+    min-width: 300px;
+    max-width: 800px;
+    padding: 8px;
+    margin-top: 5px;
+    background-color: var(--kitchen-dark);
+    color: var(--text-light);
+    box-sizing: border-box;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+textarea:focus,
+input:focus {
+    background-color: var(--focus-bg-color, #444);
+    color: var(--focus-text-color, #fff);
+    outline: none;
+    border-color: var(--highlight-color, #6c757d);
+}
+
+textarea {
+    min-height: 100px;
+}
+
+.ingredient-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    max-width: 1200px;
+    margin-bottom: 20px;
+}
+
+.ingredient-form select#categorie_filter {
+    flex: 1;
+}
+
+.ingredient-form select#ingredient_id {
+    flex: 3;
+}
+
+.ingredient-form input {
+    flex: 0.25;
+    max-width: 50px;
+    padding: 8px;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+}
+
+.ingredient-form button {
+    white-space: nowrap;
+    flex: 0.5;
+}
+
+.hoeveelheid-wrapper {
+    width: 80px;
+    flex-shrink: 0;
+}
+
+.hoeveelheid-wrapper input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+}
+
+.ingredient-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ingredient-table th {
+    text-align: left;
+    padding: 8px;
+    white-space: nowrap;
+    background-color: var(--table-header-bg, #f8f9fa);
+    border-bottom: 2px solid var(--border-color, #ccc);
+}
+
+.ingredient-table td {
+    padding: 8px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-color, #ddd);
+}
+
+.ingredient-table input[type="number"] {
+    width: 60px;
+    padding: 4px;
+    margin: 0;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+}
+
+.ingredient-table .small-button {
+    padding: 4px 8px;
+    margin-left: 4px;
+    font-size: 12px;
+}
+
+.edit-dish-form {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.edit-section {
+    margin-bottom: 2rem;
+    width: 100%;
+}
+
+.edit-section h3,
+.form-group h3 {
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+form {
+    margin: 0;
+    padding: 0;
+}
+
+.form-group,
+.edit-section .form-control {
+    width: 100%;
+    max-width: 100%;
+}
+
+h2, h3, p {
+    margin-left: 0;
+    padding-left: 0;
+}
+
+.total-cost {
+    font-size: 24px;
+    margin: 20px 0;
+    padding: 10px 0;
+    color: #2c3e50;
+    font-weight: bold;
+}
+
+.verkoopprijs-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+}
+
+.verkoopprijs-input {
+    width: 20%;
+    padding: 0.5rem;
+    border: 1px solid var(--kitchen-steel);
+    border-radius: 4px;
+    background-color: var(--kitchen-dark);
+    color: var(--text-light);
+}
+
+@media (max-width: 768px) {
+    .ingredient-form,
+    .verkoopprijs-form {
+        flex-direction: column;
+        align-items: stretch;
     }
 
-    /* Verwijder alle vorige .ingredient-form input styling */
-    .hoeveelheid-wrapper {
-        width: 80px;
-        flex-shrink: 0;
-    }
-    
-    .hoeveelheid-wrapper input {
+    .ingredient-form input,
+    .ingredient-form select,
+    .verkoopprijs-input {
         width: 100%;
-        min-width: 0;
         max-width: none;
-        padding: 8px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
     }
+}
 
-    /* Styling voor hoeveelheid veld in kostprijsberekening tabel */
-    .ingredient-table input[type="number"] {
-        width: 60px !important;
-        min-width: 60px !important;
-        max-width: 60px !important;
-        padding: 4px !important;
-        margin: 0 !important;
-    }
+.dieet-icon {
+    margin-right: 5px;
+}
 
-    .ingredient-table .small-button {
-        padding: 4px 8px;
-        margin-left: 4px;
-        font-size: 12px;
-    }
+.allergen-label,
+.diet-label {
+    color: var(--kitchen-steel);
+}
 
-    /* Verbeterde tabel layout */
-    .ingredient-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    
-    .ingredient-table th {
-        text-align: left;
-        padding: 8px;
-        white-space: nowrap;  /* Voorkom dat headers wrappen */
-    }
-    
-    .ingredient-table td {
-        padding: 8px;
-        vertical-align: middle;
-    }
 
-    /* Kleinere kolommen voor specifieke velden */
-    .col-hoeveelheid {
-        width: 120px;
-    }
-    
-    .col-prijs {
-        width: 80px;  /* Smaller voor kortere tekst */
-    }
-
-    /* Consistente uitlijning voor alle secties */
-    .edit-dish-form {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
-    }
-
-    .edit-section {
-        margin-bottom: 2rem;
-        width: 100%;
-    }
-
-    .edit-section h3,
-    .form-group h3 {
-        margin-bottom: 1rem;
-        font-size: 1.2rem;
-    }
-
-    /* Zorg dat alle forms dezelfde padding en margin hebben */
-    form {
-        margin: 0;
-        padding: 0;
-    }
-
-    /* Consistente breedte voor alle input containers */
-    .form-group,
-    .edit-section .form-control {
-        width: 100%;
-        max-width: 800px;
-    }
-
-    /* Alle headers zelfde uitlijning */
-    h2, h3, p {
-        margin-left: 0;
-        padding-left: 0;
-    }
-
-    /* Styling voor totaal kostprijs */
-    .total-cost {
-        font-size: 24px;  /* 2x normale grootte */
-        margin: 20px 0;
-        padding: 10px 0;
-        color: #2c3e50;  /* Donkerblauw voor betere leesbaarheid */
-        font-weight: bold;
-    }
 </style>
 
 <div class="edit-dish-form">
@@ -158,20 +210,21 @@
     <form method="POST" action="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="updateForm" value="1">
-
-        <div class="edit-section">
-            <h3>Naam bijwerken</h3>
-            <input type="text" id="naam" name="naam" value="{{ gerecht.naam }}" class="form-control" required>
+        <hr style="border-top: 1px solid var(--border-color, #ccc); margin: 2rem 0;">
+        <div class="form-group">
+            <div style="margin: 2rem 0;"><!-- spacer --></div>
+            <h3>Naam gerecht bijwerken</h3>
+            <input type="text" id="naam" name="naam" value="{{ gerecht.naam }}" class="form-control" style="color: black;">
         </div>
 
         <div class="form-group">
-            <h3>Beschrijving bijwerken</h3>
-            <textarea id="beschrijving" name="beschrijving" class="form-control" required>{{ gerecht.beschrijving if gerecht.beschrijving else '' }}</textarea>
+            <h3>Beschrijving bijwerken <i>(Deze tekst komt onder de naam van het gerecht op de menukaart)</i></h3>
+            <textarea id="beschrijving" name="beschrijving" class="form-control" style="color: black;">{{ gerecht.beschrijving if gerecht.beschrijving else '' }}</textarea>
         </div>
 
         <div class="form-group">
-            <h3>Categorie bijwerken</h3>
-            <select id="gerecht_categorie" name="gerecht_categorie" class="form-control" required>
+            <h3>Plaats in het menu - gang <i>(belangrijk voor het printen van de menukaart)</i></h3>
+            <select id="gerecht_categorie" name="gerecht_categorie" class="form-control" required style="color: black;">
                 <option value="Amuse-bouche" {% if gerecht.categorie == 'Amuse-bouche' %}selected{% endif %}>Amuse-bouche (optioneel)</option>
                 <option value="Hors-d'œuvre" {% if gerecht.categorie == "Hors-d'œuvre" %}selected{% endif %}>Hors-d'œuvre (koud voorgerecht)</option>
                 <option value="Potage" {% if gerecht.categorie == 'Potage' %}selected{% endif %}>Potage (soep)</option>
@@ -191,13 +244,14 @@
 
         <div class="form-group">
             <h3>Bereidingswijze bijwerken</h3>
-            <textarea id="bereidingswijze" name="bereidingswijze" class="form-control">{{ gerecht.bereidingswijze if gerecht.bereidingswijze else '' }}</textarea>
+            <textarea id="bereidingswijze" name="bereidingswijze" class="form-control" style="color: black;">{{ gerecht.bereidingswijze if gerecht.bereidingswijze else '' }}</textarea>
         </div>
 
         <button type="submit" class="btn btn-primary">Opslaan</button>
     </form>
-
-    <div class="edit-section">
+    <hr style="border-top: 1px solid var(--border-color, #ccc); margin: 2rem 0;">
+    <div style="margin: 2rem 0;"><!-- spacer --></div>
+    <div class="form-group">
         <h3>Ingrediënten toevoegen</h3>
         <form method="POST" action="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}" class="ingredient-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -236,8 +290,8 @@
         </form>
     </div>
 
-    <div class="edit-section">
-        <hr>
+    <div class="form-group">
+        <hr style="border-top: 1px solid var(--border-color, #ccc); margin: 2rem 0;">
         <h3>Kostprijsberekening:</h3>
         <div id="ingredienten-tabel">  <!-- Voeg deze div met ID toe -->
         {% if gerecht_ingredienten %}
@@ -279,16 +333,20 @@
             </tr>
             {% endfor %}
         </table>
+        <p><strong>Totale kostprijs: € {{ "%.2f"|format(totaal_ingredient_prijs|float) }}</strong></p>
         <hr>
         <p class="total-cost">Totaal kostprijs: € {{ totaal_ingredient_prijs }}</p>
 
-        <div class="price-section" id="verkoopprijs-sectie">
+        <div class="form-group" id="verkoopprijs-sectie">
             <h3>Verkoopprijs bijwerken</h3>
             <form method="POST" action="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="priceForm" value="1">
-                <input type="number" step="0.01" id="verkoopprijs" name="verkoopprijs" value="{{ gerecht.verkoopprijs }}" class="form-control">
-                <button type="submit" class="btn btn-primary">Verkoopprijs Opslaan</button>
+                <div class="form-group verkoopprijs-form">
+                    <label for="verkoopprijs">Nieuwe Verkoopprijs:</label>
+                    <input type="number" step="0.01" id="verkoopprijs" name="verkoopprijs" value="{{ gerecht.verkoopprijs }}" class="form-control verkoopprijs-input">
+                    <button type="submit" class="btn btn-primary">Verkoopprijs Opslaan</button>
+                </div>
             </form>
         </div>
 
@@ -301,7 +359,7 @@
     <div class="edit-section">
         <div class="card mb-4">
             <div class="card-header">
-                <h3>Allergenen</h3>
+                <h3>Allergenen (Selecteer de allergenen die in dit gerecht aanwezig zijn.)</h3>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('update_dish_allergenen', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
@@ -315,8 +373,7 @@
                                        value="{{ allergeen.allergeen_id }}"
                                        id="allergeen{{ allergeen.allergeen_id }}"
                                        {% if allergeen.allergeen_id in gerecht_allergenen %} checked {% endif %}>
-                                <label class="form-check-label" for="allergeen{{ allergeen.allergeen_id }}">
-                                    <i class="fas {{ allergeen.icon_class }}" title="{{ allergeen.naam }}"></i>
+                                <label class="form-check-label allergen-label" for="allergeen{{ allergeen.allergeen_id }}">
                                     {{ allergeen.naam }}
                                 </label>
                             </div>
@@ -332,7 +389,7 @@
     <div class="edit-section">
         <div class="card mb-4">
             <div class="card-header">
-                <h3>Diëten</h3>
+                <h3>Diëten (Selecteer de diëten die geschikt zijn voor dit gerecht.)</h3>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('update_dish_dieten', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
@@ -346,7 +403,7 @@
                                        value="{{ dieet.dieet_id }}"
                                        id="dieet{{ dieet.dieet_id }}"
                                        {% if dieet.dieet_id in gerecht_dieten %} checked {% endif %}>
-                                <label class="form-check-label" for="dieet{{ dieet.dieet_id }}">
+                                <label class="form-check-label diet-label" for="dieet{{ dieet.dieet_id }}">
                                     <span class="dieet-icon">{{ dieet.icon_class }}</span> {{ dieet.naam }}
                                 </label>
                             </div>
