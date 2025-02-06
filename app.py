@@ -910,12 +910,22 @@ def edit_dish(chef_naam, dish_id):
                 prijs_totaal = float(hoeveelheid) * float(prijs_per_eenheid)
 
                 try:
+                    # Check if the ingredient already exists for this dish
                     cur.execute("""
-                        INSERT INTO dish_ingredients (dish_id, ingredient_id, hoeveelheid, prijs_totaal)
-                        VALUES (%s, %s, %s, %s)
-                    """, (dish_id, ingredient_id, hoeveelheid, prijs_totaal))
-                    conn.commit()
-                    flash("Ingrediënt toegevoegd aan het gerecht!", "success")
+                        SELECT * FROM dish_ingredients
+                        WHERE dish_id = %s AND ingredient_id = %s
+                    """, (dish_id, ingredient_id))
+                    existing_ingredient = cur.fetchone()
+
+                    if existing_ingredient:
+                        flash("Dit ingrediënt is al aan het gerecht toegevoegd.", "danger")
+                    else:
+                        cur.execute("""
+                            INSERT INTO dish_ingredients (dish_id, ingredient_id, hoeveelheid, prijs_totaal)
+                            VALUES (%s, %s, %s, %s)
+                        """, (dish_id, ingredient_id, hoeveelheid, prijs_totaal))
+                        conn.commit()
+                        flash("Ingrediënt toegevoegd aan het gerecht!", "success")
                 except Exception as e:
                     conn.rollback()
                     flash(f"Fout bij toevoegen van ingrediënt: {str(e)}", "danger")

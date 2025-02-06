@@ -764,7 +764,7 @@ input[type="password"].form-control[readonly],
 select.form-control[readonly],
 textarea.form-control[readonly] {
     background-color: var(--kitchen-steel);
-    color: var(--text-dark);
+    color: var (--text-dark);
     border-color: var(--border-color);
 }
 
@@ -1228,4 +1228,13 @@ textarea.form-control {
         min-height: 100px;
         padding: 1.5rem 1rem;
     }
+}
+
+.verkoopprijs-input {
+    width: auto; /* Adjusted width */
+    padding: 0.5rem;
+    border: 1px solid var(--kitchen-steel);
+    border-radius: 4px;
+    background-color: var(--kitchen-dark);
+    color: var(--text-light);
 }

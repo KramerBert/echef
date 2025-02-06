@@ -94,6 +94,7 @@ textarea {
     padding: 8px;
     white-space: nowrap;
     background-color: var(--table-header-bg, #f8f9fa);
+    color: var(--text-dark);
     border-bottom: 2px solid var(--border-color, #ccc);
 }
 
@@ -166,7 +167,7 @@ h2, h3, p {
 }
 
 .verkoopprijs-input {
-    width: 20%;
+    width: 10%;
     padding: 0.5rem;
     border: 1px solid var(--kitchen-steel);
     border-radius: 4px;
@@ -180,6 +181,7 @@ h2, h3, p {
         flex-direction: column;
         align-items: stretch;
     }
+
 
     .ingredient-form input,
     .ingredient-form select,
@@ -214,17 +216,17 @@ h2, h3, p {
         <div class="form-group">
             <div style="margin: 2rem 0;"><!-- spacer --></div>
             <h3>Naam gerecht bijwerken</h3>
-            <input type="text" id="naam" name="naam" value="{{ gerecht.naam }}" class="form-control" style="color: black;">
+            <input type="text" id="naam" name="naam" value="{{ gerecht.naam }}" class="form-control">
         </div>
 
         <div class="form-group">
             <h3>Beschrijving bijwerken <i>(Deze tekst komt onder de naam van het gerecht op de menukaart)</i></h3>
-            <textarea id="beschrijving" name="beschrijving" class="form-control" style="color: black;">{{ gerecht.beschrijving if gerecht.beschrijving else '' }}</textarea>
+            <textarea id="beschrijving" name="beschrijving" class="form-control">{{ gerecht.beschrijving if gerecht.beschrijving else '' }}</textarea>
         </div>
 
         <div class="form-group">
             <h3>Plaats in het menu - gang <i>(belangrijk voor het printen van de menukaart)</i></h3>
-            <select id="gerecht_categorie" name="gerecht_categorie" class="form-control" required style="color: black;">
+            <select id="gerecht_categorie" name="gerecht_categorie" class="form-control" required>
                 <option value="Amuse-bouche" {% if gerecht.categorie == 'Amuse-bouche' %}selected{% endif %}>Amuse-bouche (optioneel)</option>
                 <option value="Hors-d'œuvre" {% if gerecht.categorie == "Hors-d'œuvre" %}selected{% endif %}>Hors-d'œuvre (koud voorgerecht)</option>
                 <option value="Potage" {% if gerecht.categorie == 'Potage' %}selected{% endif %}>Potage (soep)</option>
@@ -243,8 +245,8 @@ h2, h3, p {
         </div>
 
         <div class="form-group">
-            <h3>Bereidingswijze bijwerken</h3>
-            <textarea id="bereidingswijze" name="bereidingswijze" class="form-control" style="color: black;">{{ gerecht.bereidingswijze if gerecht.bereidingswijze else '' }}</textarea>
+            <h3>Bereidingswijze bijwerken <i>(Belangrijk voor het draaiboek)</i></h3>
+            <textarea id="bereidingswijze" name="bereidingswijze" class="form-control">{{ gerecht.bereidingswijze if gerecht.bereidingswijze else '' }}</textarea>
         </div>
 
         <button type="submit" class="btn btn-primary">Opslaan</button>
@@ -286,7 +288,9 @@ h2, h3, p {
                        placeholder="Hoev.">
             </div>
 
-            <button type="submit" class="btn btn-primary">Ingrediënt toevoegen</button>
+            <div style="width: 100%; margin-top: 15px;">
+                <button type="submit" class="btn btn-primary">Ingrediënt toevoegen</button>
+            </div>
         </form>
     </div>
 
@@ -322,12 +326,10 @@ h2, h3, p {
                 <td>€{{ gi.prijs_per_eenheid }}</td>
                 <td>€{{ gi.prijs_totaal }}</td>
                 <td>
-                    <a href="{{ url_for('edit_ingredient', chef_naam=chef_naam, ingredient_id=gi.ingredient_id) }}" class="small-button">
-                        <button type="button" class="small-button">Bewerk Ingredient</button>
-                    </a>
+                    
                     <form method="POST" action="{{ url_for('remove_dish_ingredient', chef_naam=chef_naam, dish_id=gerecht.dish_id, ingredient_id=gi.ingredient_id) }}" style="display: inline;" onsubmit="return confirm('Weet u zeker dat u dit ingrediënt wilt verwijderen?');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="small-button">Verwijderen</button>
+                        <button type="submit" class="small-button">Ingredient loskoppelen</button>
                     </form>
                 </td>
             </tr>
@@ -343,8 +345,7 @@ h2, h3, p {
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="priceForm" value="1">
                 <div class="form-group verkoopprijs-form">
-                    <label for="verkoopprijs">Nieuwe Verkoopprijs:</label>
-                    <input type="number" step="0.01" id="verkoopprijs" name="verkoopprijs" value="{{ gerecht.verkoopprijs }}" class="form-control verkoopprijs-input">
+                    € <input type="number" step="0.01" id="verkoopprijs" name="verkoopprijs" value="{{ gerecht.verkoopprijs }}" class="form-control verkoopprijs-input" oninput="adjustWidth(this)"> 
                     <button type="submit" class="btn btn-primary">Verkoopprijs Opslaan</button>
                 </div>
             </form>
@@ -441,6 +442,15 @@ function filterIngredients() {
 // Filter direct bij het laden van de pagina
 document.addEventListener('DOMContentLoaded', function() {
     filterIngredients();
+});
+
+function adjustWidth(element) {
+    element.style.width = ((element.value.length * 0.6) + 2) + 'em';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const verkoopprijsInput = document.getElementById('verkoopprijs');
+    adjustWidth(verkoopprijsInput);
 });
 </script>
 
