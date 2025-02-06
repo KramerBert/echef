@@ -47,30 +47,13 @@
     </div>
 
     <h2>Nieuwe Leverancier</h2>
-    <form method="POST" class="supplier-form">
-        {{ form.csrf_token }}
-        <div class="card">
-            <div class="card-body">
-
-                <div class="mb-3">
-                    <label for="naam" class="form-label">Naam</label>
-                    <input type="text" class="form-control" id="naam" name="naam" required>
-                </div>
-                <div class="mb-3">
-                    <label for="contact" class="form-label">Contactpersoon</label>
-                    <input type="text" class="form-control" id="contact" name="contact">
-                </div>
-                <div class="mb-3">
-                    <label for="telefoon" class="form-label">Telefoonnummer</label>
-                    <input type="tel" class="form-control" id="telefoon" name="telefoon">
-                </div>
-                <div class="mb-3">
-                    <label for="email" class="form-label">E-mail</label>
-                    <input type="email" class="form-control" id="email" name="email">
-                </div>
-                <button type="submit" class="btn-action">Leverancier Toevoegen</button>
-            </div>
-        </div>
+    <form method="POST" class="add-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="text" name="naam" class="form-control" placeholder="Naam" required>
+        <input type="text" name="contact" class="form-control" placeholder="Contactpersoon">
+        <input type="tel" name="telefoon" class="form-control" placeholder="Telefoonnummer">
+        <input type="email" name="email" class="form-control" placeholder="E-mail">
+        <button type="submit" class="btn-action">Leverancier Toevoegen</button>
     </form>
 
 </div>
@@ -105,6 +88,10 @@ function verwijderLeverancier(leverancierId, leverancierNaam) {
 // Add data labels to table cells for mobile view
 document.addEventListener('DOMContentLoaded', function() {
     const table = document.querySelector('.suppliers-table');
+    if (!table) {
+        console.error("Table with class 'suppliers-table' not found!");
+        return;
+    }
     const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
     
     table.querySelectorAll('tbody tr').forEach(row => {

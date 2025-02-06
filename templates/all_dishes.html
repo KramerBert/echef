@@ -4,7 +4,7 @@
 <p>Hier kunt u alle gerechten bekijken en beheren.</p>
 
 <div class="navigation-buttons">
-    <a href="{{ url_for('dashboard', chef_naam=chef_naam) }}" class="btn-action">
+    <a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}" class="btn-action">
         <i class="fas fa-arrow-left"></i> Dashboard
     </a>
 </div>

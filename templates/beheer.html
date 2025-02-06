@@ -19,7 +19,7 @@
                         <th>Naam</th>
                         <th>Contact</th>
                         <th>Telefoon</th>
-                        <th>Email</th>
+                        <th>E-mail</th>
                         <th>Acties</th>
                     </tr>
                 </thead>
@@ -28,12 +28,33 @@
                     <tr id="leverancier-row-{{ leverancier.leverancier_id }}"
                         data-id="{{ leverancier.leverancier_id }}"
                         data-naam="{{ leverancier.naam|tojson|safe }}"
+                        data-contact="{{ leverancier.contact|tojson|safe }}"
+                        data-telefoon="{{ leverancier.telefoon|tojson|safe }}"
+                        data-email="{{ leverancier.email|tojson|safe }}"
                         data-type="leverancier">
-                        <td>{{ leverancier.naam }}</td>
-                        <td>{{ leverancier.contact }}</td>
-                        <td>{{ leverancier.telefoon }}</td>
-                        <td>{{ leverancier.email }}</td>
                         <td>
+                            <span class="display-value">{{ leverancier.naam }}</span>
+                            <input type="text" class="edit-input form-control" 
+                                   value="{{ leverancier.naam }}" style="display: none;">
+                        </td>
+                        <td>
+                            <span class="display-value">{{ leverancier.contact }}</span>
+                            <input type="text" class="edit-input form-control" 
+                                   value="{{ leverancier.contact }}" style="display: none;">
+                        </td>
+                        <td>
+                            <span class="display-value">{{ leverancier.telefoon }}</span>
+                            <input type="text" class="edit-input form-control" 
+                                   value="{{ leverancier.telefoon }}" style="display: none;">
+                        </td>
+                        <td>
+                            <span class="display-value">{{ leverancier.email }}</span>
+                            <input type="text" class="edit-input form-control" 
+                                   value="{{ leverancier.email }}" style="display: none;">
+                        </td>
+                        <td>
+                            <button class="btn-action btn-edit"><i class="fas fa-edit"></i></button>
+                            <button class="btn-action btn-save" style="display: none;"><i class="fas fa-save"></i></button>
                             <button class="btn-action btn-delete"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>
@@ -44,10 +65,14 @@
         
         <form method="POST" class="add-form">
             {{ form.csrf_token }}
-            <input type="text" name="naam" class="form-control" placeholder="Naam" required>
-            <input type="text" name="contact" class="form-control" placeholder="Contactpersoon">
-            <input type="tel" name="telefoon" class="form-control" placeholder="Telefoonnummer">
-            <input type="email" name="email" class="form-control" placeholder="E-mail">
+            <input type="text" name="leverancier_naam" class="form-control" 
+                   placeholder="Naam" required>
+            <input type="text" name="leverancier_contact" class="form-control" 
+                   placeholder="Contactpersoon">
+            <input type="tel" name="leverancier_telefoon" class="form-control" 
+                   placeholder="Telefoonnummer">
+            <input type="email" name="leverancier_email" class="form-control" 
+                   placeholder="E-mail">
             <button type="submit" class="btn-action">Leverancier Toevoegen</button>
         </form>
     </div>
@@ -133,6 +158,56 @@
             <button type="submit" class="btn-action">Categorie Toevoegen</button>
         </form>
     </div>
+
+    <!-- Gerecht Categorieën Sectie -->
+    <div class="manage-section">
+        <h3>Gerecht Categorieën</h3>
+        <div class="table-responsive">
+            <table class="management-table">
+                <thead>
+                    <tr>
+                        <th>Naam</th>
+                        <th>Volgorde</th>
+                        <th>Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for categorie in dish_categories %}
+                    <tr id="dish-category-row-{{ categorie.category_id }}"
+                        data-id="{{ categorie.category_id }}"
+                        data-naam="{{ categorie.naam|tojson|safe }}"
+                        data-volgorde="{{ categorie.volgorde }}"
+                        data-type="dish_category">
+                        <td>
+                            <span class="display-value">{{ categorie.naam }}</span>
+                            <input type="text" class="edit-input form-control" 
+                                   value="{{ categorie.naam }}" style="display: none;">
+                        </td>
+                        <td>
+                            <span class="display-value">{{ categorie.volgorde }}</span>
+                            <input type="number" class="edit-input form-control" 
+                                   value="{{ categorie.volgorde }}" style="display: none;">
+                        </td>
+                        <td>
+                            <button class="btn-action btn-edit"><i class="fas fa-edit"></i></button>
+                            <button class="btn-action btn-save" style="display: none;"><i class="fas fa-save"></i></button>
+                            <button class="btn-action btn-delete"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <form method="POST" class="add-form">
+            {{ form.csrf_token }}
+            <input type="text" name="nieuwe_dish_category" class="form-control" 
+                   placeholder="Voer een nieuwe gerecht categorie in..." required>
+            <input type="number" name="volgorde" class="form-control"
+                   placeholder="Volgorde nummer" required>
+            <button type="submit" class="btn-action">Categorie Toevoegen</button>
+        </form>
+    </div>
 </div>
 
 <style>
@@ -195,6 +270,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 verwijderCategorie(id, naam);
             } else if (type === 'leverancier') {
                 verwijderLeverancier(id, naam);
+            } else if (type === 'dish_category') {
+                verwijderDishCategory(id, naam);
             }
         }
     });
@@ -218,27 +295,40 @@ async function saveEdit(button, type, id) {
     const displayValue = row.querySelector('.display-value');
     const newValue = editInput.value;
     
+    console.log(`Saving ${type} ${id} with value: ${newValue}`); // Debug log
+    
     try {
         const response = await fetch(`/dashboard/{{ chef_naam }}/${type}/${id}/update`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token() }}'
+                'X-CSRFToken': '{{ csrf_token() }}',
+                'Accept': 'application/json'
             },
             body: JSON.stringify({ naam: newValue })
         });
         
-        if (response.ok) {
+        console.log('Response status:', response.status); // Debug log
+        
+        const data = await response.json();
+        console.log('Response data:', data); // Debug log
+        
+        if (!response.ok) {
+            throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        }
+        
+        if (data.success) {
             displayValue.textContent = newValue;
             displayValue.style.display = 'block';
             editInput.style.display = 'none';
             button.style.display = 'none';
             row.querySelector('.btn-edit').style.display = 'inline-block';
         } else {
-            throw new Error('Update mislukt');
+            throw new Error(data.error || 'Update failed');
         }
     } catch (error) {
-        alert('Er is een fout opgetreden bij het opslaan van de wijzigingen.');
+        console.error('Error:', error); // Debug log
+        alert(`Er is een fout opgetreden bij het opslaan: ${error.message}`);
     }
 }
 
@@ -301,6 +391,27 @@ async function verwijderLeverancier(id, naam) {
             }
         } catch (error) {
             alert('Er is een fout opgetreden bij het verwijderen van de leverancier.');
+        }
+    }
+}
+
+async function verwijderDishCategory(id, naam) {
+    if (confirm(`Weet je zeker dat je gerecht categorie "${naam}" wilt verwijderen?`)) {
+        try {
+            const response = await fetch(`/dashboard/{{ chef_naam }}/dish_category/${id}/delete`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            });
+            
+            if (response.ok) {
+                document.querySelector(`#dish-category-row-${id}`).remove();
+            } else {
+                throw new Error('Verwijderen mislukt');
+            }
+        } catch (error) {
+            alert('Er is een fout opgetreden bij het verwijderen van de gerecht categorie.');
         }
     }
 }

@@ -27,19 +27,9 @@
         <div class="form-group">
             <label for="gerecht_categorie">Categorie:</label>
             <select id="gerecht_categorie" name="gerecht_categorie" class="form-control" required>
-                <option value="Amuse-bouche">Amuse-bouche (optioneel)</option>
-                <option value="Hors-d'œuvre">Hors-d'œuvre (koud voorgerecht)</option>
-                <option value="Potage">Potage (soep)</option>
-                <option value="Poisson">Poisson (visgerecht)</option>
-                <option value="Entrée">Entrée (warm voorgerecht / tussengerecht)</option>
-                <option value="Sorbet">Sorbet (verfrissende gang)</option>
-                <option value="Relevé of Rôti">Relevé of Rôti (hoofdgerecht/vleesgerecht)</option>
-                <option value="Légumes / Groentegerecht">Légumes / Groentegerecht</option>
-                <option value="Salade">Salade</option>
-                <option value="Fromage">Fromage (kaas)</option>
-                <option value="Entremets">Entremets (zoet nagerecht)</option>
-                <option value="Café / Mignardises">Café / Mignardises</option>
-                <option value="Digestief">Digestief (optioneel)</option>
+                {% for categorie in dish_categories %}
+                    <option value="{{ categorie.naam }}">{{ categorie.naam }}</option>
+                {% endfor %}
             </select>
         </div>
 
