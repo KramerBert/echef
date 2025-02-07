@@ -707,8 +707,8 @@ footer {
     display: block;
     width: 100%;
     padding: 0.5rem;
-    background-color: var(--kitchen-black);
-    color: var(--text-light);
+    background-color: var(--kitchen-steel); /* Default background */
+    color: var(--kitchen-black); /* Default text color */
     border: 1px solid var(--kitchen-steel);
     border-radius: 4px;
     transition: all 0.3s ease;
@@ -716,15 +716,22 @@ footer {
 }
 
 .form-control:focus {
-    background-color: var(--kitchen-black);
+    background-color: #fff; /* Focus background: white */
     border-color: var(--kitchen-highlight);
     outline: none;
     box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.25);
-    color: var(--text-light);
+    color: var(--kitchen-black); /* Focus text color: dark */
 }
 
-.form-control::placeholder {
-    color: var(--text-muted);
+/* Add this rule to handle text selection color */
+.form-control::selection {
+    background-color: var(--kitchen-highlight); /* Use highlight color */
+    color: #000; /* Ensure text is readable: black */
+}
+
+.form-control::-moz-selection {
+    background-color: var(--kitchen-highlight); /* Use highlight color */
+    color: #000; /* Ensure text is readable: black */
 }
 
 /* Specifieke styling voor verschillende input types */
@@ -738,6 +745,20 @@ textarea.form-control {
     background-color: var(--kitchen-steel);
     color: var(--kitchen-black);
     text-align: left;
+}
+
+input[type="text"].form-control:focus,
+input[type="email"].form-control:focus,
+input[type="tel"].form-control:focus,
+input[type="number"].form-control:focus,
+input[type="password"].form-control:focus,
+select.form-control:focus,
+textarea.form-control:focus {
+    color: var(--kitchen-black); /* Keep text dark on focus */
+}
+
+.form-control::placeholder {
+    color: var(--text-muted);
 }
 
 /* Styling for disabled state */
