@@ -4,8 +4,8 @@ from wtforms.validators import DataRequired
 
 class RecipeGenerationForm(FlaskForm):
     prompt = TextAreaField('Beschrijf het gerecht dat je wilt maken', 
-                          validators=[DataRequired()])
+                          validators=[DataRequired()], default="Hier je tekst")
     cuisine = StringField('Keuken (bijv. Frans, Italiaans)', 
-                         validators=[DataRequired()])
-    dietary = StringField('Dieetwensen (optioneel)')
+                         default="")
+    dietary = StringField('Dieetwensen (optioneel)', default="")
     submit = SubmitField('Genereer Recept')

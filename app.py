@@ -71,6 +71,11 @@ else:
 app.config['RECAPTCHA_PUBLIC_KEY'] = os.getenv('RECAPTCHA_SITE_KEY')
 app.config['RECAPTCHA_PRIVATE_KEY'] = os.getenv('RECAPTCHA_SECRET_KEY')
 
+def nl2br(value):
+    return value.replace('\n', '<br>')
+
+app.jinja_env.filters['nl2br'] = nl2br
+
 def create_app():
     """Application factory function"""
     # Configure the app

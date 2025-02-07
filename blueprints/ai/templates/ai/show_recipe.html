@@ -1,11 +1,34 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container mt-4">
-    <h1>Gegenereerd Recept</h1>
+    <h1>{{ recipe.naam }}</h1>
     
     <div class="recipe-container">
         <div class="recipe-content">
-            {{ recipe|nl2br }}
+            <h2>Beschrijving</h2>
+            <p>{{ recipe.beschrijving }}</p>
+
+            <h2>Ingrediënten</h2>
+            <ul>
+                {% for ingredient in recipe.ingredienten %} 
+                    <li>
+                        {% if ingredient.hoeveelheid %}
+                            {{ ingredient.hoeveelheid }}
+                        {% endif %}
+                        {% if ingredient.eenheid %}
+                            {{ ingredient.eenheid }}
+                        {% endif %}
+                        {{ ingredient.naam }}
+                    </li>
+                {% endfor %}
+            </ul>
+
+            <h2 id="bereidingswijze">Bereidingswijze</h2>
+            <ul>
+                {% for item in recipe.bereidingswijze %}
+                    <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
         </div>
 
         <div class="action-buttons mt-4">
@@ -31,7 +54,16 @@
         background-color: rgba(0, 0, 0, 0.2);
         padding: 1.5rem;
         border-radius: 4px;
-        white-space: pre-line;
+    }
+
+    .recipe-content h2 {
+        color: var(--text-light);
+        margin-bottom: 1rem;
+    }
+
+    .recipe-content p,
+    .recipe-content li {
+        color: var(--text-light);
     }
 
     .action-buttons {
@@ -43,6 +75,26 @@
 <script>
 async function saveRecipe() {
     try {
+        const recipeContent = document.querySelector('.recipe-content');
+        let recipeText = '';
+
+        // Extract text from each section
+        recipeText += `Naam van het gerecht: ${document.querySelector('h1').innerText}\n`;
+        recipeText += `Beschrijving: ${recipeContent.querySelector('p').innerText}\n`;
+
+        // Extract ingredients
+        recipeText += 'Ingrediënten:\n';
+        const ingredients = recipeContent.querySelectorAll('ul li');
+        ingredients.forEach(ingredient => {
+            recipeText += `- ${ingredient.innerText}\n`;
+        });
+
+        recipeText += 'Bereidingswijze:\n';
+        const steps = recipeContent.querySelectorAll('#bereidingswijze li');
+        steps.forEach(step => {
+            recipeText += `${step.innerText}\n`;
+        });
+
         const response = await fetch('/ai/save_recipe', {
             method: 'POST',
             headers: {
@@ -50,7 +102,7 @@ async function saveRecipe() {
                 'X-CSRFToken': '{{ csrf_token() }}'
             },
             body: JSON.stringify({
-                recipe_text: document.querySelector('.recipe-content').innerText
+                recipe_text: recipeText
             })
         });
 

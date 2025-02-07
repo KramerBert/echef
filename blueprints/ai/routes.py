@@ -8,8 +8,13 @@ from app import get_db_connection  # Voeg deze import toe
 import os
 import logging
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+
 # Initialize Anthropic client
-anthropic = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+api_key = os.getenv('ANTHROPIC_API_KEY')
+logging.debug(f"Anthropic API Key: {api_key}")  # Log the API key
+anthropic = Anthropic(api_key=api_key)
 
 @ai_blueprint.route('/generate', methods=['GET', 'POST'])
 def generate_recipe():
@@ -23,37 +28,42 @@ def generate_recipe():
             # Bouw de prompt op
             system_prompt = """Je bent een ervaren chef-kok die helpt bij het maken van recepten.
             Geef het recept in het volgende format:
-            - Naam van het gerecht
-            - Beschrijving
-            - Ingrediëntenlijst met hoeveelheden
-            - Bereidingswijze in stappen
-            - Geschatte bereidingstijd
-            - Moeilijkheidsgraad (1-5)"""
-            
+
+            Naam van het gerecht: [Naam van het gerecht] (maximaal 50 tekens)
+            Beschrijving: [Een korte beschrijving van het gerecht] (maximaal 150 tekens)
+
+            Ingrediënten:
+            - [Hoeveelheid] [Eenheid] [Naam van het ingrediënt]
+            - ...
+
+            Bereidingswijze:
+            1. [Stap 1]
+            2. [Stap 2]
+            ...
+            """
             user_prompt = f"""
             Maak een recept voor: {form.prompt.data}
             Keuken: {form.cuisine.data}
             Dieetwensen: {form.dietary.data if form.dietary.data else 'Geen specifieke wensen'}
             """
-
             # Gebruik Claude's API
             message = anthropic.messages.create(
-                model="claude-2.1",  # Goedkoper model
+                model="claude-3-opus-20240229",
                 max_tokens=1000,
                 temperature=0.7,
+                system=system_prompt,
                 messages=[
-                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ]
             )
 
             # Haal het gegenereerde recept op
             generated_recipe = message.content[0].text
+            parsed_recipe = parse_recipe(generated_recipe)
 
             return render_template('ai/show_recipe.html',
-                                recipe=generated_recipe,
-                                form=form)
-
+                                   recipe=parsed_recipe,
+                                   form=form)
         except Exception as e:
             flash(f"Er is een fout opgetreden: {str(e)}", "danger")
             return render_template('ai/generate_recipe.html', form=form)
@@ -64,11 +74,12 @@ def generate_recipe():
 def save_recipe():
     if 'chef_id' not in session:
         return jsonify({'success': False, 'error': 'Niet ingelogd'}), 403
-
     try:
         data = request.json
         recipe_text = data.get('recipe_text')
+        logging.debug(f"Received recipe_text: {recipe_text}")  # Log the received recipe_text
         parsed = parse_recipe(recipe_text)
+        logging.debug(f"Parsed recipe: {parsed}")  # Log the parsed recipe
 
         conn = get_db_connection()
         if not conn:
@@ -76,40 +87,32 @@ def save_recipe():
 
         cur = conn.cursor()
         try:
-            # Voeg het gerecht toe
+            # Combineer ingrediënten en bereidingswijze tot één string
+            ingredienten_string = "\nIngrediënten:\n"
+            if parsed['ingredienten']:
+                for ingredient in parsed['ingredienten']:
+                    hoeveelheid = ingredient['hoeveelheid'] if ingredient['hoeveelheid'] else ""
+                    eenheid = ingredient['eenheid'] if ingredient['eenheid'] else ""
+                    ingredienten_string += f"- {hoeveelheid} {eenheid} {ingredient['naam']}\n"
+            else:
+                ingredienten_string += "Geen ingrediënten gevonden.\n"
+
+            bereidingswijze_string = "\nBereidingswijze:\n"
+            if parsed['bereidingswijze']:
+                for i, stap in enumerate(parsed['bereidingswijze']):
+                     bereidingswijze_string += f"{i+1}. {stap}\n"
+            else:
+                bereidingswijze_string += "Geen bereidingswijze gevonden.\n"
+
+            volledige_bereidingswijze = ingredienten_string + bereidingswijze_string
+
             cur.execute("""
                 INSERT INTO dishes (chef_id, naam, beschrijving, bereidingswijze, 
                                   is_ai_generated, original_prompt, generation_date)
                 VALUES (%s, %s, %s, %s, TRUE, %s, NOW())
             """, (session['chef_id'], parsed['naam'], parsed['beschrijving'],
-                 '\n'.join(parsed['bereidingswijze']), recipe_text))
-            
+                 volledige_bereidingswijze, recipe_text))
             dish_id = cur.lastrowid
-
-            # Voeg ingrediënten toe of maak nieuwe aan indien nodig
-            for ingredient in parsed['ingredienten']:
-                # Kijk of het ingrediënt al bestaat
-                cur.execute("""
-                    SELECT ingredient_id FROM ingredients 
-                    WHERE chef_id = %s AND naam = %s AND eenheid = %s
-                """, (session['chef_id'], ingredient['naam'], ingredient['eenheid']))
-                
-                result = cur.fetchone()
-                if result:
-                    ingredient_id = result[0]
-                else:
-                    # Maak nieuw ingrediënt aan
-                    cur.execute("""
-                        INSERT INTO ingredients (chef_id, naam, eenheid)
-                        VALUES (%s, %s, %s)
-                    """, (session['chef_id'], ingredient['naam'], ingredient['eenheid']))
-                    ingredient_id = cur.lastrowid
-
-                # Koppel ingrediënt aan gerecht
-                cur.execute("""
-                    INSERT INTO dish_ingredients (dish_id, ingredient_id, hoeveelheid)
-                    VALUES (%s, %s, %s)
-                """, (dish_id, ingredient_id, ingredient['hoeveelheid']))
 
             conn.commit()
             return jsonify({
@@ -125,7 +128,6 @@ def save_recipe():
         finally:
             cur.close()
             conn.close()
-
     except Exception as e:
         logging.error(f'Error in save_recipe: {str(e)}')
         return jsonify({'success': False, 'error': str(e)}), 500
