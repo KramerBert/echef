@@ -26,6 +26,7 @@ from flask_wtf import FlaskForm, RecaptchaField
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo
 from flask import send_from_directory
+from flask_migrate import Migrate
 
 load_dotenv()  # Load the values from .env
 
