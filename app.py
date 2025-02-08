@@ -3001,11 +3001,12 @@ def delete_supplier(chef_naam, leverancier_id):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     application = create_app()
+    
     if os.environ.get('FLASK_ENV') == 'development':
-        # Use Flask's development server locally
-        application.run(host='0.0.0.0', port=port, debug=True)
-    else:
-        # Use waitress in production
+        # Use waitress for local development
         from waitress import serve
         serve(application, host='0.0.0.0', port=port)
+    else:
+        # Use gunicorn in production (Heroku)
+        application.run(host='0.0.0.0', port=port)
 
