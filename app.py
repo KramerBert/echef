@@ -773,9 +773,9 @@ def download_csv_template():
 # -----------------------------------------------------------
 #  Gerechten Samenstellen
 # -----------------------------------------------------------
-@app.route('/dashboard/<chef_naam>/dishes', methods=['GET', 'POST'])
+@app.route("/manage_dishes/<chef_naam>", methods=['GET', 'POST'])
 def manage_dishes(chef_naam):
-    form = FlaskForm()  # Add this line for CSRF validation
+    form = FlaskForm()
     if 'chef_id' not in session or session['chef_naam'] != chef_naam:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
@@ -788,32 +788,30 @@ def manage_dishes(chef_naam):
     cur = conn.cursor(dictionary=True)
 
     try:
-        if request.method == 'POST' and 'gerechtForm' in request.form:
+        if request.method == 'POST' and request.form.get('gerechtForm') == '1':
             if not form.validate_on_submit():  # Add CSRF validation
                 flash("Ongeldige CSRF-token. Probeer het opnieuw.", "danger")
                 return redirect(url_for('manage_dishes', chef_naam=chef_naam))
 
-            naam = request.form.get('naam')
-            beschrijving = request.form.get('beschrijving')
-            gerecht_categorie = request.form.get('gerecht_categorie')
-            bereidingswijze = request.form.get('bereidingswijze')
+            naam = request.form['naam']
+            beschrijving = request.form['beschrijving']
+            gerecht_categorie = request.form['gerecht_categorie']
+            ingredienten = request.form.get('ingredienten', '')  # Get ingredients from form and ensure it's not None
+            bereidingswijze = request.form['bereidingswijze']
 
-            try:
-                cur.execute("""
-                    INSERT INTO dishes (chef_id, naam, beschrijving, categorie, bereidingswijze)
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (session['chef_id'], naam, beschrijving, gerecht_categorie, bereidingswijze))
-                new_dish_id = cur.lastrowid
-                conn.commit()
-                flash("Gerecht toegevoegd!", "success")
-                return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=new_dish_id))
-            except Exception as e:
-                conn.rollback()
-                flash(f"Fout bij toevoegen gerecht: {str(e)}", "danger")
+            cur.execute("""
+                INSERT INTO dishes (chef_id, naam, beschrijving, categorie, ingredienten, bereidingswijze)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (session['chef_id'], naam, beschrijving, gerecht_categorie, ingredienten, bereidingswijze))
+            conn.commit()
+            new_dish_id = cur.lastrowid
+
+            flash('Gerecht succesvol aangemaakt!', 'success')
+            return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=new_dish_id))
 
         # Haal alle gerechten van deze chef op
         cur.execute("""
-            SELECT * FROM dishes
+            SELECT * FROM dishes 
             WHERE chef_id = %s
             ORDER BY dish_id DESC
         """, (session['chef_id'],))
@@ -888,14 +886,15 @@ def edit_dish(chef_naam, dish_id):
             nieuwe_beschrijving = request.form.get('beschrijving')
             nieuwe_verkoopprijs = request.form.get('verkoopprijs')
             nieuwe_categorie = request.form.get('gerecht_categorie')
+            nieuwe_ingredienten = request.form.get('ingredienten', '')  # Add default empty string
             nieuwe_bereidingswijze = request.form.get('bereidingswijze')
 
             try:
                 cur.execute("""
                     UPDATE dishes
-                    SET naam = %s, beschrijving = %s, verkoopprijs = %s, categorie = %s, bereidingswijze = %s
+                    SET naam = %s, beschrijving = %s, verkoopprijs = %s, categorie = %s, ingredienten = %s, bereidingswijze = %s
                     WHERE dish_id = %s AND chef_id = %s
-                """, (nieuwe_naam, nieuwe_beschrijving, nieuwe_verkoopprijs, nieuwe_categorie, nieuwe_bereidingswijze, dish_id, session['chef_id']))
+                """, (nieuwe_naam, nieuwe_beschrijving, nieuwe_verkoopprijs, nieuwe_categorie, nieuwe_ingredienten, nieuwe_bereidingswijze, dish_id, session['chef_id']))
                 conn.commit()
                 flash("Gerecht bijgewerkt!", "success")
                 return redirect(url_for('all_dishes'))
@@ -921,7 +920,7 @@ def edit_dish(chef_naam, dish_id):
                 try:
                     # Check if the ingredient already exists for this dish
                     cur.execute("""
-                        SELECT * FROM dish_ingredients
+                        SELECT * FROM dish_ingredients 
                         WHERE dish_id = %s AND ingredient_id = %s
                     """, (dish_id, ingredient_id))
                     existing_ingredient = cur.fetchone()
@@ -996,8 +995,7 @@ def edit_dish(chef_naam, dish_id):
 
     # Haal alle beschikbare ingrediënten van deze chef op
     cur.execute("""
-        SELECT * 
-        FROM ingredients 
+        SELECT * FROM ingredients 
         WHERE chef_id = %s
         ORDER BY naam ASC
     """, (session['chef_id'],))
@@ -1070,22 +1068,23 @@ def update_dish_ingredient(chef_naam, dish_id, ingredient_id):
     if conn is None:
         flash("Database connection error.", "danger")
         return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
-    
     cur = conn.cursor(dictionary=True)
+
     try:
         nieuwe_hoeveelheid = float(request.form['nieuwe_hoeveelheid'])
-        
+
         # Eerst de prijs_per_eenheid ophalen
         cur.execute("""
             SELECT prijs_per_eenheid 
             FROM ingredients 
-            WHERE ingredient_id = %s
-        """, (ingredient_id,))
+            WHERE ingredient_id = %s 
+              AND chef_id = %s
+        """, (ingredient_id, session['chef_id']))
         ingredient = cur.fetchone()
         
         if ingredient:
             nieuwe_prijs_totaal = nieuwe_hoeveelheid * float(ingredient['prijs_per_eenheid'])
-            
+
             # Update de hoeveelheid en prijs_totaal
             cur.execute("""
                 UPDATE dish_ingredients 
@@ -1097,14 +1096,13 @@ def update_dish_ingredient(chef_naam, dish_id, ingredient_id):
             flash("Ingrediënt hoeveelheid bijgewerkt!", "success")
         else:
             flash("Ingrediënt niet gevonden.", "danger")
-            
     except Exception as e:
         conn.rollback()
         flash(f"Fout bij bijwerken: {str(e)}", "danger")
     finally:
         cur.close()
         conn.close()
-    
+
     return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id) + '#ingredienten-tabel')
 
 @app.route('/chef/<chef_naam>/dish/<int:dish_id>/ingredient/<int:ingredient_id>/remove', methods=['POST'])
@@ -1122,8 +1120,8 @@ def remove_dish_ingredient(chef_naam, dish_id, ingredient_id):
     if conn is None:
         flash("Database connection error.", "danger")
         return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
-    
     cur = conn.cursor()
+
     try:
         # Verwijder het ingredient uit het gerecht
         cur.execute("""
@@ -1139,7 +1137,7 @@ def remove_dish_ingredient(chef_naam, dish_id, ingredient_id):
     finally:
         cur.close()
         conn.close()
-    
+
     return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id) + '#ingredienten-tabel')
 
 @app.route('/dashboard/<chef_naam>/dish/<int:dish_id>/allergenen', methods=['POST'])
@@ -1154,6 +1152,9 @@ def update_dish_allergenen(chef_naam, dish_id):
         return redirect(url_for('login'))
 
     conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
     cur = conn.cursor()
 
     try:
@@ -1191,6 +1192,9 @@ def update_dish_dieten(chef_naam, dish_id):
         return redirect(url_for('login'))
 
     conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
     cur = conn.cursor()
 
     try:
@@ -1245,7 +1249,6 @@ def all_dishes():
         WHERE d.chef_id = %s  /* Voeg deze WHERE clausule toe */
         ORDER BY d.dish_id DESC
     """, (session['chef_id'],))
-    
     alle_gerechten = cur.fetchall()
     cur.close()
     conn.close()
@@ -1259,14 +1262,14 @@ def all_dishes():
 # -----------------------------------------------------------
 @app.route('/export_dishes', methods=['POST'])
 def export_dishes():
+    """
+    Export selected dishes to a Microsoft Word document.
+    """
     form = FlaskForm()
     if not form.validate_on_submit():
         flash("Ongeldige CSRF-token.", "danger")
         return redirect(url_for('all_dishes'))
 
-    """
-    Export selected dishes to a Microsoft Word document.
-    """
     if 'chef_id' not in session:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
@@ -1295,7 +1298,6 @@ def export_dishes():
             WHERE d.dish_id IN ({}) AND d.chef_id = %s
             ORDER BY d.categorie
         """.format(format_strings)
-        
         params = selected_dish_ids + [session['chef_id']]
         cur.execute(query, tuple(params))
         selected_dishes = cur.fetchall()
@@ -1376,7 +1378,6 @@ def export_dishes():
         logger.error(f'Error exporting dishes: {str(e)}')
         flash("Er is een fout opgetreden bij het exporteren van de menukaart.", "danger")
         return redirect(url_for('all_dishes'))
-    
     finally:
         cur.close()
         conn.close()
@@ -1401,126 +1402,132 @@ def export_cookbook():
         return redirect(url_for('all_dishes'))
     cur = conn.cursor(dictionary=True)
 
-    # Haal alle gerechten van de ingelogde chef op
-    cur.execute("""
-        SELECT d.*, c.naam as chef_naam, 
-               (SELECT SUM(di.prijs_totaal) 
-                FROM dish_ingredients di 
-                WHERE di.dish_id = d.dish_id) as totaal_ingredient_prijs
-        FROM dishes d
-        JOIN chefs c ON d.chef_id = c.chef_id
-        WHERE d.chef_id = %s
-        ORDER BY CASE 
-            WHEN d.categorie = 'Amuse-bouche' THEN 1
-            WHEN d.categorie = 'Hors-d''oeuvre' THEN 2
-            WHEN d.categorie = 'Potage' THEN 3
-            WHEN d.categorie = 'Poisson' THEN 4
-            WHEN d.categorie = 'Entrée' THEN 5
-            WHEN d.categorie = 'Sorbet' THEN 6
-            WHEN d.categorie = 'Relevé of Rôti' THEN 7
-            WHEN d.categorie = 'Légumes / Groentegerecht' THEN 8
-            WHEN d.categorie = 'Salade' THEN 9
-            WHEN d.categorie = 'Fromage' THEN 10
-            WHEN d.categorie = 'Entremets' THEN 11
-            WHEN d.categorie = 'Café / Mignardises' THEN 12
-            WHEN d.categorie = 'Digestief' THEN 13
-            ELSE 14
-        END
-    """, (session['chef_id'],))
-    all_dishes = cur.fetchall()
-
-    # Maak een Word-document aan
-    doc = Document()
-    doc.add_heading('Kookboek', 0).alignment = WD_ALIGN_PARAGRAPH.LEFT
-
-    # Voeg een inhoudsopgave toe
-    doc.add_heading('Inhoudsopgave', level=1)
-    for dish in all_dishes:
-        doc.add_paragraph(dish['naam'], style='List Number')
-
-    doc.add_page_break()
-
-    # Voeg veiligheidscontroles toe voor alle velden
-    for dish in all_dishes:
-        verkoopprijs = dish['verkoopprijs'] if dish['verkoopprijs'] else 'n.v.t.'
-        naam = dish['naam'] if dish['naam'] else 'Onbekend gerecht'
-        heading = doc.add_heading(f"{naam} - €{verkoopprijs}", level=1)
-        heading.alignment = WD_ALIGN_PARAGRAPH.LEFT
-
-        description_text = dish['beschrijving'] if dish['beschrijving'] else 'Geen beschrijving'
-        description = doc.add_paragraph(description_text)
-        description.alignment = WD_ALIGN_PARAGRAPH.LEFT
-
-        # Haal de ingrediënten voor dit gerecht op
+    try:
+        # Haal alle gerechten van de ingelogde chef op
         cur.execute("""
-            SELECT di.*, i.naam AS ingredient_naam, i.eenheid
-            FROM dish_ingredients di
-            JOIN ingredients i ON di.ingredient_id = i.ingredient_id
-            WHERE di.dish_id = %s
-        """, (dish['dish_id'],))
-        gerecht_ingredienten = cur.fetchall()
+            SELECT d.*, c.naam as chef_naam, 
+                   (SELECT SUM(di.prijs_totaal) 
+                    FROM dish_ingredients di 
+                    WHERE di.dish_id = d.dish_id) as totaal_ingredient_prijs
+            FROM dishes d
+            JOIN chefs c ON d.chef_id = c.chef_id
+            WHERE d.chef_id = %s
+            ORDER BY CASE 
+                WHEN d.categorie = 'Amuse-bouche' THEN 1
+                WHEN d.categorie = 'Hors-d''oeuvre' THEN 2
+                WHEN d.categorie = 'Potage' THEN 3
+                WHEN d.categorie = 'Poisson' THEN 4
+                WHEN d.categorie = 'Entrée' THEN 5
+                WHEN d.categorie = 'Sorbet' THEN 6
+                WHEN d.categorie = 'Relevé of Rôti' THEN 7
+                WHEN d.categorie = 'Légumes / Groentegerecht' THEN 8
+                WHEN d.categorie = 'Salade' THEN 9
+                WHEN d.categorie = 'Fromage' THEN 10
+                WHEN d.categorie = 'Entremets' THEN 11
+                WHEN d.categorie = 'Café / Mignardises' THEN 12
+                WHEN d.categorie = 'Digestief' THEN 13
+                ELSE 14
+            END
+        """, (session['chef_id'],))
+        all_dishes = cur.fetchall()
 
-        if gerecht_ingredienten:
-            doc.add_heading('Ingrediënten', level=2)
-            for gi in gerecht_ingredienten:
-                ingredient_text = f"{gi['hoeveelheid']} {gi['eenheid']} {gi['ingredient_naam']}"
-                doc.add_paragraph(ingredient_text).alignment = WD_ALIGN_PARAGRAPH.LEFT
+        # Maak een Word-document aan
+        doc = Document()
+        doc.add_heading('Kookboek', 0).alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-        method_text = dish['bereidingswijze'] if dish['bereidingswijze'] else 'Geen bereidingswijze'
-        doc.add_heading('Bereidingswijze', level=2)
-        method = doc.add_paragraph(method_text)
-        method.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        # Voeg een inhoudsopgave toe
+        doc.add_heading('Inhoudsopgave', level=1)
+        for dish in all_dishes:
+            doc.add_paragraph(dish['naam'], style='List Number')
 
-        # Haal allergenen op voor dit gerecht
-        cur.execute("""
-            SELECT a.naam, a.icon_class 
-            FROM allergenen a
-            JOIN dish_allergenen da ON a.allergeen_id = da.allergeen_id
-            WHERE da.dish_id = %s
-            ORDER BY a.naam
-        """, (dish['dish_id'],))
-        allergenen = cur.fetchall()
+        doc.add_page_break()
 
-        # Voeg allergenen toe als ze bestaan
-        if allergenen:
-            allergenen_paragraph = doc.add_paragraph()
-            allergenen_paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            allergenen_text = "Allergenen: " + ", ".join([a['naam'] for a in allergenen])
-            allergenen_paragraph.add_run(allergenen_text).italic = True
+        # Voeg veiligheidscontroles toe voor alle velden
+        for dish in all_dishes:
+            verkoopprijs = dish['verkoopprijs'] if dish['verkoopprijs'] else 'n.v.t.'
+            naam = dish['naam'] if dish['naam'] else 'Onbekend gerecht'
+            heading = doc.add_heading(f"{naam} - €{verkoopprijs}", level=1)
+            heading.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            description_text = dish['beschrijving'] if dish['beschrijving'] else 'Geen beschrijving'
+            description = doc.add_paragraph(description_text)
+            description.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-        # Voeg diëten toe aan het document
-        cur.execute("""
-            SELECT d.naam, d.icon_class 
-            FROM dieten d
-            JOIN dish_dieten dd ON d.dieet_id = dd.dieet_id
-            WHERE dd.dish_id = %s
-            ORDER BY d.naam
-        """, (dish['dish_id'],))
-        dieten = cur.fetchall()
-        
-        if dieten:
-            dieten_paragraph = doc.add_paragraph()
-            dieten_paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            dieten_text = "Geschikt voor: " + ", ".join([d['naam'] for d in dieten])
-            dieten_paragraph.add_run(dieten_text).italic = True
+            # Haal de ingrediënten voor dit gerecht op
+            cur.execute("""
+                SELECT di.*, i.naam AS ingredient_naam, i.eenheid
+                FROM dish_ingredients di
+                JOIN ingredients i ON di.ingredient_id = i.ingredient_id
+                WHERE di.dish_id = %s
+                ORDER BY i.naam ASC
+            """, (dish['dish_id'],))
+            gerecht_ingredienten = cur.fetchall()
 
-        doc.add_paragraph("\n").alignment = WD_ALIGN_PARAGRAPH.LEFT
+            if gerecht_ingredienten:
+                doc.add_heading('Ingrediënten', level=2)
+                for gi in gerecht_ingredienten:
+                    ingredient_text = f"{gi['hoeveelheid']} {gi['eenheid']} {gi['ingredient_naam']}"
+                    doc.add_paragraph(ingredient_text).alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-    cur.close()
-    conn.close()
+            method_text = dish['bereidingswijze'] if dish['bereidingswijze'] else 'Geen bereidingswijze'
+            doc.add_heading('Bereidingswijze', level=2)
+            method = doc.add_paragraph(method_text)
+            method.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-    # Sla het document op in een in-memory buffer
-    buffer = io.BytesIO()
-    doc.save(buffer)
-    buffer.seek(0)
+            # Haal allergenen op voor dit gerecht
+            cur.execute("""
+                SELECT a.naam, a.icon_class 
+                FROM allergenen a
+                JOIN dish_allergenen da ON a.allergeen_id = da.allergeen_id
+                WHERE da.dish_id = %s
+                ORDER BY a.naam
+            """, (dish['dish_id'],))
+            allergenen = cur.fetchall()
 
-    safe_filename = quote('Kookboek.docx', safe='')
-    return send_file(
-        buffer,
-        as_attachment=True, 
-        download_name=safe_filename,
-        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    )
+            # Voeg allergenen toe als ze bestaan
+            if allergenen:
+                allergenen_paragraph = doc.add_paragraph()
+                allergenen_paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                allergenen_text = "Allergenen: " + ", ".join([a['naam'] for a in allergenen])
+                allergenen_paragraph.add_run(allergenen_text).italic = True
+
+            # Voeg diëten toe aan het document
+            cur.execute("""
+                SELECT d.naam, d.icon_class 
+                FROM dieten d
+                JOIN dish_dieten dd ON d.dieet_id = dd.dieet_id
+                WHERE dd.dish_id = %s
+                ORDER BY d.naam
+            """, (dish['dish_id'],))
+            dieten = cur.fetchall()
+            
+            if dieten:
+                dieten_paragraph = doc.add_paragraph()
+                dieten_paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                dieten_text = "Geschikt voor: " + ", ".join([d['naam'] for d in dieten])
+                dieten_paragraph.add_run(dieten_text).italic = True
+
+            doc.add_paragraph("\n").alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+        # Sla het document op in een in-memory buffer
+        buffer = io.BytesIO()
+        doc.save(buffer)
+        buffer.seek(0)
+
+        safe_filename = quote('Kookboek.docx', safe='')
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=safe_filename,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+
+    except Exception as e:
+        logger.error(f'Error exporting cookbook: {str(e)}')
+        flash("Er is een fout opgetreden bij het exporteren van het kookboek.", "danger")
+        return redirect(url_for('dashboard', chef_naam=session.get('chef_naam')))
+    finally:
+        cur.close()
+        conn.close()
 
 # -----------------------------------------------------------
 #  Verwijder Gerecht
@@ -1532,13 +1539,13 @@ def delete_dish(dish_id):
         flash("Ongeldige CSRF-token.", "danger")
         return redirect(url_for('all_dishes'))
 
-    """
-    Verwijder een gerecht.
-    """
     if 'chef_id' not in session:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('login'))
 
+    """
+    Verwijder een gerecht.
+    """
     conn = get_db_connection()
     if conn is None:
         flash("Database connection error.", "danger")
@@ -1683,7 +1690,7 @@ def delete_ingredient(chef_naam, ingredient_id):
 def export_dish(chef_naam, dish_id):
     form = FlaskForm()
     if not form.validate_on_submit():
-        flash("Ongeldige CSRF-token.", "danger") 
+        flash("Ongeldige CSRF-token.", "danger")
         return redirect(url_for('all_dishes'))
 
     if 'chef_id' not in session or session['chef_naam'] != chef_naam:
@@ -1694,8 +1701,8 @@ def export_dish(chef_naam, dish_id):
     if conn is None:
         flash("Database connection error.", "danger")
         return redirect(url_for('manage_dishes', chef_naam=chef_naam))
-    
     cur = conn.cursor(dictionary=True)
+
     try:
         # Haal gerecht informatie op
         cur.execute("""
@@ -1754,7 +1761,6 @@ def export_dish(chef_naam, dish_id):
 
         filename = f"{gerecht['naam']}_recept.docx"
         safe_filename = secure_filename(filename)
-        
         return send_file(
             buffer,
             as_attachment=True,
@@ -1766,7 +1772,6 @@ def export_dish(chef_naam, dish_id):
         logger.error(f'Error exporting dish: {str(e)}')
         flash("Er is een fout opgetreden bij het exporteren van het recept.", "danger")
         return redirect(url_for('all_dishes'))
-    
     finally:
         cur.close()
         conn.close()
@@ -1777,13 +1782,6 @@ def export_dish(chef_naam, dish_id):
 @app.route('/instructions')
 def instructions():
     return render_template('instructions.html', form=FlaskForm())
-
-# -----------------------------------------------------------
-# Voeg error handler toe voor Werkzeug exceptions
-# @app.errorhandler(HTTPException)
-# def handle_exception(e):
-#     return
-# ...existing code...
 
 # -----------------------------------------------------------
 #  Bestellijst Beheren
@@ -1808,7 +1806,6 @@ def manage_orderlist():
         WHERE d.chef_id = %s
         ORDER BY d.naam
     """, (session['chef_id'],))
-    
     alle_gerechten = cur.fetchall()
     cur.close()
     conn.close()
@@ -1840,7 +1837,6 @@ def export_orderlist():
     if conn is None:
         flash("Database connection error.", "danger")
         return redirect(url_for('manage_orderlist'))
-    
     cur = conn.cursor(dictionary=True)
 
     try:
@@ -1858,10 +1854,9 @@ def export_orderlist():
                 WHERE dish_id = %s
             """, (dish_id,))
             dish = cur.fetchone()
-            
             if dish:  # Voeg veiligheidscheck toe
                 dishes_info[dish_id] = {
-                    'naam': dish['naam'], 
+                    'naam': dish['naam'],
                     'aantal': quantity,
                     'verkoopprijs': float(dish['verkoopprijs'] or 0)
                 }
@@ -1882,7 +1877,6 @@ def export_orderlist():
                         LEFT JOIN leveranciers l ON i.leverancier_id = l.leverancier_id
                         WHERE di.dish_id = %s
                     """, (dish_id,))
-                    
                     ingredients = cur.fetchall()
                     for ing in ingredients:
                         supplier_key = ing['leverancier_naam'] or 'Geen leverancier'
@@ -1913,7 +1907,7 @@ def export_orderlist():
                 row[1].text = f"{ingredient['hoeveelheid']:.2f}"
                 row[2].text = ingredient['eenheid']
                 row[3].text = f"€{ingredient['prijs']:.2f}"
-            
+
             doc.add_paragraph()
 
         # Voeg financieel overzicht toe
@@ -1953,7 +1947,6 @@ def export_orderlist():
         logger.error(f'Error creating orderlist: {str(e)}')
         flash("Er is een fout opgetreden bij het maken van de bestellijst.", "danger")
         return redirect(url_for('manage_orderlist'))
-    
     finally:
         cur.close()
         conn.close()
@@ -2023,8 +2016,11 @@ def new_haccp_checklist(chef_naam):
         frequentie = request.form.get('frequentie')
         
         conn = get_db_connection()
+        if conn is None:
+            flash("Database connection error.", "danger")
+            return redirect(url_for('haccp_dashboard', chef_naam=chef_naam))
         cur = conn.cursor()
-        
+
         try:
             cur.execute("""
                 INSERT INTO haccp_checklists (chef_id, naam, frequentie)
@@ -2053,9 +2049,8 @@ def new_haccp_checklist(chef_naam):
         finally:
             cur.close()
             conn.close()
-            
-        return redirect(url_for('haccp_dashboard', chef_naam=chef_naam))
-        
+            return redirect(url_for('haccp_dashboard', chef_naam=chef_naam))
+
     return render_template('haccp/new_checklist.html', chef_naam=chef_naam, form=FlaskForm())
 
 @app.route('/dashboard/<chef_naam>/haccp/checklist/<int:checklist_id>/fill', methods=['GET', 'POST'])
@@ -2068,7 +2063,6 @@ def fill_haccp_checklist(chef_naam, checklist_id):
     if conn is None:
         flash("Database connection error.", "danger")
         return redirect(url_for('haccp_dashboard', chef_naam=chef_naam))
-    
     cur = conn.cursor(dictionary=True)
 
     try:
@@ -2085,7 +2079,7 @@ def fill_haccp_checklist(chef_naam, checklist_id):
 
         # Haal alle checkpunten op
         cur.execute("""
-            SELECT * FROM haccp_checkpunten
+            SELECT * FROM haccp_checkpunten 
             WHERE checklist_id = %s
         """, (checklist_id,))
         checkpunten = cur.fetchall()
@@ -2102,7 +2096,6 @@ def fill_haccp_checklist(chef_naam, checklist_id):
                         (punt_id, chef_id, waarde, opmerking, actie_ondernomen)
                         VALUES (%s, %s, %s, %s, %s)
                     """, (punt['punt_id'], session['chef_id'], waarde, opmerking, actie))
-
             conn.commit()
             flash("HACCP metingen opgeslagen!", "success")
             return redirect(url_for('haccp_dashboard', chef_naam=chef_naam))
@@ -2127,6 +2120,9 @@ def haccp_reports(chef_naam):
         return redirect(url_for('login'))
 
     conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('haccp_dashboard', chef_naam=chef_naam))
     cur = conn.cursor(dictionary=True)
 
     try:
@@ -2172,7 +2168,6 @@ def haccp_reports(chef_naam):
             params.append(selected_checklist)
 
         query += " ORDER BY m.timestamp DESC"
-        
         cur.execute(query, tuple(params))
         metingen = cur.fetchall()
 
@@ -2187,7 +2182,6 @@ def haccp_reports(chef_naam):
                         afwijkingen += 1
                 except (ValueError, TypeError):
                     continue
-            
             compliance = ((len(metingen) - afwijkingen) / len(metingen) * 100) if metingen else 100
         else:
             compliance = 100
@@ -2246,8 +2240,8 @@ def export_haccp_report(metingen, start_date, end_date, compliance):
         else:
             row_cells[4].text = '⚠ Afwijking'
         
-    # Exporteer document
-    # Exporteer document
+        row_cells[5].text = meting['actie_ondernomen'] or 'Geen actie'
+
     # Exporteer document
     buffer = io.BytesIO()
     doc.save(buffer)
@@ -2290,7 +2284,6 @@ def update_haccp_meting(chef_naam, meting_id):
                 JOIN haccp_checkpunten c ON m.punt_id = c.punt_id
                 WHERE m.meting_id = %s AND m.chef_id = %s
             """, (meting_id, session['chef_id']))
-            
             meting = cursor.fetchone()
             if not meting:
                 return jsonify({'success': False, 'error': 'Meting niet gevonden'}), 404
@@ -2311,7 +2304,7 @@ def update_haccp_meting(chef_naam, meting_id):
             if cursor.rowcount == 0:
                 conn.rollback()
                 return jsonify({'success': False, 'error': 'Geen wijzigingen aangebracht'}), 400
-            
+
             conn.commit()
             return jsonify({
                 'success': True,
@@ -2337,6 +2330,8 @@ def delete_haccp_checklist(chef_naam, checklist_id):
 
     try:
         conn = get_db_connection()
+        if conn is None:
+            return jsonify({'success': False, 'error': 'Database verbinding mislukt'}), 500
         cur = conn.cursor()
 
         # Controleer eerst of de checklist van deze chef is
@@ -2371,7 +2366,6 @@ def delete_haccp_checklist(chef_naam, checklist_id):
         conn.commit()
         cur.close()
         conn.close()
-
         return jsonify({'success': True})
 
     except Exception as e:
@@ -2395,11 +2389,11 @@ def delete_account(chef_naam):
     if conn is None:
         flash("Database connection error.", "danger")
         return redirect(url_for('dashboard', chef_naam=chef_naam))
-    
     cur = conn.cursor()
+
     try:
         chef_id = session['chef_id']
-        
+
         # Start transaction
         cur.execute("START TRANSACTION")
         
@@ -2412,7 +2406,7 @@ def delete_account(chef_naam):
         
         # Delete ingredients
         cur.execute("DELETE FROM ingredients WHERE chef_id = %s", (chef_id,))
-        
+
         # Delete suppliers
         cur.execute("DELETE FROM leveranciers WHERE chef_id = %s", (chef_id,))
         
@@ -2420,7 +2414,7 @@ def delete_account(chef_naam):
         cur.execute("DELETE FROM haccp_metingen WHERE chef_id = %s", (chef_id,))
         cur.execute("DELETE FROM haccp_checkpunten WHERE checklist_id IN (SELECT checklist_id FROM haccp_checklists WHERE chef_id = %s)", (chef_id,))
         cur.execute("DELETE FROM haccp_checklists WHERE chef_id = %s", (chef_id,))
-        
+
         # Delete master data
         cur.execute("DELETE FROM eenheden WHERE chef_id = %s", (chef_id,))
         cur.execute("DELETE FROM categorieen WHERE chef_id = %s", (chef_id,))
@@ -2431,7 +2425,7 @@ def delete_account(chef_naam):
         
         # Finally delete the chef
         cur.execute("DELETE FROM chefs WHERE chef_id = %s", (chef_id,))
-        
+
         # Commit transaction
         conn.commit()
         
@@ -2457,14 +2451,13 @@ def profile(chef_naam):
     if 'chef_id' not in session or session['chef_naam'] != chef_naam:
         flash("Onvoldoende rechten om dit profiel te bekijken.", "danger")
         return redirect(url_for('home'))
-    
+
     conn = get_db_connection()
     if conn is None:
         flash("Database verbindingsfout.", "danger")
         return redirect(url_for('dashboard', chef_naam=chef_naam))
-    
     cur = conn.cursor(dictionary=True)
-    chef = None  # Initialiseer variabele
+
     try:
         # Haal chef-gegevens op
         cur.execute("SELECT * FROM chefs WHERE chef_id = %s", (session['chef_id'],))
@@ -2481,7 +2474,7 @@ def profile(chef_naam):
     finally:
         cur.close()
         conn.close()
-    
+
     return render_template('profile.html', chef_naam=chef_naam, chef=chef, form=form)
 
 # -----------------------------------------------------------
@@ -2534,7 +2527,6 @@ def beheer(chef_naam):
     if conn is None:
         flash("Database connection error.", "danger")
         return redirect(url_for('dashboard', chef_naam=chef_naam))
-    
     cur = conn.cursor(dictionary=True)
 
     try:
@@ -2574,7 +2566,12 @@ def beheer(chef_naam):
                 contact = request.form.get('leverancier_contact')
                 telefoon = request.form.get('leverancier_telefoon')
                 email = request.form.get('leverancier_email')
-            if 'nieuwe_eenheid' in request.form:
+                cur.execute("""
+                    INSERT INTO leveranciers (chef_id, naam, contact, telefoon, email) 
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (session['chef_id'], naam, contact, telefoon, email))
+                
+            elif 'nieuwe_eenheid' in request.form:
                 naam = request.form.get('nieuwe_eenheid')
                 cur.execute("""
                     INSERT INTO eenheden (chef_id, naam)
@@ -2587,7 +2584,7 @@ def beheer(chef_naam):
                     INSERT INTO categorieen (chef_id, naam)
                     VALUES (%s, %s)
                 """, (session['chef_id'], naam))
-            
+
             elif 'nieuwe_dish_category' in request.form:
                 naam = request.form.get('nieuwe_dish_category')
                 volgorde_str = request.form.get('volgorde', '0')  # Default to '0' if empty
@@ -2704,7 +2701,7 @@ def update_eenheid(chef_naam, eenheid_id):
     cur = conn.cursor()
     try:
         naam = request.json.get('naam')
-        
+
         # Check if the unit exists and belongs to this chef
         cur.execute("""
             SELECT eenheid_id FROM eenheden 
@@ -2725,7 +2722,6 @@ def update_eenheid(chef_naam, eenheid_id):
         return jsonify({'success': True})
     except Exception as e:
         conn.rollback()
-        logger.error(f'Error updating unit: {str(e)}')
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         cur.close()
@@ -2747,9 +2743,9 @@ def delete_eenheid(chef_naam, eenheid_id):
             SELECT COUNT(*) FROM ingredients 
             WHERE chef_id = %s AND eenheid = (
                 SELECT naam FROM eenheden 
-                WHERE eenheid_id = %s
+                WHERE eenheid_id = %s AND chef_id = %s
             )
-        """, (session['chef_id'], eenheid_id))
+        """, (session['chef_id'], eenheid_id, session['chef_id']))
         
         if cur.fetchone()[0] > 0:
             return jsonify({
@@ -2766,7 +2762,6 @@ def delete_eenheid(chef_naam, eenheid_id):
         return jsonify({'success': True})
     except Exception as e:
         conn.rollback()
-        logger.error(f'Error deleting unit: {str(e)}')
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         cur.close()
@@ -2805,7 +2800,6 @@ def update_categorie(chef_naam, categorie_id):
             
         # Log query parameters
         logger.info(f"Executing query with params: categorie_id={categorie_id}, chef_id={session['chef_id']}, naam={naam}")
-        
         cur.execute("""
             UPDATE categorieen 
             SET naam = %s
@@ -2845,9 +2839,9 @@ def delete_categorie(chef_naam, categorie_id):
             SELECT COUNT(*) FROM ingredients 
             WHERE chef_id = %s AND categorie = (
                 SELECT naam FROM categorieen 
-                WHERE categorie_id = %s
+                WHERE categorie_id = %s AND chef_id = %s
             )
-        """, (session['chef_id'], categorie_id))
+        """, (session['chef_id'], categorie_id, session['chef_id']))
         
         if cur.fetchone()[0] > 0:
             return jsonify({
@@ -2864,7 +2858,6 @@ def delete_categorie(chef_naam, categorie_id):
         return jsonify({'success': True})
     except Exception as e:
         conn.rollback()
-        logger.error(f'Error deleting category: {str(e)}')
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         cur.close()
@@ -2884,7 +2877,6 @@ def manage_suppliers(chef_naam):
     if conn is None:
         flash("Database connection error.", "danger")
         return redirect(url_for('dashboard', chef_naam=chef_naam))
-    
     cur = conn.cursor(dictionary=True)
 
     try:
@@ -2928,7 +2920,6 @@ def manage_suppliers(chef_naam):
                     (chef_id, naam, contact, telefoon, email) 
                     VALUES (%s, %s, %s, %s, %s)
                 """, (session['chef_id'], naam, contact, telefoon, email))
-                
                 conn.commit()
 
                 # Haal direct de bijgewerkte lijst op
@@ -2938,9 +2929,8 @@ def manage_suppliers(chef_naam):
                     ORDER BY naam
                 """, (session['chef_id'],))
                 leveranciers = cur.fetchall()
-                
+
                 flash("Leverancier succesvol toegevoegd!", "success")
-                
             except mysql.connector.Error as e:
                 conn.rollback()
                 logger.error(f"Database error adding supplier: {str(e)}")
@@ -2959,7 +2949,6 @@ def manage_suppliers(chef_naam):
         logger.error(f"Error in manage_suppliers: {str(e)}")
         flash(f"Er is een fout opgetreden: {str(e)}", "danger")
         return redirect(url_for('dashboard', chef_naam=chef_naam))
-    
     finally:
         cur.close()
         conn.close()
@@ -2989,8 +2978,8 @@ def delete_supplier(chef_naam, leverancier_id):
         cur.execute("""
             UPDATE ingredients 
             SET leverancier_id = NULL 
-            WHERE leverancier_id = %s
-        """, (leverancier_id,))
+            WHERE leverancier_id = %s AND chef_id = %s
+        """, (leverancier_id, session['chef_id']))
 
         # Verwijder dan de leverancier
         cur.execute("""
@@ -3000,7 +2989,6 @@ def delete_supplier(chef_naam, leverancier_id):
         
         conn.commit()
         return jsonify({'success': True})
-        
     except Exception as e:
         conn.rollback()
         logger.error(f'Error deleting supplier: {str(e)}')
@@ -3048,7 +3036,6 @@ def edit_supplier(chef_naam, leverancier_id):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     application = create_app()
-    
     if os.environ.get('FLASK_ENV') == 'development':
         # Use waitress for local development
         from waitress import serve

@@ -237,6 +237,11 @@ h2, h3, p {
         </div>
 
         <div class="form-group">
+            <h3>Ingrediënten bijwerken <i>(voor keukenvoorraadbeheer en bestellijsten)</i></h3>
+            <textarea id="ingredienten" name="ingredienten" class="form-control">{{ gerecht.ingredienten if gerecht.ingredienten else '' }}</textarea>
+        </div>
+
+        <div class="form-group">
             <h3>Bereidingswijze bijwerken <i>(Belangrijk voor het draaiboek)</i></h3>
             <textarea id="bereidingswijze" name="bereidingswijze" class="form-control">{{ gerecht.bereidingswijze if gerecht.bereidingswijze else '' }}</textarea>
         </div>
