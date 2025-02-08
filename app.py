@@ -26,7 +26,6 @@ from flask_wtf import FlaskForm, RecaptchaField
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo
 from flask import send_from_directory
-from flask_migrate import Migrate
 
 load_dotenv()  # Load the values from .env
 
@@ -94,10 +93,6 @@ def create_app():
     )
 
     # Removed blueprint registration; routes are defined below instead.
-
-    # Registreer de AI blueprint
-    from blueprints.ai import ai_blueprint
-    app.register_blueprint(ai_blueprint)
 
     return app
 
