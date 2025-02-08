@@ -17,10 +17,10 @@ anthropic = Anthropic(api_key=api_key)
 
 ai_blueprint = Blueprint('ai', __name__, url_prefix='/ai')
 
-@ai_blueprint.route('/generate', methods=['GET', 'POST'])
-def generate_recipe():
+@ai_blueprint.route('/generate/<chef_naam>', methods=['GET', 'POST'])
+def generate_recipe(chef_naam):
     """Genereer een recept met behulp van de AI."""
-    if 'chef_id' not in session:
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
         flash("Je moet ingelogd zijn om een recept te genereren.", "warning")
         return redirect(url_for('login'))
 
@@ -58,9 +58,9 @@ def generate_recipe():
             return render_template('ai/show_recipe.html', recipe=recipe)
         except Exception as e:
             flash(f"Fout bij genereren recept: {str(e)}", "danger")
-            return render_template('ai/generate_recipe.html')
+            return render_template('ai/generate_recipe.html', chef_naam=chef_naam)
 
-    return render_template('ai/generate_recipe.html')
+    return render_template('ai/generate_recipe.html', chef_naam=chef_naam)
 
 @ai_blueprint.route('/save_recipe', methods=['POST'])
 def save_recipe():

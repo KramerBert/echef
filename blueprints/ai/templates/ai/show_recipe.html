@@ -35,7 +35,7 @@
             <button class="btn btn-primary" onclick="saveRecipe()">
                 <i class="fas fa-save"></i> Opslaan als Gerecht
             </button>
-            <a href="{{ url_for('ai.generate_recipe') }}" class="btn btn-secondary">
+            <a href="{{ url_for('ai.generate_recipe', chef_naam=session.chef_naam) }}" class="btn btn-secondary">
                 <i class="fas fa-redo"></i> Nieuw Recept Genereren
             </a>
         </div>

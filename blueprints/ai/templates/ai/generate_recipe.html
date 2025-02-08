@@ -4,7 +4,7 @@
     <h1>Genereer een Recept met AI</h1>
     
     <div class="recipe-form-container">
-        <form method="POST" class="ai-form" action="{{ url_for('ai.generate_recipe') }}">
+        <form method="POST" class="ai-form" action="{{ url_for('ai.generate_recipe', chef_naam=chef_naam) }}">
             {{ form.csrf_token }}
             
             <div class="form-group">
