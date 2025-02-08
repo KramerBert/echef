@@ -2999,9 +2999,13 @@ def delete_supplier(chef_naam, leverancier_id):
 # Start de server alleen lokaal
 # -----------------------------------------------------------
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
     application = create_app()
-    application.run(
-        host='0.0.0.0',
-        debug=os.environ.get('FLASK_ENV') == 'development'
-    )
+    if os.environ.get('FLASK_ENV') == 'development':
+        # Use Flask's development server locally
+        application.run(host='0.0.0.0', port=port, debug=True)
+    else:
+        # Use waitress in production
+        from waitress import serve
+        serve(application, host='0.0.0.0', port=port)
 
