@@ -873,6 +873,14 @@ def edit_dish(chef_naam, dish_id):
         flash("Gerecht niet gevonden of je hebt geen toestemming.", "danger")
         return redirect(url_for('manage_dishes', chef_naam=chef_naam))
 
+    # Haal dish_categories op
+    cur.execute("""
+        SELECT * FROM dish_categories 
+        WHERE chef_id = %s
+        ORDER BY volgorde, naam
+    """, (session['chef_id'],))
+    dish_categories = cur.fetchall()
+
     # Opslaan van nieuw ingrediënt voor dit gerecht
     if request.method == 'POST':
         if 'updateForm' in request.form:
@@ -1043,6 +1051,7 @@ def edit_dish(chef_naam, dish_id):
         gerecht_allergenen=gerecht_allergenen,
         alle_dieten=alle_dieten,
         gerecht_dieten=gerecht_dieten,
+        dish_categories=dish_categories, # Deze regel was al aanwezig, maar ik herhaal hem voor de zekerheid
         form=form  # Add form to template context
     )
 

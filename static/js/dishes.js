@@ -4,26 +4,26 @@ document.addEventListener('DOMContentLoaded', function() {
     const table = document.querySelector('.dish-table');
 
     if (!table) {
-        console.error("Table with class 'dish-table' not found!");
+        console.warn("Table with class 'dish-table' not found on this page. Skipping script.");
         return;
     }
 
-    const rows = table.getElementsByTagName('tr');
+    const rows = Array.from(table.getElementsByTagName('tr'));
 
     function filterTable() {
         const searchTerm = searchInput.value.toLowerCase();
         const category = categoryFilter.value.toLowerCase();
 
-        for (let i = 1; i < rows.length; i++) {
-            const row = rows[i];
+        rows.forEach((row, index) => {
+            if (index === 0) return; // Skip header row
             const name = row.cells[0].textContent.toLowerCase();
             const rowCategory = row.cells[1].textContent.toLowerCase();
             
             const matchesSearch = name.includes(searchTerm);
             const matchesCategory = category === '' || rowCategory === category;
 
-            row.style.display = matchesSearch && matchesCategory ? '' : 'none';
-        }
+            row.classList.toggle('hidden', !(matchesSearch && matchesCategory));
+        });
     }
 
     searchInput.addEventListener('input', filterTable);
