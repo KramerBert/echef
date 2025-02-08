@@ -1,216 +1,77 @@
 {% extends "base.html" %}
+{% block title %}Alle Gerechten{% endblock %}
 {% block content %}
-<h2>Gerechten Overzicht</h2>
-<p>Hier kunt u alle gerechten bekijken en beheren.</p>
+<div class="container mt-5">
+    <div class="navigation-buttons mb-4 no-print">
+        <a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}" class="btn-action">
+            <i class="fas fa-arrow-left"></i> Dashboard
+        </a>
+    </div>
 
-<div class="navigation-buttons">
-    <a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}" class="btn-action">
-        <i class="fas fa-arrow-left"></i> Dashboard
-    </a>
-</div>
+    <h2>Alle Gerechten</h2>
 
-<div class="search-filter" style="margin-bottom: 20px;">
-    <input type="text" id="dishSearch" class="form-control" 
-           placeholder="Zoek gerecht..." style="max-width: 300px; display: inline-block;">
-    <select id="categoryFilter" class="form-control" style="max-width: 200px; display: inline-block;">
-        <option value="">Alle categorieën</option>
-        {% for categorie in gerechten|map(attribute='categorie')|unique %}
-        <option value="{{ categorie }}">{{ categorie }}</option>
+    <div class="search-filter no-print">
+        <input type="search" id="dishSearch" class="form-control" placeholder="Zoek gerecht...">
+        <select id="categoryFilter" class="form-control">
+            <option value="">Alle categorieën</option>
+            {% for categorie in dish_categories %}
+                <option value="{{ categorie.naam }}">{{ categorie.naam }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="table-responsive">
+        <table class="dish-table">
+            <thead>
+                <tr>
+                    <th>Naam</th>
+                    <th>Categorie</th>
+                    <th class="col-price">Verkoopprijs</th>
+                    <th>Ingrediënten Kostprijs</th>
+                    <th class="col-actions no-print">Acties</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for gerecht in gerechten %}
+                <tr>
+                    <td>{{ gerecht.naam }}</td>
+                    <td>{{ gerecht.categorie }}</td>
+                    <td class="col-price">€ {{ gerecht.verkoopprijs if gerecht.verkoopprijs else 'n.v.t.' }}</td>
+                    <td>€ {{ gerecht.totaal_ingredient_prijs if gerecht.totaal_ingredient_prijs else '0.00' }}</td>
+                    <td class="col-actions no-print">
+                        <div class="dish-actions">
+                            <a href="{{ url_for('edit_dish', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" class="btn-action btn-edit">
+                                <i class="fas fa-edit"></i> Bewerken
+                            </a>
+                            <form method="POST" action="{{ url_for('export_dish', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-action btn-export">
+                                    <i class="fas fa-file-export"></i> Recept exporteren
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('delete_dish', dish_id=gerecht.dish_id) }}" style="display: inline;" onsubmit="return confirm('Weet je zeker dat je dit gerecht wilt verwijderen?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-action btn-delete">
+                                    <i class="fas fa-trash"></i> Verwijderen
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <form method="POST" action="{{ url_for('export_dishes') }}" class="no-print">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-primary">Menukaart exporteren</button>
+        <br>
+        {% for gerecht in gerechten %}
+            <input type="checkbox" id="selected_dishes_{{ gerecht.dish_id }}" name="selected_dishes" value="{{ gerecht.dish_id }}">
+            <label for="selected_dishes_{{ gerecht.dish_id }}">{{ gerecht.naam }}</label><br>
         {% endfor %}
-    </select>
+    </form>
 </div>
-
-<table class="dish-table" border="1" cellpadding="5" cellspacing="0">
-    <tr>
-        <th>Gerecht</th>
-        <th>Menuleer</th>
-        <th class="col-price">Kostprijs</th>
-        <th class="col-price">Verkoopprijs</th>
-        <th class="col-actions">Acties</th>
-        <th>Menukaart <i class="fas fa-info-circle" title="Selecteer gerechten voor de menukaart"></i></th>
-    </tr>
-    {% for gerecht in gerechten %}
-    <tr>
-        <td>{{ gerecht.naam }}</td>
-        <td>{{ gerecht.categorie }}</td>
-        <td class="col-price">€ {{ "%.2f"|format(gerecht.totaal_ingredient_prijs|float) if gerecht.totaal_ingredient_prijs else 'n.v.t.' }}</td>
-        <td class="col-price">€ {{ "%.2f"|format(gerecht.verkoopprijs|float) if gerecht.verkoopprijs else 'n.v.t.' }}</td>
-        <td class="col-actions">
-            <div class="dish-actions">
-                <a href="{{ url_for('edit_dish', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" 
-                   class="btn-action btn-edit" title="Bewerken"><i class="fas fa-edit"></i></a>
-                
-                <form method="POST" action="{{ url_for('export_dish', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn-action btn-export" title="Export Recept">
-                        <i class="fas fa-file-export"></i>
-                    </button>
-                </form>
-                
-                <form method="POST" action="{{ url_for('delete_dish', dish_id=gerecht.dish_id) }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn-action btn-delete" title="Verwijderen">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </form>
-            </div>
-        </td>
-        <td class="text-center">
-            <input type="checkbox" name="selected_dishes" value="{{ gerecht.dish_id }}" 
-                   form="exportForm" class="print-checkbox">
-        </td>
-    </tr>
-    {% endfor %}
-</table>
-
-<form id="exportForm" method="POST" action="{{ url_for('export_dishes') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button type="submit" class="btn-action" style="margin-top: 20px;" title="Print Menukaart">
-        <i class="fas fa-print"></i> Selecteer gerechten en print menukaart
-    </button>
-</form>
-
-<form method="POST" action="{{ url_for('export_cookbook') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button type="submit" class="btn btn-success">
-        <i class="fas fa-book"></i> Exporteer als Kookboek
-    </button>
-</form>
-
-<div class="navigation-buttons" style="margin-top: 20px;">
-    <a href="{{ url_for('manage_dishes', chef_naam=session.get('chef_naam')) }}" 
-       class="btn-action" style="margin-left: 10px;" title="Voeg nieuw gerecht toe">
-        <i class="fas fa-plus"></i> Nieuw Gerecht
-    </a>
-</div>
-
-<style>
-    .search-filter {
-        background-color: var(--kitchen-dark);
-        padding: 15px;
-        border-radius: 4px;
-        margin-bottom: 20px;
-    }
-    
-    .search-filter input,
-    .search-filter select {
-        background-color: var(--kitchen-black);
-        color: var(--text-light);
-        border: 1px solid var(--kitchen-steel);
-        padding: 8px;
-    }
-
-    .dish-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-        background-color: var(--kitchen-dark);
-    }
-
-    .dish-table th {
-        background-color: var(--kitchen-blue);
-        padding: 12px;
-        text-align: left;
-    }
-
-    .dish-table td {
-        padding: 10px;
-        border: 1px solid #586e75;
-    }
-
-    .col-price {
-        text-align: right;
-        width: 100px;
-    }
-
-    .col-actions {
-        width: 150px;
-        text-align: center;
-    }
-
-    .btn-action {
-        display: inline-block;
-        padding: 6px 12px;
-        background-color: #268bd2;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        text-decoration: none;
-        margin: 0 2px;
-    }
-
-    .btn-action:hover {
-        background-color: #1e6ea7;
-    }
-
-    .btn-edit { background-color: var(--kitchen-blue); }
-    .btn-export { background-color: var(--kitchen-success); }
-    .btn-delete { background-color: var(--kitchen-danger); }
-
-    .print-checkbox {
-        width: 20px;
-        height: 20px;
-    }
-
-    .navigation-buttons {
-        margin-top: 20px;
-        display: flex;
-        gap: 10px;
-    }
-
-    /* Responsieve aanpassingen */
-    @media (max-width: 768px) {
-        .search-filter input,
-        .search-filter select {
-            width: 100%;
-            margin: 5px 0;
-            display: block;
-        }
-        
-        .col-actions {
-            width: auto;
-        }
-        
-        .btn-action {
-            padding: 8px;
-            margin: 2px;
-        }
-    }
-</style>
-
-<script>
-    // Zoek en filter functionaliteit
-    document.addEventListener('DOMContentLoaded', function() {
-        const searchInput = document.getElementById('dishSearch');
-        const categoryFilter = document.getElementById('categoryFilter');
-        const table = document.querySelector('.dish-table');
-
-        if (!table) {
-            console.error("Table with class 'dish-table' not found!");
-            return;
-        }
-
-        const rows = table.getElementsByTagName('tr');
-
-        function filterTable() {
-            const searchTerm = searchInput.value.toLowerCase();
-            const category = categoryFilter.value.toLowerCase();
-
-            for (let i = 1; i < rows.length; i++) {
-                const row = rows[i];
-                const name = row.cells[0].textContent.toLowerCase();
-                const rowCategory = row.cells[1].textContent.toLowerCase();
-                
-                const matchesSearch = name.includes(searchTerm);
-                const matchesCategory = category === '' || rowCategory === category;
-
-                row.style.display = matchesSearch && matchesCategory ? '' : 'none';
-            }
-        }
-
-        searchInput.addEventListener('input', filterTable);
-        categoryFilter.addEventListener('change', filterTable);
-    });
-</script>
+<script src="{{ url_for('static', filename='js/dishes.js') }}"></script>
 {% endblock %}

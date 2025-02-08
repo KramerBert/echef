@@ -225,9 +225,9 @@ h2, h3, p {
         </div>
 
         <div class="form-group">
-            <h3>Plaats in het menu - gang <i>(belangrijk voor het printen van de menukaart)</i></h3>
+            <h3>Plaats in het menu - gang <i>(belangrijk voor de volgorde bij het printen van de menukaart)</i></h3>
             <select id="gerecht_categorie" name="gerecht_categorie" class="form-control" required>
-                <option value="" disabled {% if not gerecht.categorie %}selected{% endif %}>Kies een categorie</option>
+                <option value="" disabled {% if not gerecht.categorie %}selected{% endif %}>Kies menu-item</option>
                 {% for categorie in dish_categories %}
                     <option value="{{ categorie.naam }}" {% if gerecht.categorie == categorie.naam %}selected{% endif %}>
                         {{ categorie.naam }}
@@ -252,7 +252,7 @@ h2, h3, p {
             <input type="hidden" name="ingredientForm" value="1">
             
             <select id="categorie_filter" class="form-control" onchange="filterIngredients()">
-                <option value="">Alle categorieën</option>
+                <option value="">Selecteer categorieën</option>
                 {% set categories = [] %}
                 {% for ingr in alle_ingredienten %}
                     {% if ingr.categorie not in categories %}

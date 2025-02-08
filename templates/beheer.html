@@ -66,9 +66,9 @@
         <form method="POST" class="add-form">
             {{ form.csrf_token }}
             <input type="text" name="leverancier_naam" class="form-control" 
-                   placeholder="Naam" required>
+                   placeholder="Naam nieuwe leverancier" required>
             <input type="text" name="leverancier_contact" class="form-control" 
-                   placeholder="Contactpersoon">
+                   placeholder="Naam contactper">
             <input type="tel" name="leverancier_telefoon" class="form-control" 
                    placeholder="Telefoonnummer">
             <input type="email" name="leverancier_email" class="form-control" 
@@ -206,7 +206,7 @@
             <input type="number" name="volgorde" class="form-control"
                    placeholder="Volgorde nummer" required>
             <button type="submit" class="btn-action">Categorie Toevoegen</button>
-        </form>
+        </form> 
     </div>
 </div>
 
@@ -258,9 +258,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const id = row.dataset.id;
         const naam = row.dataset.naam;
         const type = row.dataset.type;
+        const volgorde = row.dataset.volgorde;
 
         if (button.classList.contains('btn-edit')) {
-            toggleEdit(button, type, id);
+            toggleEdit(button, type, id, volgorde);
         } else if (button.classList.contains('btn-save')) {
             saveEdit(button, type, id);
         } else if (button.classList.contains('btn-delete')) {
@@ -277,26 +278,40 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-function toggleEdit(button, type, id) {
+function toggleEdit(button, type, id, volgorde) {
     const row = button.closest('tr');
-    const displayValue = row.querySelector('.display-value');
-    const editInput = row.querySelector('.edit-input');
+    const displayValues = row.querySelectorAll('.display-value');
+    const editInputs = row.querySelectorAll('.edit-input');
     const saveButton = row.querySelector('.btn-save');
     
-    displayValue.style.display = 'none';
-    editInput.style.display = 'block';
+    displayValues.forEach(value => value.style.display = 'none');
+    editInputs.forEach(input => input.style.display = 'block');
     button.style.display = 'none';
     saveButton.style.display = 'inline-block';
 }
 
 async function saveEdit(button, type, id) {
     const row = button.closest('tr');
-    const editInput = row.querySelector('.edit-input');
-    const displayValue = row.querySelector('.display-value');
-    const newValue = editInput.value;
+    const editInputs = row.querySelectorAll('.edit-input');
+    const displayValues = row.querySelectorAll('.display-value');
+    
+    let newValue, newVolgorde;
+
+    if (type === 'dish_category') {
+        newValue = editInputs[0].value;
+        newVolgorde = editInputs[1].value;
+    } else {
+        newValue = editInputs[0].value;
+    }
     
     console.log(`Saving ${type} ${id} with value: ${newValue}`); // Debug log
     
+    let requestBody = { naam: newValue };
+
+    if (type === 'dish_category') {
+        requestBody.volgorde = newVolgorde;
+    }
+
     try {
         const response = await fetch(`/dashboard/{{ chef_naam }}/${type}/${id}/update`, {
             method: 'POST',
@@ -305,7 +320,7 @@ async function saveEdit(button, type, id) {
                 'X-CSRFToken': '{{ csrf_token() }}',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify({ naam: newValue })
+            body: JSON.stringify(requestBody)
         });
         
         console.log('Response status:', response.status); // Debug log
@@ -318,9 +333,18 @@ async function saveEdit(button, type, id) {
         }
         
         if (data.success) {
-            displayValue.textContent = newValue;
-            displayValue.style.display = 'block';
-            editInput.style.display = 'none';
+            if (type === 'dish_category') {
+                displayValues[0].textContent = newValue;
+                displayValues[1].textContent = newVolgorde;
+
+                row.dataset.naam = newValue;
+                row.dataset.volgorde = newVolgorde;
+            } else {
+                displayValues[0].textContent = newValue;
+            }
+
+            displayValues.forEach(value => value.style.display = 'block');
+            editInputs.forEach(input => input.style.display = 'none');
             button.style.display = 'none';
             row.querySelector('.btn-edit').style.display = 'inline-block';
         } else {

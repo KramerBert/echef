@@ -2590,7 +2590,12 @@ def beheer(chef_naam):
             
             elif 'nieuwe_dish_category' in request.form:
                 naam = request.form.get('nieuwe_dish_category')
-                volgorde = request.form.get('volgorde', 0)
+                volgorde_str = request.form.get('volgorde', '0')  # Default to '0' if empty
+                try:
+                    volgorde = int(volgorde_str)
+                except ValueError:
+                    flash("Ongeldige volgorde nummer. Gebruik een getal.", "danger")
+                    return redirect(url_for('beheer', chef_naam=chef_naam))
                 cur.execute("""
                     INSERT INTO dish_categories (chef_id, naam, volgorde)
                     VALUES (%s, %s, %s)

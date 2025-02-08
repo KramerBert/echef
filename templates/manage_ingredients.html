@@ -19,22 +19,24 @@
         </div>
         <div class="form-group">
             <select name="categorie" class="form-control">
-                {% for categorie in categorieen %}
-                    <option value="{{ categorie.naam }}">{{ categorie.naam }}</option>
-                {% endfor %}
+            <option value="">Kies categorie</option>
+            {% for categorie in categorieen %}
+                <option value="{{ categorie.naam }}">{{ categorie.naam }}</option>
+            {% endfor %}
             </select>
         </div>
         <div class="form-group">
             <select name="eenheid" class="form-control">
-                {% for eenheid in eenheden %}
-                    <option value="{{ eenheid.naam }}">{{ eenheid.naam }}</option>
-                {% endfor %}
+            <option value="">Kies eenheid</option>
+            {% for eenheid in eenheden %}
+                <option value="{{ eenheid.naam }}">{{ eenheid.naam }}</option>
+            {% endfor %}
             </select>
         </div>
         <div class="form-group">
             <input type="number" name="prijs_per_eenheid" placeholder="Prijs per eenheid" step="0.01" required class="form-control">
             <select name="leverancier_id" class="form-control">
-                <option value="">Geen leverancier</option>
+                <option value="">Kies leverancier</option>
                 {% for leverancier in leveranciers %}
                     <option value="{{ leverancier.leverancier_id }}">{{ leverancier.naam }}</option>
                 {% endfor %}
