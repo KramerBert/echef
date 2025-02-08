@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Pacifico&family=Roboto&display=swap');
+@import url('/static/css/buttons.css');
 
 /* Reset for better responsive behavior */
 * {
@@ -132,38 +133,6 @@ footer {
     gap: 5px;
     justify-content: flex-start;
     align-items: center;
-}
-
-.btn-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px 12px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.3s ease;
-    text-decoration: none;
-}
-
-.btn-action:hover {
-    opacity: 0.9;
-}
-
-.btn-edit {
-    background-color: var(--kitchen-blue);
-    color: white;
-}
-
-.btn-export {
-    background-color: var(--kitchen-success);
-    color: white;
-}
-
-.btn-delete {
-    background-color: var(--kitchen-danger);
-    color: white;
 }
 
 /* Checkbox styling */
@@ -1068,6 +1037,30 @@ textarea.form-control {
     }
 }
 
+/* Styles for the menu export table */
+.menu-export-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background-color: var(--kitchen-dark);
+    color: var(--text-light);
+}
+
+.menu-export-table th,
+.menu-export-table td {
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #586e75;
+}
+
+.menu-export-table th {
+    background-color: var(--kitchen-blue);
+}
+
+.menu-export-table td input[type="checkbox"] {
+    margin: 0;
+}
+
 /* Manage Suppliers Page Styles */
 .suppliers-table {
     width: 100%;
@@ -1261,5 +1254,99 @@ textarea.form-control {
 }
 
 .hidden {
+    display: none;
+}
+
+/* Style for the export dishes form */
+.export-dishes-form {
+    background-color: var(--kitchen-dark);
+    padding: 20px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.export-dishes-form table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    color: var(--text-light);
+}
+
+.export-dishes-form th,
+.export-dishes-form td {
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #586e75;
+}
+
+.export-dishes-form th {
+    background-color: var(--kitchen-blue);
+}
+
+.export-dishes-form td input[type="checkbox"] {
+    margin: 0;
+}
+
+/* Manage Dishes Form Styling */
+.create-dish-form {
+    background-color: var(--kitchen-dark);
+    padding: 20px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    max-width: 800px; /* Limit form width for better readability */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.create-dish-form .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.create-dish-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-muted);
+}
+
+.create-dish-form input[type="text"],
+.create-dish-form textarea,
+.create-dish-form select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--kitchen-steel);
+    border-radius: 4px;
+    background-color: var(--kitchen-steel);
+    color: var(--kitchen-black);
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+}
+
+.create-dish-form input[type="text"]:focus,
+.create-dish-form textarea:focus,
+.create-dish-form select:focus {
+    border-color: var(--kitchen-highlight);
+    outline: none;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+}
+
+.create-dish-form textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+/* Style the select dropdown arrow */
+.create-dish-form select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg viewBox="0 0 24 24" fill="%233498db" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 0.75rem top 50%;
+    background-size: 1.5rem 1.5rem;
+    padding-right: 2.5rem;
+}
+
+/* Adjustments for IE */
+.create-dish-form select::-ms-expand {
     display: none;
 }

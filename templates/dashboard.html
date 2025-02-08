@@ -7,15 +7,11 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="dashboard-grid" role="group" aria-label="Primary dashboard actions">
-                <a href="{{ url_for('instructions') }}" class="dashboard-btn" aria-label="Instructions">
-                    <i class="fas fa-book"></i> E-chef Werkinstructie
-                </a>
+                
                 <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Manage ingredients">
                     <i class="fas fa-carrot"></i> Ingrediënten beheren
                 </a>
-                <a href="{{ url_for('manage_suppliers', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Manage suppliers">
-                    <i class="fas fa-truck"></i> Leveranciers beheren
-                </a>
+               
                 <a href="{{ url_for('manage_dishes', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Create new dish">
                     <i class="fas fa-utensils"></i> Nieuw gerecht toevoegen
                 </a>
@@ -39,6 +35,13 @@
                 </a>
                 <a href="{{ url_for('beheer', chef_naam=chef_naam) }}" class="dashboard-btn">
                     <i class="fas fa-cog"></i> Beheer Stamgegevens
+                </a>
+                <a href="{{ url_for('manage_suppliers', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Manage suppliers">
+                    <i class="fas fa-truck"></i> Leveranciers beheren
+                </a>
+
+                <a href="{{ url_for('instructions') }}" class="dashboard-btn" aria-label="Instructions">
+                    <i class="fas fa-book"></i> E-chef Werkinstructie
                 </a>
             </div>
         </div>

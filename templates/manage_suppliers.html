@@ -20,7 +20,7 @@
                             <th>Contact</th>
                             <th>Telefoon</th>
                             <th>E-mail</th>
-                            <th style="width: 100px;">Acties</th>
+                            <th style="width: 150px;">Acties</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -32,6 +32,10 @@
                             <td data-label="E-mail">{{ leverancier.email }}</td>
                             <td data-label="Acties" class="text-center">
                                 <div class="dish-actions">
+                                    <button class="btn-action btn-edit"
+                                            onclick="openEditModal('{{ leverancier.leverancier_id }}', '{{ leverancier.naam|e }}', '{{ leverancier.contact|e }}', '{{ leverancier.telefoon|e }}', '{{ leverancier.email|e }}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
                                     <button class="btn-action btn-delete" 
                                             onclick="verwijderLeverancier('{{ leverancier.leverancier_id }}', '{{ leverancier.naam|e }}')">
                                         <i class="fas fa-trash"></i>
@@ -46,17 +50,66 @@
         </div>
     </div>
 
-    <h2>Nieuwe Leverancier</h2>
+    <h2>Nieuwe Leverancier toevoegen </h2>
     <form method="POST" class="add-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="text" name="naam" class="form-control" placeholder="Naam" required>
-        <input type="text" name="contact" class="form-control" placeholder="Contactpersoon">
-        <input type="tel" name="telefoon" class="form-control" placeholder="Telefoonnummer">
-        <input type="email" name="email" class="form-control" placeholder="E-mail">
+        <input type="text" name="naam" class="form-control smaller-input" placeholder="Naam" required>
+        <input type="text" name="contact" class="form-control smaller-input" placeholder="Contactpersoon">
+        <input type="tel" name="telefoon" class="form-control smaller-input" placeholder="Telefoonnummer">
+        <input type="email" name="email" class="form-control smaller-input" placeholder="E-mail">
         <button type="submit" class="btn-action">Leverancier Toevoegen</button>
     </form>
 
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editSupplierModal" tabindex="-1" role="dialog" aria-labelledby="editSupplierModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editSupplierModalLabel">Leverancier Bewerken</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="editSupplierForm" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" id="edit_leverancier_id" name="leverancier_id">
+                        <div class="form-group">
+                            <label for="edit_naam">Naam</label>
+                            <input type="text" class="form-control" id="edit_naam" name="naam" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_contact">Contactpersoon</label>
+                            <input type="text" class="form-control" id="edit_contact" name="contact">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_telefoon">Telefoonnummer</label>
+                            <input type="tel" class="form-control" id="edit_telefoon" name="telefoon">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_email">E-mail</label>
+                            <input type="email" class="form-control" id="edit_email" name="email">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuleren</button>
+                    <button type="button" class="btn btn-primary" onclick="submitEditForm()">Opslaan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<style>
+    .smaller-input {
+        max-width: 50%; /* Adjust as needed */
+    }
+</style>
+
 </div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
 <script>
 function verwijderLeverancier(leverancierId, leverancierNaam) {
@@ -83,6 +136,44 @@ function verwijderLeverancier(leverancierId, leverancierNaam) {
             alert('Er is een fout opgetreden bij het verwijderen van de leverancier.');
         });
     }
+}
+
+function openEditModal(leverancierId, naam, contact, telefoon, email) {
+    document.getElementById('edit_leverancier_id').value = leverancierId;
+    document.getElementById('edit_naam').value = naam;
+    document.getElementById('edit_contact').value = contact;
+    document.getElementById('edit_telefoon').value = telefoon;
+    document.getElementById('edit_email').value = email;
+    $('#editSupplierModal').modal('show');
+}
+
+function submitEditForm() {
+    const leverancierId = document.getElementById('edit_leverancier_id').value;
+    const form = document.getElementById('editSupplierForm');
+
+    fetch(`/dashboard/{{ session.get('chef_naam') }}/suppliers/${leverancierId}/edit`, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Er is een fout opgetreden bij het bewerken van de leverancier.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Er is een fout opgetreden bij het bewerken van de leverancier.');
+    });
+
+    $('#editSupplierModal').modal('hide');
 }
 
 // Add data labels to table cells for mobile view
@@ -156,18 +247,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     .btn-action {
-        padding: 0.5rem;
+        padding: 0.75rem 1.25rem;
         border: none;
         border-radius: 4px;
         cursor: pointer;
         transition: all 0.3s ease;
-        width: 2.5rem;
-        height: 2.5rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        display: inline-block; /* Allows width to adjust to content */
+        text-align: center; /* Centers text within the button */
+        text-decoration: none; /* Removes underlines from links */
+        font-size: 1rem; /* Adjust as needed */
     }
-
+    
     .btn-delete {
         background: linear-gradient(145deg, var(--kitchen-danger), var(--kitchen-dark));
         color: var(--text-light);
@@ -175,6 +265,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     .btn-delete:hover {
         background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-danger));
+        transform: translateY(-1px);
+    }
+
+    .btn-edit {
+        background: linear-gradient(145deg, var(--kitchen-primary), var(--kitchen-dark));
+        color: var(--text-light);
+    }
+
+    .btn-edit:hover {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-primary));
         transform: translateY(-1px);
     }
 

@@ -27,14 +27,15 @@
         <div class="form-group">
             <label for="gerecht_categorie">Categorie:</label>
             <select id="gerecht_categorie" name="gerecht_categorie" class="form-control" required>
-                {% for categorie in dish_categories %}
-                    <option value="{{ categorie.naam }}">{{ categorie.naam }}</option>
-                {% endfor %}
+            <option value="" disabled selected>Kies plaats in het menu (gang)</option>
+            {% for categorie in dish_categories %}
+                <option value="{{ categorie.naam }}">{{ categorie.naam }}</option>
+            {% endfor %}
             </select>
         </div>
 
         <div class="form-group">
-            <label for="bereidingswijze">:</label>
+            <label for="bereidingswijze">Bereidingswijze</label>
             <textarea id="bereidingswijze" name="bereidingswijze" class="form-control" required></textarea>
         </div>
 
@@ -46,7 +47,8 @@
 
 <div class="navigation-buttons">
     <a href="{{ url_for('all_dishes') }}" class="btn-action">
-        <i class="fas fa-list"></i> Gerechten Overzicht
+        <i class="fas fa-list"></i> Terug naar overzicht gerechten
+    </a>
 
 </div>
 

@@ -3009,6 +3009,39 @@ def delete_supplier(chef_naam, leverancier_id):
         cur.close()
         conn.close()
 
+@app.route('/dashboard/<chef_naam>/suppliers/<int:leverancier_id>/edit', methods=['POST'])
+def edit_supplier(chef_naam, leverancier_id):
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        return jsonify({'success': False, 'error': 'Geen toegang'}), 403
+
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({'success': False, 'error': 'Database verbindingsfout'}), 500
+
+    cur = conn.cursor()
+    try:
+        naam = request.form.get('naam')
+        contact = request.form.get('contact')
+        telefoon = request.form.get('telefoon')
+        email = request.form.get('email')
+
+        # Update de leverancier
+        cur.execute("""
+            UPDATE leveranciers 
+            SET naam = %s, contact = %s, telefoon = %s, email = %s
+            WHERE leverancier_id = %s AND chef_id = %s
+        """, (naam, contact, telefoon, email, leverancier_id, session['chef_id']))
+        
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        conn.rollback()
+        logger.error(f'Error updating supplier: {str(e)}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
 # -----------------------------------------------------------
 # Start de server alleen lokaal
 # -----------------------------------------------------------

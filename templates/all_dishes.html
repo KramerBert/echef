@@ -25,7 +25,7 @@
             <thead>
                 <tr>
                     <th>Naam</th>
-                    <th>Categorie</th>
+                    <th>Gang</th>
                     <th class="col-price">Verkoopprijs</th>
                     <th>Ingrediënten Kostprijs</th>
                     <th class="col-actions no-print">Acties</th>
@@ -41,7 +41,7 @@
                     <td class="col-actions no-print">
                         <div class="dish-actions">
                             <a href="{{ url_for('edit_dish', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" class="btn-action btn-edit">
-                                <i class="fas fa-edit"></i> Bewerken
+                                <i class="fas fa-edit"></i> Gerecht Bewerken
                             </a>
                             <form method="POST" action="{{ url_for('export_dish', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" style="display: inline;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -52,7 +52,7 @@
                             <form method="POST" action="{{ url_for('delete_dish', dish_id=gerecht.dish_id) }}" style="display: inline;" onsubmit="return confirm('Weet je zeker dat je dit gerecht wilt verwijderen?');">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn-action btn-delete">
-                                    <i class="fas fa-trash"></i> Verwijderen
+                                    <i class="fas fa-trash"></i> Gerecht Verwijderen
                                 </button>
                             </form>
                         </div>
@@ -63,14 +63,27 @@
         </table>
     </div>
 
-    <form method="POST" action="{{ url_for('export_dishes') }}" class="no-print">
+        <hr class="no-print">
+        <h3 class="no-print">Selecteer gerechten om een menukaart naar MS Word uit te printen</h3>
+    <form method="POST" action="{{ url_for('export_dishes') }}" class="no-print export-dishes-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn-primary">Menukaart exporteren</button>
-        <br>
-        {% for gerecht in gerechten %}
-            <input type="checkbox" id="selected_dishes_{{ gerecht.dish_id }}" name="selected_dishes" value="{{ gerecht.dish_id }}">
-            <label for="selected_dishes_{{ gerecht.dish_id }}">{{ gerecht.naam }}</label><br>
-        {% endfor %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Gerecht</th>
+                    <th>Selecteer</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for gerecht in gerechten %}
+                <tr>
+                    <td>{{ gerecht.naam }}</td>
+                    <td><input type="checkbox" id="selected_dishes_{{ gerecht.dish_id }}" name="selected_dishes" value="{{ gerecht.dish_id }}"></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="submit" class="btn-action">Menukaart printen</button>
     </form>
 </div>
 <script src="{{ url_for('static', filename='js/dishes.js') }}"></script>
