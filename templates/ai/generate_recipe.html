@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+{% block content %}
+    <h2>AI Recept Generator</h2>
+    <form method="POST">
+        {{ form.csrf_token() }}
+        <div class="form-group">
+            <label for="prompt">Geef een beschrijving van het recept dat je wilt genereren:</label>
+            <textarea class="form-control" id="prompt" name="prompt" rows="5"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Genereer Recept</button>
+    </form>
+{% endblock %}
