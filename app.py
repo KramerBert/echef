@@ -23,8 +23,8 @@ import requests
 from itsdangerous import URLSafeTimedSerializer
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 from flask_wtf import FlaskForm, RecaptchaField
-from wtforms import StringField, PasswordField, SubmitField
-from wtforms.validators import DataRequired, Email, EqualTo
+from wtforms import StringField, PasswordField, SubmitField, BooleanField
+from wtforms.validators import DataRequired, Email, EqualTo, InputRequired
 from flask import send_from_directory
 
 load_dotenv()  # Load the values from .env
@@ -256,13 +256,6 @@ def send_confirmation_email(email, token):
         logger.error(f"Email error: {str(e)}")
         return False
 
-class RegistrationForm(FlaskForm):
-    naam = StringField('Naam', validators=[DataRequired()])
-    email = StringField('E-mail', validators=[DataRequired(), Email()])
-    wachtwoord = PasswordField('Wachtwoord', validators=[DataRequired()])
-    confirm_password = PasswordField('Bevestig Wachtwoord', validators=[DataRequired(), EqualTo('wachtwoord')])
-    submit = SubmitField('Registreren')
-
 class LoginForm(FlaskForm):
     email = StringField('E-mail', validators=[DataRequired(), Email()])
     wachtwoord = PasswordField('Wachtwoord', validators=[DataRequired()])
@@ -392,8 +385,9 @@ class RegisterForm(FlaskForm):
     confirm_password = PasswordField('Bevestig Wachtwoord', 
                                    validators=[DataRequired(), 
                                              EqualTo('wachtwoord', message='Wachtwoorden moeten overeenkomen')])
+    terms = BooleanField('Ik ga akkoord met de algemene voorwaarden en privacy policy', validators=[InputRequired(message='Je moet akkoord gaan met de algemene voorwaarden en privacy policy')])
     recaptcha = RecaptchaField()
-    submit = SubmitField('Registreren')
+    submit = SubmitField('Registreer')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -419,9 +413,9 @@ def register():
             try:
                 # Add email_verified column with default value 0
                 cur.execute("""
-                    INSERT INTO chefs (naam, email, wachtwoord, email_verified)
-                    VALUES (%s, %s, %s, 0)
-                """, (naam, email, hashed_pw))
+                    INSERT INTO chefs (naam, email, wachtwoord, email_verified, terms_accepted, privacy_accepted)
+                    VALUES (%s, %s, %s, 0, %s, %s)
+                """, (naam, email, hashed_pw, datetime.utcnow(), datetime.utcnow()))
                 conn.commit()
 
                 # Generate confirmation token and send email

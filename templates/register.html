@@ -35,6 +35,20 @@
                     {{ form.recaptcha }}
                 </div>
                 <div class="form-group">
+                    <div class="form-check">
+                        {{ form.terms(class="form-check-input") }}
+                        <label class="form-check-label" style="font-weight: normal;">
+                            Ik ga akkoord met de
+                            <a href="{{ url_for('terms') }}" target="_blank">algemene voorwaarden</a>
+                            en de
+                            <a href="{{ url_for('privacy') }}" target="_blank">privacy policy</a>
+                        </label>
+                        {% if form.terms.errors %}
+                            <div class="alert alert-danger">{{ form.terms.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="form-group">
                     {{ form.submit(class="btn btn-primary mt-3") }}
                 </div>
             </form>
