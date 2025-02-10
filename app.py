@@ -26,7 +26,7 @@ from flask_wtf import FlaskForm, RecaptchaField
 from wtforms import StringField, PasswordField, SubmitField, BooleanField
 from wtforms.validators import DataRequired, Email, EqualTo, InputRequired
 from flask import send_from_directory
-from ai_recipe_generator import ai_bp # Import the blueprint
+# from ai_recipe_generator import ai_bp # Import the blueprint
 
 load_dotenv()  # Load the values from .env
 
@@ -92,9 +92,6 @@ def create_app():
         SESSION_COOKIE_SAMESITE='Lax',
         PERMANENT_SESSION_LIFETIME=1800
     )
-
-    # Removed blueprint registration; routes are defined below instead.
-    app.register_blueprint(ai_bp)
 
     return app
 
@@ -566,7 +563,8 @@ def dashboard(chef_naam):
             flash("Ongeldige sessie. Log opnieuw in.", "warning")
             return redirect(url_for('login'))
 
-        return render_template('dashboard.html', chef_naam=chef_naam)
+        with app.app_context():
+            return render_template('dashboard.html', chef_naam=chef_naam)
         
     except Exception as e:
         app.logger.error(f"Dashboard error: {str(e)}")

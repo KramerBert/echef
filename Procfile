@@ -1,1 +1,1 @@
-web: gunicorn app:app
+web: waitress-serve --listen=localhost:5000 wsgi:app

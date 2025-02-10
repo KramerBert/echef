@@ -1,8 +1,6 @@
 import os
-from app import create_app
+from app import app
 from waitress import serve
-
-application = create_app()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
@@ -13,4 +11,4 @@ if __name__ == '__main__':
     print(f" * http://localhost:{port} (alternative)")
     print("="*60 + "\n")
     
-    serve(application, host='0.0.0.0', port=port)
+    serve(app, host='0.0.0.0', port=port)
