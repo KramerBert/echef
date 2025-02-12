@@ -51,7 +51,7 @@
     <input type="text" id="ingredientSearch" class="form-control" 
            placeholder="Zoek ingrediënt..." style="max-width: 300px; display: inline-block;">
     <select id="categoryFilter" class="form-control" style="max-width: 300px; display: inline-block">
-        <option value="">In alle categorieën</option>
+        <option value="">Zoek in...</option>
         {% for categorie in unieke_categorieen %} 
             <option value="{{ categorie }}">{{ categorie }}</option>
         {% endfor %}
@@ -106,6 +106,31 @@
         </a>
     </form>
 </div>
+
+<div class="mobile-bulk-import-message">
+    Log aan op je laptop om bulkwijzigingen te doen.
+</div>
+
+<style>
+    /* Verberg de CSV import sectie op kleine schermen */
+    @media (max-width: 768px) {
+        .csv-import {
+            display: none;
+        }
+        .mobile-bulk-import-message {
+            text-align: center;
+            margin-top: 20px;
+            font-style: italic;
+        }
+    }
+
+    /* Stijlen voor grotere schermen */
+    @media (min-width: 769px) {
+        .mobile-bulk-import-message {
+            display: none;
+        }
+    }
+</style>
 
 
 <script>

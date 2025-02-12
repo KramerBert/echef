@@ -2,14 +2,14 @@
 {% block title %}Dashboard - E-chef{% endblock %}
 {% block content %}
 <div class="container mt-5">
-    <div class="row">
+    <div class="">
       <h1>Dashboard van {{ chef_naam }}</h1>
 
         <hr class="mb-4">
         <h3>Menu Engineering</h3>
 
-    <div class="row mb-4">
-        <div class="col-12">
+    <div class="mb-4">
+        <div class="">
             <div class="dashboard-grid" role="group" aria-label="Primary dashboard actions">
                 
                 <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Manage ingredients">
@@ -38,8 +38,8 @@
     <hr class="mb-4">
     <h3>Beheer</h3>
 
-    <div class="row mb-4">
-        <div class="col-12">
+    <div class="mb-4">
+        <div class="">
             <div class="dashboard-grid" role="group" aria-label="Primary dashboard actions">
                 
                                <a href="{{ url_for('haccp_dashboard', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="HACCP Dashboard">

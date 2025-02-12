@@ -234,7 +234,22 @@ footer {
     }
 
     .ingredient-form .btn-action {
-        margin-top: 0.5rem;
+        margin-top: 1rem;
+        margin-bottom: 0;
+        width: 100%;
+    }
+
+    .ingredient-form input[type="number"] {
+        min-width: 0;
+    }
+
+    /* Add-ingredient-form specific styles */
+    .add-ingredient-form .form-group {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .add-ingredient-form .form-control {
         width: 100%;
     }
 }
@@ -248,7 +263,7 @@ footer {
 }
 
 .ingredient-form input {
-    flex: 0.5;
+    /* flex: 0.5; */ /* Comment out flex */
     max-width: 80px;
 }
 
@@ -541,6 +556,16 @@ footer {
         padding: 1rem;
         font-size: 0.9rem;
     }
+
+    /* Add-ingredient-form specific styles */
+    .add-ingredient-form .form-group {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .add-ingredient-form .form-control {
+        width: 100%;
+    }
 }
 
 /* Additional tablet breakpoint */
@@ -654,10 +679,20 @@ footer {
 @media (min-width: 769px) and (max-width: 1024px) {
     .container {
         width: 95%;
+        padding: 1rem;
     }
 
-    .flex-item {
-        min-width: 200px;
+    .ingredient-form {
+        flex-wrap: wrap;
+    }
+
+    .dish-table,
+    .ingredient-table {
+        font-size: 0.95rem;
+    }
+
+    .btn-action {
+        padding: 0.5rem 1rem;
     }
 }
 
@@ -775,6 +810,23 @@ select.form-control option:focus {
     color: var(--text-light);
 }
 
+/* Add a down arrow icon to select elements */
+select.form-control {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23777'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem top 50%;
+    background-size: 1.5rem 1.5rem;
+    padding-right: 2.5rem;
+}
+
+/* Adjustments for IE */
+select.form-control::-ms-expand {
+    display: none;
+}
+
 /* Print Optimization */
 @media print {
     .no-print {
@@ -785,6 +837,7 @@ select.form-control option:focus {
         width: 100% !important;
         padding: 0 !important;
         margin: 0 !important;
+        box-shadow: none;
     }
 
     body {
@@ -881,7 +934,6 @@ select.form-control option:focus {
 
 .ingredient-form .form-group input,
 .ingredient-form .form-group select {
-    flex: 1;
     min-width: 200px;
 }
 
@@ -1113,11 +1165,12 @@ textarea.form-control {
 
 /* Dashboard Grid Layout */
 .dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1rem;
-    width: 100%;
-    margin: 1rem 0;
+    display: grid !important; /* Use grid layout */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important; /* Responsive columns */
+    gap: 1.5rem !important;
+    width: 100% !important;
+    margin: 1rem 0 !important;
+    justify-content: stretch !important; /* Stretch items to fill space */
 }
 
 .dashboard-btn,
@@ -1127,31 +1180,32 @@ textarea.form-control {
 }
 
 .dashboard-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
-    background-color: var(--kitchen-blue);
-    color: var(--text-light);
-    border: 1px solid var(--kitchen-steel);
-    border-radius: 4px;
-    text-decoration: none;
-    transition: all 0.3s ease;
-    text-align: center;
-    font-size: 1rem;
-    min-height: 80px;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 1.5rem !important;
+    background-color: var(--kitchen-blue) !important;
+    color: var(--text-light) !important;
+    border: 1px solid var(--kitchen-steel) !important;
+    border-radius: 4px !important;
+    text-decoration: none !important;
+    transition: all 0.3s ease !important;
+    text-align: center !important;
+    font-size: 1rem !important;
+    min-height: 80px !important;
+    box-sizing: border-box !important; /* Ensure padding is included in the size */
 }
 
 .dashboard-btn:hover {
-    background-color: var(--kitchen-highlight);
-    color: var(--text-light);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background-color: var(--kitchen-highlight) !important;
+    color: var(--text-light) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
 }
 
 .dashboard-btn i {
-    margin-right: 0.5rem;
-    font-size: 1.2em;
+    margin-right: 0.5rem !important;
+    font-size: 1.2em !important;
 }
 
 .dashboard-btn-wrapper {
@@ -1171,13 +1225,14 @@ textarea.form-control {
 
 @media (max-width: 768px) {
     .dashboard-grid {
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
+        display: flex !important; /* Use flexbox */
+        flex-direction: column !important; /* Stack items vertically */
+        gap: 0.5rem !important;
     }
 
     .dashboard-btn {
-        padding: 1rem;
-        min-height: 60px;
+        padding: 1rem !important;
+        min-height: 60px !important;
     }
 }
 

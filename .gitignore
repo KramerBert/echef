@@ -13,3 +13,8 @@ venv/
 
 # OS
 .DS_Store
+
+
+# ... existing rules ...
+docker-compose.yml
+docker-compose.override.yml
