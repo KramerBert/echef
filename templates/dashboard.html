@@ -42,8 +42,9 @@
         <div class="">
             <div class="dashboard-grid" role="group" aria-label="Primary dashboard actions">
                 
-                               <a href="{{ url_for('haccp_dashboard', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="HACCP Dashboard">
+                <a href="{{ url_for('haccp_dashboard', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="HACCP Dashboard">
                     <i class="fas fa-clipboard-check"></i> HACCP automatiseren
+                </a>
                 <a href="{{ url_for('profile', chef_naam=chef_naam) }}" class="dashboard-btn">
                     <i class="fas fa-user-cog"></i> Profiel Instellingen
                 </a>
@@ -54,9 +55,13 @@
                     <i class="fas fa-truck"></i> Leveranciers beheren
                 </a>
 
-                <a href="{{ url_for('instructions') }}" class="dashboard-btn" aria-label="Instructions">
+                <a href="{{ url_for('instructions.index') }}" class="dashboard-btn" aria-label="Instructions">
                     <i class="fas fa-book"></i> E-chef Werkinstructie
                 </a>
+                
+                
+
+
             </div>
         </div>
     </div>
