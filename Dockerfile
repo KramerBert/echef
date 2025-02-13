@@ -7,8 +7,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Verwijder de vaste poort 8000
-EXPOSE $PORT
+# Je kunt desgewenst een vaste poort EXPOSEn, maar $PORT wordt pas runtime gevuld.
+# Voor local debugging kun je gewoon EXPOSE 8000 doen, bijvoorbeeld:
+EXPOSE 8000
 
-# Gebruik de $PORT environment variable
-CMD gunicorn --bind 0.0.0.0:$PORT wsgi:app
+# Gebruik de JSON-array met een mini-shellcommando.
+# De shell (sh -c) zorgt ervoor dat $PORT wél wordt uitgebreid,
+# en `exec` laat gunicorn netjes PID 1 worden voor signaalafhandeling.
+CMD ["sh", "-c", "exec gunicorn --bind 0.0.0.0:${PORT:-8000} wsgi:app"]
