@@ -1,8 +1,6 @@
-from flask import render_template, Blueprint
-from flask_wtf import FlaskForm
+from flask import render_template
+from . import bp
 
-bp = Blueprint('privacy', __name__, template_folder='templates')
-
-@bp.route('/')
-def privacy_index():
-    return render_template('privacy.html', form=FlaskForm())
+@bp.route('/privacy')
+def privacy():
+    return render_template('privacy.html')  # Verwijder 'privacy/' prefix

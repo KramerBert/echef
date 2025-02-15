@@ -72,12 +72,12 @@ def create_app():
 
     # Register blueprints
     app.register_blueprint(instructions_bp)
-    app.register_blueprint(quickstart_bp, url_prefix='/quickstart') # Register the quickstart blueprint
+    app.register_blueprint(quickstart_bp, url_prefix='/quickstart')
     app.register_blueprint(terms_bp, url_prefix='/terms')
     app.register_blueprint(privacy_bp, url_prefix='/privacy')
     app.register_blueprint(auth_bp, template_folder='templates')
     app.register_blueprint(profile_bp)
-    app.register_blueprint(about_bp)  # Add this line
+    app.register_blueprint(about_bp)
     
     # Register template filters and helper functions inside create_app
     def nl2br(value):

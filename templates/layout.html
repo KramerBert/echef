@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,10 +21,15 @@
 
         <div class="collapse navbar-collapse" id="navbarsExampleDefault">
             <ul class="navbar-nav mr-auto">
-                <li class="nav-item active">
-                    <a class="nav-link" href="/">Home <span class="sr-only">(current)</span></a>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
                 </li>
-                <!-- Add more navbar items here -->
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('about.about') }}">Over ons</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('privacy.privacy') }}">Privacy</a>
+                </li>
             </ul>
              <ul class="navbar-nav">
                 {% if session['chef_id'] %}
@@ -57,6 +62,12 @@
 
         {% block content %}{% endblock %}
     </main>
+
+    <footer class="footer mt-5 py-3 bg-dark text-white">
+        <div class="container text-center">
+            <span>&copy; 2024 E-Chef. Alle rechten voorbehouden.</span>
+        </div>
+    </footer>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
