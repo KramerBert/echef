@@ -27,7 +27,10 @@ from wtforms import StringField, PasswordField, SubmitField, BooleanField
 from wtforms.validators import DataRequired, Email, EqualTo, InputRequired
 from flask import send_from_directory
 # from ai_recipe_generator import ai_bp # Import the blueprint
-from instructions.routes import bp as instructions_bp
+from blueprints.instructions.routes import bp as instructions_bp
+from blueprints.quickstart.routes import bp as quickstart_bp # Import the quickstart blueprint
+from blueprints.terms.routes import bp as terms_bp
+from blueprints.privacy.routes import bp as privacy_bp
 
 load_dotenv()  # Load the values from .env
 
@@ -62,12 +65,13 @@ def create_app():
 
     # Register blueprints
     app.register_blueprint(instructions_bp)
+    app.register_blueprint(quickstart_bp, url_prefix='/quickstart') # Register the quickstart blueprint
+    app.register_blueprint(terms_bp, url_prefix='/terms')
+    app.register_blueprint(privacy_bp, url_prefix='/privacy')
 
     # Register template filters
     def nl2br(value):
         return value.replace('\n', '<br>')
-    app.jinja_env.filters['nl2br'] = nl2br
-
     # Move all route handlers and helper functions inside create_app
     # Improved error handlers
     @app.errorhandler(404)
@@ -2453,14 +2457,14 @@ def create_app():
     # -----------------------------------------------------------
     #  Quickstart Guide
     # -----------------------------------------------------------
-    @app.route('/quickstart/')
-    def quickstart_index():
-        return render_template('quickstart.html', form=FlaskForm())
+    # @app.route('/quickstart/')
+    # def quickstart_index():
+    #     return render_template('quickstart.html', form=FlaskForm())
 
     # Add alias for backward compatibility of 'quickstart' endpoint:
     @app.route('/quickstart', endpoint='quickstart')
     def quickstart_alias():
-        return quickstart_index()
+        return redirect(url_for('quickstart.quickstart_index'))
 
     def static_files(filename):
         return send_from_directory('static', filename)
