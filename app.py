@@ -37,6 +37,7 @@ from blueprints.auth.utils import generate_confirmation_token, confirm_token, se
 from blueprints import auth
 from utils.db import get_db_connection
 from blueprints.profile.routes import bp as profile_bp
+from blueprints.about.routes import bp as about_bp  # Add this import
 
 load_dotenv()  # Load the values from .env
 
@@ -76,7 +77,8 @@ def create_app():
     app.register_blueprint(privacy_bp, url_prefix='/privacy')
     app.register_blueprint(auth_bp, template_folder='templates')
     app.register_blueprint(profile_bp)
-
+    app.register_blueprint(about_bp)  # Add this line
+    
     # Register template filters and helper functions inside create_app
     def nl2br(value):
         return value.replace('\n', '<br>')
@@ -153,13 +155,6 @@ def create_app():
         Toon de homepage, met bijvoorbeeld een link naar inloggen/registreren.
         """
         return render_template('home.html', form=FlaskForm())  # Zorg voor een home.html template
-
-    # -----------------------------------------------------------
-    #  Over e-Chef
-    # -----------------------------------------------------------
-    @app.route('/about')
-    def about():
-        return render_template('about.html', form=FlaskForm())
 
     # -----------------------------------------------------------
     #  AVG Privacy Verklaring
