@@ -31,6 +31,11 @@ from blueprints.instructions.routes import bp as instructions_bp
 from blueprints.quickstart.routes import bp as quickstart_bp # Import the quickstart blueprint
 from blueprints.terms.routes import bp as terms_bp
 from blueprints.privacy.routes import bp as privacy_bp
+from blueprints.auth.routes import bp as auth_bp
+from blueprints.auth.routes import LoginForm, ForgotPasswordForm, ResetPasswordForm, RegisterForm
+from blueprints.auth.utils import generate_confirmation_token, confirm_token, send_confirmation_email, send_reset_email, hash_password
+from blueprints import auth
+from utils.db import get_db_connection
 
 load_dotenv()  # Load the values from .env
 
@@ -68,22 +73,27 @@ def create_app():
     app.register_blueprint(quickstart_bp, url_prefix='/quickstart') # Register the quickstart blueprint
     app.register_blueprint(terms_bp, url_prefix='/terms')
     app.register_blueprint(privacy_bp, url_prefix='/privacy')
+    app.register_blueprint(auth_bp, template_folder='templates')
 
-    # Register template filters
+    # Register template filters and helper functions inside create_app
     def nl2br(value):
         return value.replace('\n', '<br>')
+    app.template_filter('nl2br')(nl2br)
+
     # Move all route handlers and helper functions inside create_app
     # Improved error handlers
     @app.errorhandler(404)
     def not_found_error(error):
         logger.error(f'Page not found: {request.url}')
+        return render_template('404.html'), 404
+
     @app.errorhandler(500)
     def internal_error(error):
         logger.error(f'Server Error: {error}')
         db = get_db_connection()
         if db is not None:
             db.close()
-        return render_template('error.html', error=error), 500
+        return render_template('500.html'), 500
 
     @app.errorhandler(Exception)
     def handle_exception(e):
@@ -116,22 +126,10 @@ def create_app():
         DB_CONFIG = {
             'host': os.getenv("DB_HOST"),
             'database': os.getenv("DB_NAME"),
-            'user': os.getenv("DB_USER"), 
+            'user': os.getenv("DB_USER"),
             'password': os.getenv("DB_PASSWORD"),
             'port': os.getenv("DB_PORT")
         }
-
-    def get_db_connection():
-        """
-        Creates a new database connection using the configuration
-        """
-        try:
-            conn = mysql.connector.connect(**DB_CONFIG)
-            if conn.is_connected():
-                return conn
-        except Error as e:
-            logger.error(f"Error connecting to the database: {e}")
-            return None
 
     # Reset wachtwoord configuratie
     app.config['RESET_TOKEN_EXPIRE_MINUTES'] = 30
@@ -141,190 +139,8 @@ def create_app():
     app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
     app.config['MAIL_USE_TLS'] = True
 
-    def send_reset_email(email, token):
-        """Stuur een wachtwoord reset email."""
-        msg = MIMEMultipart()
-        msg['From'] = app.config['MAIL_USERNAME']
-        msg['To'] = email
-        msg['Subject'] = "e-Chef Wachtwoord Reset"
-        
-        # Gebruik HTTPS in productie en HTTP in lokale ontwikkeling
-        scheme = 'https' if os.getenv('FLASK_ENV') == 'production' else 'http'
-        reset_url = url_for('reset_password', token=token, _external=True, _scheme=scheme)
-        
-        body = f"""
-        Er is een wachtwoord reset aangevraagd voor je e-Chef account.
-        Klik op de onderstaande link om je wachtwoord te resetten:
-        
-        {reset_url}
-        
-        Deze link verloopt over {app.config['RESET_TOKEN_EXPIRE_MINUTES']} minuten.
-        Als je geen reset hebt aangevraagd, kun je deze email negeren.
-        """
-        
-        msg.attach(MIMEText(body, 'plain'))
-        
-        try:
-            server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
-            server.starttls()
-            server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
-            server.send_message(msg)
-            server.quit()
-            return True
-        except Exception as e:
-            logger.error(f"Email error: {str(e)}")
-            return False
-
-    def generate_confirmation_token(email):
-        """Generate email confirmation token"""
-        serializer = URLSafeTimedSerializer(app.secret_key)
-        return serializer.dumps(email, salt=app.config['SECURITY_PASSWORD_SALT'])
-
-    def confirm_token(token, expiration=3600):
-        """Verify email confirmation token met extra logging voor debugging op Heroku."""
-        logger.debug(f"Attempting to confirm token: {token}")
-        serializer = URLSafeTimedSerializer(app.secret_key)
-        try:
-            email = serializer.loads(
-                token,
-                salt=app.config['SECURITY_PASSWORD_SALT'],
-                max_age=expiration
-            )
-            logger.debug(f"Token confirmed successfully. Email: {email}")
-            return email
-        except Exception as e:
-            logger.error(f"Token confirmation failed: {str(e)}")
-            # Debug logging: toon de huidige secret_key en salt, let op dat je deze informatie later weer verwijdert!
-            logger.error(f"Token bevestiging mislukt: {str(e)}. SECRET_KEY: {app.secret_key}, SALT: {app.config['SECURITY_PASSWORD_SALT']}")
-            return False
-
-    def send_confirmation_email(email, token):
-        """Send confirmation email"""
-        msg = MIMEMultipart()
-        msg['From'] = app.config['MAIL_USERNAME']
-        msg['To'] = email
-        msg['Subject'] = "e-Chef Email Verificatie"
-        
-        scheme = 'https' if os.getenv('FLASK_ENV') == 'production' else 'http'
-        verify_url = url_for('verify_email', token=token, _external=True, _scheme=scheme)
-        
-        body = f"""
-        Welkom bij e-Chef!
-        
-        Klik op de onderstaande link om je email adres te verifiëren:
-        
-        {verify_url}
-        
-        Deze link verloopt over 1 uur.
-        """
-        
-        msg.attach(MIMEText(body, 'plain'))
-        
-        try:
-            server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
-            server.starttls()
-            server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
-            server.send_message(msg)
-            server.quit()
-            return True
-        except Exception as e:
-            logger.error(f"Email error: {str(e)}")
-            return False
-
-    class LoginForm(FlaskForm):
-        email = StringField('E-mail', validators=[DataRequired(), Email()])
-        wachtwoord = PasswordField('Wachtwoord', validators=[DataRequired()])
-        recaptcha = RecaptchaField()
-        submit = SubmitField('Inloggen')
-
-    class ResetPasswordForm(FlaskForm):
-        password = PasswordField('Nieuw wachtwoord', validators=[DataRequired()])
-        confirm_password = PasswordField('Bevestig wachtwoord', 
-                                        validators=[DataRequired(), 
-                                                    EqualTo('password', message='Wachtwoorden moeten overeenkomen')])
-        submit = SubmitField('Wachtwoord wijzigen')
-
-    class ForgotPasswordForm(FlaskForm):
-        email = StringField('E-mail', validators=[DataRequired(), Email()])
-        recaptcha = RecaptchaField()
-        submit = SubmitField('Reset Link Versturen')
-
-    @app.route('/forgot-password', methods=['GET', 'POST'])
-    def forgot_password():
-        form = ForgotPasswordForm()
-        if form.validate_on_submit():
-            email = form.email.data
-            # Controleer of er daadwerkelijk een e-mail is ingevuld
-            if not email:
-                flash("Voer een geldig e-mailadres in.", "danger")
-                return redirect(url_for('forgot_password'))
-            
-            conn = get_db_connection()
-            if conn is None:
-                flash("Databaseverbinding mislukt.", "danger")
-                return redirect(url_for('forgot_password'))
-            
-            cur = conn.cursor(dictionary=True)
-            try:
-                # Controleer of het e-mailadres bestaat in de database
-                cur.execute("SELECT chef_id FROM chefs WHERE email = %s", (email,))
-                chef = cur.fetchone()
-                if chef is None:
-                    flash("E-mailadres niet gevonden.", "danger")
-                    return redirect(url_for('forgot_password'))
-                
-                # Genereer reset token en stuur reset e-mail
-                token = generate_confirmation_token(email)
-                if send_reset_email(email, token):
-                    flash("Een reset link is naar je e-mailadres gestuurd.", "info")
-                else:
-                    flash("Er is een fout opgetreden bij het versturen van de e-mail.", "danger")
-            except Exception as e:
-                logger.error(f"Error in forgot_password: {str(e)}")
-                flash("Er is een fout opgetreden.", "danger")
-            finally:
-                cur.close()
-                conn.close()
-            
-            return redirect(url_for('login'))
-            
-        return render_template('forgot_password.html', form=form)
-
-    @app.route('/reset-password/<token>', methods=['GET', 'POST'])
-    def reset_password(token):
-        logger.debug(f"Received reset token: {token}")
-        if not token or not isinstance(token, str) or len(token) > 128:
-            flash("Ongeldige reset link.", "danger")
-            return redirect(url_for('login'))
-        form = ResetPasswordForm()
-        email = confirm_token(token)
-        if not email:
-            flash("Reset token is ongeldig of verlopen.", "danger")
-            logger.error(f"Reset token invalid or expired for token: {token}")
-            return redirect(url_for('login'))
-        conn = get_db_connection()
-        if conn is None:
-            flash("Database connection error.", "danger")
-            return redirect(url_for('login'))
-        cur = conn.cursor(dictionary=True)
-        cur.execute("SELECT chef_id FROM chefs WHERE email = %s", (email,))
-        chef = cur.fetchone()
-        if chef is None:
-            flash("E-mailadres niet gevonden.", "danger")
-            cur.close()
-            conn.close()
-            return redirect(url_for('login'))
-        if form.validate_on_submit():
-            new_password = form.password.data
-            cur.execute("UPDATE chefs SET wachtwoord = %s WHERE chef_id = %s",
-                        (generate_password_hash(new_password, method='pbkdf2:sha256'), chef['chef_id']))
-            conn.commit()
-            flash("Je wachtwoord is succesvol gewijzigd!", "success")
-            return redirect(url_for('login'))
-        return render_template('reset_password.html', form=form, token=token)
-
-    def get_serializer():
-        return URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    # Add the database connection function to the app context
+    app.get_db_connection = get_db_connection
 
     # -----------------------------------------------------------
     #  Homepage (index)
@@ -349,203 +165,6 @@ def create_app():
     @app.route('/privacy')
     def privacy():
         return render_template('privacy.html', form=FlaskForm())
-
-    # -----------------------------------------------------------
-    #  Registreren
-    # -----------------------------------------------------------
-    class RegisterForm(FlaskForm):
-        naam = StringField('Naam', validators=[DataRequired()])
-        email = StringField('Email', validators=[DataRequired(), Email()])
-        wachtwoord = PasswordField('Wachtwoord', validators=[DataRequired()])
-        confirm_password = PasswordField('Bevestig Wachtwoord', 
-                                        validators=[DataRequired(), 
-                                                    EqualTo('wachtwoord', message='Wachtwoorden moeten overeenkomen')])
-        terms = BooleanField('Ik ga akkoord met de algemene voorwaarden en privacy policy', validators=[InputRequired(message='Je moet akkoord gaan met de algemene voorwaarden en privacy policy')])
-        recaptcha = RecaptchaField()
-        submit = SubmitField('Registreer')
-
-    @app.route('/register', methods=['GET', 'POST'])
-    def register():
-        form = RegisterForm()  # Let op: gebruik RegisterForm, niet RegistrationForm
-        if form.validate_on_submit():
-            try:
-                naam = secure_filename(form.naam.data)
-                email = form.email.data
-                wachtwoord = form.wachtwoord.data
-                
-                # Voeg een extra check toe voor wachtwoord bevestiging
-                if form.wachtwoord.data != form.confirm_password.data:
-                    flash("Wachtwoorden komen niet overeen.", "danger")
-                    return render_template('register.html', form=form)
-
-                hashed_pw = generate_password_hash(wachtwoord, method='pbkdf2:sha256')
-
-                conn = get_db_connection()
-                if conn is None:
-                    raise Exception("Database connection error")
-
-                cur = conn.cursor()
-                try:
-                    # Add email_verified column with default value 0
-                    cur.execute("""
-                        INSERT INTO chefs (naam, email, wachtwoord, email_verified, terms_accepted, privacy_accepted)
-                        VALUES (%s, %s, %s, 0, %s, %s)
-                    """, (naam, email, hashed_pw, datetime.utcnow(), datetime.utcnow()))
-                    conn.commit()
-
-                    # Generate confirmation token and send email
-                    token = generate_confirmation_token(email)
-                    if send_confirmation_email(email, token):
-                        flash("Registratie succesvol! Check je email om je account te verifiëren.", "success")
-                        return redirect(url_for('verify_email'))  # Zonder token parameter
-                    else:
-                        flash("Registratie succesvol, maar er ging iets mis met het versturen van de verificatie email. Neem contact op met support.", "warning")
-
-                except Exception as e:
-                    conn.rollback()
-                    logger.error(f'Registration error: {str(e)}')
-                    flash("Er is een fout opgetreden bij registratie.", "danger")
-                finally:
-                    cur.close()
-                    conn.close()
-
-            except Exception as e:
-                logger.error(f'Registration error: {str(e)}')
-                flash("Er is een fout opgetreden.", "danger")
-
-        return render_template('register.html', form=form)
-
-    @app.route('/verify-email', methods=['GET'])
-    @app.route('/verify-email/<token>', methods=['GET'])
-    def verify_email(token=None):
-        """Handle both the initial verification page and token verification"""
-        if not token:
-            # Show the initial verification page
-            return render_template('verify_email.html', verified=False)
-        
-        # Handle token verification
-        email = confirm_token(token)
-        if email:
-            conn = get_db_connection()
-            if conn:
-                cur = conn.cursor()
-                try:
-                    cur.execute("""
-                        UPDATE chefs 
-                        SET email_verified = 1 
-                        WHERE email = %s
-                    """, (email,))
-                    conn.commit()
-                    flash("Email adres geverifieerd! Je kunt nu inloggen.", "success")
-                    return render_template('verify_email.html', verified=True)
-                except Exception as e:
-                    conn.rollback()
-                    logger.error(f'Email verification error: {str(e)}')
-                    flash("Er is een fout opgetreden bij het verifiëren van je email.", "danger")
-                finally:
-                    cur.close()
-                    conn.close()
-        else:
-            flash("Ongeldige of verlopen verificatie link.", "danger")
-        
-        return render_template('verify_email.html', verified=False)
-
-    # -----------------------------------------------------------
-    #  Inloggen
-    # -----------------------------------------------------------
-    @app.route('/login', methods=['GET', 'POST'])
-    def login():
-        form = LoginForm()
-        if form.validate_on_submit():
-            try:
-                email = form.email.data
-                wachtwoord = form.wachtwoord.data
-
-                conn = get_db_connection()
-                if conn is None:
-                    raise Exception("Database connection error")
-
-                cur = conn.cursor(dictionary=True)
-                try:
-                    cur.execute("SELECT * FROM chefs WHERE email = %s", (email,))
-                    chef = cur.fetchone()
-                    
-                    # Check for unsupported scrypt hash and advise password reset
-                    if chef and chef.get('wachtwoord','').startswith("scrypt:"):
-                        flash("Je account maakt gebruik van een wachtwoord hash (scrypt) die niet langer ondersteund wordt. Reset je wachtwoord.", "danger")
-                        return redirect(url_for('forgot_password'))
-                    
-                    if chef and check_password_hash(chef['wachtwoord'], wachtwoord):
-                        if not chef.get('email_verified', False):
-                            flash("Verifieer eerst je email adres voordat je inlogt.", "warning")
-                            return redirect(url_for('verify_email'))
-                        
-                        session.clear()
-                        chef_id = chef.get('chef_id')
-                        if chef_id is None:
-                            flash("Er is een fout opgetreden bij het inloggen: ongeldige accountgegevens.", "danger")
-                            return redirect(url_for('login'))
-                        session['chef_id'] = int(chef_id)
-                        session['chef_naam'] = chef['naam']
-                        session.permanent = True
-                        
-                        flash("Succesvol ingelogd!", "success")
-                        return redirect(url_for('dashboard', chef_naam=chef['naam']))
-                    else:
-                        flash("Ongeldige inloggegevens.", "danger")
-                finally:
-                    cur.close()
-                    conn.close()
-            except Exception as e:
-                logger.error(f'Login error: {str(e)}')
-                flash("Er is een fout opgetreden bij inloggen.", "danger")
-
-        return render_template('login.html', form=form)
-
-    # -----------------------------------------------------------
-    #  Uitloggen
-    # -----------------------------------------------------------
-    @app.route('/logout')
-    def logout():
-        session.clear()
-        flash("Je bent uitgelogd.", "info")
-        return redirect(url_for('home'))
-
-    # -----------------------------------------------------------
-    #  Persoonlijk Dashboard
-    # -----------------------------------------------------------
-    @app.route('/dashboard/<chef_naam>')
-    def dashboard(chef_naam):
-        """
-        Eenvoudig dashboard waarop de chef na inloggen belandt.
-        We controleren of de ingelogde chef overeenkomt met de URL.
-        """
-        try:
-            app.logger.info(f"Accessing dashboard for chef: {chef_naam}")
-            app.logger.info(f"Session data: {session}")
-            
-            if 'chef_id' not in session:
-                app.logger.warning("No chef_id in session")
-                flash("Je bent niet ingelogd.", "warning")
-                return redirect(url_for('login'))
-                
-            if 'chef_naam' not in session:
-                app.logger.warning("No chef_naam in session")
-                flash("Sessie verlopen.", "warning")
-                return redirect(url_for('login'))
-                
-            if session['chef_naam'] != chef_naam:
-                app.logger.warning(f"Chef naam mismatch: {session['chef_naam']} != {chef_naam}")
-                flash("Ongeldige sessie. Log opnieuw in.", "warning")
-                return redirect(url_for('login'))
-
-            with app.app_context():
-                return render_template('dashboard.html', chef_naam=chef_naam)
-            
-        except Exception as e:
-            app.logger.error(f"Dashboard error: {str(e)}")
-            flash("Er is een fout opgetreden.", "danger")
-            return redirect(url_for('login'))
 
     # -----------------------------------------------------------
     #  Ingrediënten Beheren
@@ -1114,7 +733,7 @@ def create_app():
     def update_dish_allergenen(chef_naam, dish_id):
         form = FlaskForm()  # Add CSRF validation
         if not form.validate_on_submit():
-            flash("Ongeldige CSRF-token. Probeer het opnieuw.", "danger")
+            flash("Ongeldige CSRF-token.", "danger")
             return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
 
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
@@ -2434,6 +2053,32 @@ def create_app():
             chef = cur.fetchone()
 
             if request.method == 'POST' and form.validate_on_submit():
+                if 'update_password' in request.form:
+                    current_password = request.form.get('current_password')
+                    new_password = request.form.get('new_password')
+                    confirm_password = request.form.get('confirm_password')
+
+                    # Verifieer het huidige wachtwoord
+                    if not check_password_hash(chef['wachtwoord'], current_password):
+                        flash("Huidig wachtwoord is onjuist.", "danger")
+                        return redirect(url_for('profile', chef_naam=chef_naam))
+
+                    # Controleer of de nieuwe wachtwoorden overeenkomen
+                    if new_password != confirm_password:
+                        flash("Nieuwe wachtwoorden komen niet overeen.", "danger")
+                        return redirect(url_for('profile', chef_naam=chef_naam))
+
+                    # Update het wachtwoord
+                    hashed_password = hash_password(new_password)
+                    cur.execute("""
+                        UPDATE chefs 
+                        SET wachtwoord = %s 
+                        WHERE chef_id = %s
+                    """, (hashed_password, session['chef_id']))
+                    conn.commit()
+                    flash("Wachtwoord succesvol bijgewerkt.", "success")
+                    return redirect(url_for('profile', chef_naam=chef_naam))
+
                 # Voeg hier logica toe om het profiel te updaten, bijvoorbeeld:
                 # naam = request.form.get('naam')
                 # cur.execute("UPDATE chefs SET naam = %s WHERE chef_id = %s", (naam, session['chef_id']))
@@ -2995,6 +2640,15 @@ def create_app():
         finally:
             cur.close()
             conn.close()
+
+    @app.route('/dashboard/<chef_naam>')
+    def dashboard(chef_naam):
+        """Dashboard page after login"""
+        if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
+            
+        return render_template('dashboard.html', chef_naam=chef_naam, form=FlaskForm())
 
     return app
 

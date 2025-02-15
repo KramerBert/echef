@@ -380,18 +380,18 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('logout') }}">
+                                <a class="nav-link" href="{{ url_for('auth.logout') }}">
                                     <i class="fas fa-sign-out-alt"></i> Uitloggen
                                 </a>
                             </li>
                             {% else %}
                             <li class="nav-item">
-                                <a class="nav-link {% if request.path == url_for('register') %}active{% endif %}" href="{{ url_for('register') }}">
+                                <a class="nav-link {% if request.path == url_for('auth.register') %}active{% endif %}" href="{{ url_for('auth.register') }}">
                                     <i class="fas fa-user-plus"></i> Registreren
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link {% if request.path == url_for('login') %}active{% endif %}" href="{{ url_for('login') }}">
+                                <a class="nav-link {% if request.path == url_for('auth.login') %}active{% endif %}" href="{{ url_for('auth.login') }}">
                                     <i class="fas fa-sign-in-alt"></i> Inloggen
                                 </a>
                             </li>

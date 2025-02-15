@@ -20,7 +20,7 @@
                         {% endwith %}
                         
                         {% if verified %}
-                            <p class="text-center">Je email adres is geverifieerd! Je kunt nu <a href="{{ url_for('login') }}">inloggen</a>.</p>
+                            <p class="text-center">Je email adres is geverifieerd! Je kunt nu <a href="{{ url_for('auth.login') }}">inloggen</a>.</p>
                         {% else %}
                             <p class="text-center">Er is een verificatie link naar je email adres gestuurd. Check je inbox en spam folder.</p>
                         {% endif %}
