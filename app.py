@@ -23,8 +23,8 @@ import requests
 from itsdangerous import URLSafeTimedSerializer
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 from flask_wtf import FlaskForm, RecaptchaField
-from wtforms import StringField, PasswordField, SubmitField, BooleanField
-from wtforms.validators import DataRequired, Email, EqualTo, InputRequired
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, IntegerField
+from wtforms.validators import DataRequired, Email, EqualTo, InputRequired, Optional
 from flask import send_from_directory
 # from ai_recipe_generator import ai_bp # Import the blueprint
 from blueprints.instructions.routes import bp as instructions_bp
@@ -38,6 +38,7 @@ from blueprints import auth
 from utils.db import get_db_connection
 from blueprints.profile.routes import bp as profile_bp
 from blueprints.about.routes import bp as about_bp  # Add this import
+from forms import LeverancierForm, EenheidForm, CategorieForm, DishCategoryForm
 
 load_dotenv()  # Load the values from .env
 
@@ -50,6 +51,7 @@ def create_app():
     app.config['SECURITY_PASSWORD_SALT'] = os.getenv("SECURITY_PASSWORD_SALT", "your-default-salt")
     app.config['RECAPTCHA_PUBLIC_KEY'] = os.getenv('RECAPTCHA_SITE_KEY')
     app.config['RECAPTCHA_PRIVATE_KEY'] = os.getenv('RECAPTCHA_SECRET_KEY')
+    app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB 
     app.config.update(
         SESSION_COOKIE_SECURE=True,
         SESSION_COOKIE_HTTPONLY=True,
@@ -83,6 +85,16 @@ def create_app():
     def nl2br(value):
         return value.replace('\n', '<br>')
     app.template_filter('nl2br')(nl2br)
+
+    # Custom decorator
+    def login_required(f):
+        def decorated_function(*args, **kwargs):
+            if 'chef_id' not in session:
+                flash("Geen toegang. Log opnieuw in.", "danger")
+                return redirect(url_for('auth.login'))
+            return f(*args, **kwargs)
+        decorated_function.__name__ = f.__name__
+        return decorated_function
 
     # Move all route handlers and helper functions inside create_app
     # Improved error handlers
@@ -167,7 +179,11 @@ def create_app():
     #  Ingrediënten Beheren
     # -----------------------------------------------------------
     @app.route('/dashboard/<chef_naam>/ingredients', methods=['GET', 'POST'])
+    @login_required
     def manage_ingredients(chef_naam):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
         form = FlaskForm()  # Add this line for CSRF validation
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             flash("Geen toegang. Log opnieuw in.", "danger")
@@ -289,7 +305,11 @@ def create_app():
             conn.close()
 
     @app.route('/dashboard/<chef_naam>/ingredients/bulk_add', methods=['POST'])
+    @login_required
     def bulk_add_ingredients(chef_naam):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             flash("Geen toegang. Log opnieuw in.", "danger")
             return redirect(url_for('login'))
@@ -299,6 +319,13 @@ def create_app():
             return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
 
         file = request.files['csv_file']
+
+        # Check file size
+        if len(file.read()) > app.config['MAX_CONTENT_LENGTH']:
+            flash("Bestand is te groot. Maximale grootte is 5MB.", "danger")
+            return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
+
+        file.seek(0)  # Reset file pointer to the beginning
         filename = secure_filename(file.filename)
         if filename == '':
             flash("Geen bestand geselecteerd.", "danger")
@@ -306,6 +333,10 @@ def create_app():
 
         if not file.filename.endswith('.csv'):
             flash("Ongeldig bestandstype. Upload een CSV-bestand.", "danger")
+            return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
+
+        if file.content_length > app.config['MAX_CONTENT_LENGTH']:
+            flash("Bestand is te groot. Maximale grootte is 5MB.", "danger")
             return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
 
         conn = get_db_connection()
@@ -360,7 +391,11 @@ def create_app():
     #  Gerechten Samenstellen
     # -----------------------------------------------------------
     @app.route("/manage_dishes/<chef_naam>", methods=['GET', 'POST'])
+    @login_required
     def manage_dishes(chef_naam):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
         form = FlaskForm()
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             flash("Geen toegang. Log opnieuw in.", "danger")
@@ -430,7 +465,11 @@ def create_app():
     #  Gerecht Bewerken (Ingrediënten toevoegen)
     # -----------------------------------------------------------
     @app.route('/dashboard/<chef_naam>/dishes/<int:dish_id>', methods=['GET', 'POST'])
+    @login_required
     def edit_dish(chef_naam, dish_id):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
         form = FlaskForm()  # Add this line for CSRF validation
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             flash("Geen toegang. Log opnieuw in.", "danger")
@@ -640,7 +679,11 @@ def create_app():
         )
 
     @app.route('/chef/<chef_naam>/dish/<int:dish_id>/ingredient/<int:ingredient_id>/update', methods=['POST'])
+    @login_required
     def update_dish_ingredient(chef_naam, dish_id, ingredient_id):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
         form = FlaskForm()
         if not form.validate_on_submit():
             flash("Ongeldige CSRF-token.", "danger")
@@ -692,7 +735,11 @@ def create_app():
         return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id) + '#ingredienten-tabel')
 
     @app.route('/chef/<chef_naam>/dish/<int:dish_id>/ingredient/<int:ingredient_id>/remove', methods=['POST'])
+    @login_required
     def remove_dish_ingredient(chef_naam, dish_id, ingredient_id):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
         form = FlaskForm()
         if not form.validate_on_submit():
             flash("Ongeldige CSRF-token.", "danger")
@@ -727,7 +774,11 @@ def create_app():
         return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id) + '#ingredienten-tabel')
 
     @app.route('/dashboard/<chef_naam>/dish/<int:dish_id>/allergenen', methods=['POST'])
+    @login_required
     def update_dish_allergenen(chef_naam, dish_id):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
         form = FlaskForm()  # Add CSRF validation
         if not form.validate_on_submit():
             flash("Ongeldige CSRF-token.", "danger")
@@ -767,7 +818,11 @@ def create_app():
         return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
 
     @app.route('/dashboard/<chef_naam>/dish/<int:dish_id>/dieten', methods=['POST'])
+    @login_required
     def update_dish_dieten(chef_naam, dish_id):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
         form = FlaskForm()  # Add CSRF validation
         if not form.validate_on_submit():
             flash("Ongeldige CSRF-token. Probeer het opnieuw.", "danger")
@@ -810,6 +865,7 @@ def create_app():
     #  Alle Gerechten Beheren
     # -----------------------------------------------------------
     @app.route('/all_dishes')
+    @login_required
     def all_dishes():
         """
         Pagina om alle gerechten te beheren.
@@ -847,6 +903,7 @@ def create_app():
     #  Export Dishes to MS Word
     # -----------------------------------------------------------
     @app.route('/export_dishes', methods=['POST'])
+    @login_required
     def export_dishes():
         """
         Export selected dishes to a Microsoft Word document.
@@ -972,6 +1029,7 @@ def create_app():
     #  Export Cookbook to MS Word
     # -----------------------------------------------------------
     @app.route('/export_cookbook', methods=['POST'])
+    @login_required
     def export_cookbook():
         form = FlaskForm()  # Add CSRF validation
         if not form.validate_on_submit():
@@ -1119,6 +1177,7 @@ def create_app():
     #  Verwijder Gerecht
     # -----------------------------------------------------------
     @app.route('/delete_dish/<int:dish_id>', methods=['POST'])
+    @login_required
     def delete_dish(dish_id):
         form = FlaskForm()
         if not form.validate_on_submit():
@@ -1156,7 +1215,11 @@ def create_app():
     #  Ingrediënt Bewerken
     # -----------------------------------------------------------
     @app.route('/dashboard/<chef_naam>/ingredients/<int:ingredient_id>', methods=['GET', 'POST'])
+    @login_required
     def edit_ingredient(chef_naam, ingredient_id):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             flash("Geen toegang. Log opnieuw in.", "danger")
             return redirect(url_for('login'))
@@ -1245,7 +1308,11 @@ def create_app():
     #  Ingrediënt Verwijderen
     # -----------------------------------------------------------
     @app.route('/dashboard/<chef_naam>/ingredients/<int:ingredient_id>/delete', methods=['POST'])
+    @login_required
     def delete_ingredient(chef_naam, ingredient_id):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             flash("Geen toegang. Log opnieuw in.", "danger")
             return redirect(url_for('login'))
@@ -1273,7 +1340,11 @@ def create_app():
     #  Export Dish to MS Word
     # -----------------------------------------------------------
     @app.route('/export_dish/<chef_naam>/<dish_id>', methods=['POST'])
+    @login_required
     def export_dish(chef_naam, dish_id):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
         form = FlaskForm()
         if not form.validate_on_submit():
             flash("Ongeldige CSRF-token.", "danger")
@@ -1373,6 +1444,7 @@ def create_app():
     #  Bestellijst Beheren
     # -----------------------------------------------------------
     @app.route('/orderlist', methods=['GET', 'POST'])
+    @login_required
     def manage_orderlist():
         if 'chef_id' not in session:
             flash("Geen toegang. Log opnieuw in.", "danger")
@@ -1399,6 +1471,7 @@ def create_app():
         return render_template('manage_orderlist.html', gerechten=alle_gerechten, form=FlaskForm())
 
     @app.route('/export_orderlist', methods=['POST'])
+    @login_required
     def export_orderlist():
         form = FlaskForm()  # Add CSRF validation
         if not form.validate_on_submit():
@@ -1541,7 +1614,11 @@ def create_app():
     #  HACCP Module
     # -----------------------------------------------------------
     @app.route('/dashboard/<chef_naam>/haccp')
+    @login_required
     def haccp_dashboard(chef_naam):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             flash("Geen toegang. Log opnieuw in.", "danger")
             return redirect(url_for('login'))
@@ -1592,7 +1669,11 @@ def create_app():
                             laatste_metingen=laatste_metingen)
 
     @app.route('/dashboard/<chef_naam>/haccp/new_checklist', methods=['GET', 'POST'])
+    @login_required
     def new_haccp_checklist(chef_naam):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             flash("Geen toegang. Log opnieuw in.", "danger")
             return redirect(url_for('login'))
@@ -1640,7 +1721,11 @@ def create_app():
         return render_template('haccp/new_checklist.html', chef_naam=chef_naam, form=FlaskForm())
 
     @app.route('/dashboard/<chef_naam>/haccp/checklist/<int:checklist_id>/fill', methods=['GET', 'POST'])
+    @login_required
     def fill_haccp_checklist(chef_naam, checklist_id):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             flash("Geen toegang. Log opnieuw in.", "danger")
             return redirect(url_for('login'))
@@ -1700,7 +1785,11 @@ def create_app():
                             checkpunten=checkpunten)
 
     @app.route('/dashboard/<chef_naam>/haccp/reports', methods=['GET', 'POST'])
+    @login_required
     def haccp_reports(chef_naam):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             flash("Geen toegang. Log opnieuw in.", "danger")
             return redirect(url_for('login'))
@@ -1841,7 +1930,10 @@ def create_app():
         )
 
     @app.route('/dashboard/<chef_naam>/haccp/meting/<int:meting_id>/update', methods=['POST'])
+    @login_required
     def update_haccp_meting(chef_naam, meting_id):
+        if session['chef_naam'] != chef_naam:
+            return jsonify({'success': False, 'error': 'Geen toegang'}), 403
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             return jsonify({'success': False, 'error': 'Geen toegang'}), 403
 
@@ -1910,7 +2002,10 @@ def create_app():
             return jsonify({'success': False, 'error': str(e)}), 500
 
     @app.route('/dashboard/<chef_naam>/haccp/checklist/<int:checklist_id>/delete', methods=['POST'])
+    @login_required
     def delete_haccp_checklist(chef_naam, checklist_id):
+        if session['chef_naam'] != chef_naam:
+            return jsonify({'success': False, 'error': 'Geen toegang'}), 403
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             return jsonify({'success': False, 'error': 'Geen toegang'}), 403
 
@@ -1958,23 +2053,12 @@ def create_app():
             logger.error(f'Error deleting HACCP checklist: {str(e)}')
             return jsonify({'success': False, 'error': str(e)}), 500
 
-    # ...existing code...
-
-    # ...existing code...
-
     # -----------------------------------------------------------
     #  Terms and Conditions
     # -----------------------------------------------------------
     @app.route('/terms')
     def terms():
         return render_template('terms.html', form=FlaskForm())
-
-    # -----------------------------------------------------------
-    #  Quickstart Guide
-    # -----------------------------------------------------------
-    # @app.route('/quickstart/')
-    # def quickstart_index():
-    #     return render_template('quickstart.html', form=FlaskForm())
 
     # Add alias for backward compatibility of 'quickstart' endpoint:
     @app.route('/quickstart', endpoint='quickstart')
@@ -1998,12 +2082,20 @@ def create_app():
     #  Beheer Module (Stamgegevens)
     # -----------------------------------------------------------
     @app.route('/dashboard/<chef_naam>/beheer', methods=['GET', 'POST'])
+    @login_required
     def beheer(chef_naam):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             flash("Geen toegang. Log opnieuw in.", "danger")
             return redirect(url_for('login'))
 
-        form = FlaskForm()
+        leverancier_form = LeverancierForm(prefix="leverancier")
+        eenheid_form = EenheidForm(prefix="eenheid")
+        categorie_form = CategorieForm(prefix="categorie")
+        dish_category_form = DishCategoryForm(prefix="dish_category")
+
         conn = get_db_connection()
         if conn is None:
             flash("Database connection error.", "danger")
@@ -2041,47 +2133,50 @@ def create_app():
             """, (session['chef_id'],))
             dish_categories = cur.fetchall()
 
-            if request.method == 'POST' and form.validate_on_submit():
-                if 'leverancier_naam' in request.form:
-                    naam = request.form.get('leverancier_naam')
-                    contact = request.form.get('leverancier_contact')
-                    telefoon = request.form.get('leverancier_telefoon')
-                    email = request.form.get('leverancier_email')
+            if request.method == 'POST':
+                if leverancier_form.validate_on_submit() and leverancier_form.submit.data:
+                    naam = leverancier_form.leverancier_naam.data
+                    contact = leverancier_form.leverancier_contact.data
+                    telefoon = leverancier_form.leverancier_telefoon.data
+                    email = leverancier_form.leverancier_email.data
                     cur.execute("""
                         INSERT INTO leveranciers (chef_id, naam, contact, telefoon, email) 
                         VALUES (%s, %s, %s, %s, %s)
                     """, (session['chef_id'], naam, contact, telefoon, email))
-                    
-                elif 'nieuwe_eenheid' in request.form:
-                    naam = request.form.get('nieuwe_eenheid')
+                    conn.commit()
+                    flash("Leverancier toegevoegd!", "success")
+                    return redirect(url_for('beheer', chef_naam=chef_naam))
+
+                elif eenheid_form.validate_on_submit() and eenheid_form.submit.data:
+                    naam = eenheid_form.nieuwe_eenheid.data
                     cur.execute("""
                         INSERT INTO eenheden (chef_id, naam)
                         VALUES (%s, %s)
                     """, (session['chef_id'], naam))
-                    
-                elif 'nieuwe_categorie' in request.form:
-                    naam = request.form.get('nieuwe_categorie')
+                    conn.commit()
+                    flash("Eenheid toegevoegd!", "success")
+                    return redirect(url_for('beheer', chef_naam=chef_naam))
+
+                elif categorie_form.validate_on_submit() and categorie_form.submit.data:
+                    naam = categorie_form.nieuwe_categorie.data
                     cur.execute("""
                         INSERT INTO categorieen (chef_id, naam)
                         VALUES (%s, %s)
                     """, (session['chef_id'], naam))
+                    conn.commit()
+                    flash("Categorie toegevoegd!", "success")
+                    return redirect(url_for('beheer', chef_naam=chef_naam))
 
-                elif 'nieuwe_dish_category' in request.form:
-                    naam = request.form.get('nieuwe_dish_category')
-                    volgorde_str = request.form.get('volgorde', '0')  # Default to '0' if empty
-                    try:
-                        volgorde = int(volgorde_str)
-                    except ValueError:
-                        flash("Ongeldige volgorde nummer. Gebruik een getal.", "danger")
-                        return redirect(url_for('beheer', chef_naam=chef_naam))
+                elif dish_category_form.validate_on_submit() and dish_category_form.submit.data:
+                    naam = dish_category_form.nieuwe_dish_category.data
+                    volgorde = dish_category_form.volgorde.data
                     cur.execute("""
                         INSERT INTO dish_categories (chef_id, naam, volgorde)
                         VALUES (%s, %s, %s)
                     """, (session['chef_id'], naam, volgorde))
-
-                conn.commit()
-                flash("Wijzigingen opgeslagen!", "success")
-                return redirect(url_for('beheer', chef_naam=chef_naam))
+                    conn.commit()
+                    flash("Dish Category toegevoegd!", "success")
+                    return redirect(url_for('beheer', chef_naam=chef_naam))
 
             return render_template('beheer.html',
                                 chef_naam=chef_naam,
@@ -2089,7 +2184,11 @@ def create_app():
                                 eenheden=eenheden,
                                 categorieen=categorieen,
                                 dish_categories=dish_categories,
-                                form=form)
+                                leverancier_form=leverancier_form,
+                                eenheid_form=eenheid_form,
+                                categorie_form=categorie_form,
+                                dish_category_form=dish_category_form,
+                                form=FlaskForm())
 
         except Exception as e:
             conn.rollback()
@@ -2100,7 +2199,10 @@ def create_app():
             conn.close()
 
     @app.route('/dashboard/<chef_naam>/dish_category/<int:category_id>/update', methods=['POST'])
+    @login_required
     def update_dish_category(chef_naam, category_id):
+        if session['chef_naam'] != chef_naam:
+            return jsonify({'success': False, 'error': 'Geen toegang'}), 403
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             return jsonify({'success': False, 'error': 'Geen toegang'}), 403
 
@@ -2129,7 +2231,10 @@ def create_app():
             conn.close()
 
     @app.route('/dashboard/<chef_naam>/dish_category/<int:category_id>/delete', methods=['POST'])
+    @login_required
     def delete_dish_category(chef_naam, category_id):
+        if session['chef_naam'] != chef_naam:
+            return jsonify({'success': False, 'error': 'Geen toegang'}), 403
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             return jsonify({'success': False, 'error': 'Geen toegang'}), 403
 
@@ -2168,10 +2273,11 @@ def create_app():
             cur.close()
             conn.close()
 
-    # ...existing code...
-
     @app.route('/dashboard/<chef_naam>/eenheid/<int:eenheid_id>/update', methods=['POST'])
+    @login_required
     def update_eenheid(chef_naam, eenheid_id):
+        if session['chef_naam'] != chef_naam:
+            return jsonify({'success': False, 'error': 'Geen toegang'}), 403
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             return jsonify({'success': False, 'error': 'Geen toegang'}), 403
 
@@ -2209,7 +2315,10 @@ def create_app():
             conn.close()
 
     @app.route('/dashboard/<chef_naam>/eenheid/<int:eenheid_id>/delete', methods=['POST'])
+    @login_required
     def delete_eenheid(chef_naam, eenheid_id):
+        if session['chef_naam'] != chef_naam:
+            return jsonify({'success': False, 'error': 'Geen toegang'}), 403
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             return jsonify({'success': False, 'error': 'Geen toegang'}), 403
 
@@ -2249,7 +2358,13 @@ def create_app():
             conn.close()
 
     @app.route('/dashboard/<chef_naam>/categorie/<int:categorie_id>/update', methods=['POST'])
+    @login_required
     def update_categorie(chef_naam, categorie_id):
+        if session['chef_naam'] != chef_naam:
+            return jsonify({'success': False, 'error': 'Geen toegang'}), 403
+        if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+            return jsonify({'success': False, 'error': 'Geen toegang'}), 403
+
         # Log alle inkomende data
         logger.info(f"Received update request for categorie {categorie_id}")
         logger.info(f"Request JSON: {request.get_json()}")
@@ -2305,7 +2420,10 @@ def create_app():
                 conn.close()
 
     @app.route('/dashboard/<chef_naam>/categorie/<int:categorie_id>/delete', methods=['POST'])
+    @login_required
     def delete_categorie(chef_naam, categorie_id):
+        if session['chef_naam'] != chef_naam:
+            return jsonify({'success': False, 'error': 'Geen toegang'}), 403
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             return jsonify({'success': False, 'error': 'Geen toegang'}), 403
 
@@ -2348,7 +2466,11 @@ def create_app():
     #  Leveranciers Beheren
     # -----------------------------------------------------------
     @app.route('/dashboard/<chef_naam>/suppliers', methods=['GET', 'POST'])
+    @login_required
     def manage_suppliers(chef_naam):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             flash("Geen toegang. Log opnieuw in.", "danger")
             return redirect(url_for('login'))
@@ -2435,7 +2557,10 @@ def create_app():
             conn.close()
 
     @app.route('/dashboard/<chef_naam>/suppliers/<leverancier_id>/delete', methods=['POST'])
+    @login_required
     def delete_supplier(chef_naam, leverancier_id):
+        if session['chef_naam'] != chef_naam:
+            return jsonify({'success': False, 'error': 'Geen toegang'}), 403
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             return jsonify({'success': False, 'error': 'Geen toegang'}), 403
 
@@ -2479,7 +2604,10 @@ def create_app():
             conn.close()
 
     @app.route('/dashboard/<chef_naam>/suppliers/<int:leverancier_id>/edit', methods=['POST'])
+    @login_required
     def edit_supplier(chef_naam, leverancier_id):
+        if session['chef_naam'] != chef_naam:
+            return jsonify({'success': False, 'error': 'Geen toegang'}), 403
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             return jsonify({'success': False, 'error': 'Geen toegang'}), 403
 
@@ -2512,11 +2640,15 @@ def create_app():
             conn.close()
 
     @app.route('/dashboard/<chef_naam>')
+    @login_required
     def dashboard(chef_naam):
         """Dashboard page after login"""
-        if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        if session['chef_naam'] != chef_naam:
             flash("Geen toegang. Log opnieuw in.", "danger")
             return redirect(url_for('auth.login'))
+        if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('login'))
             
         return render_template('dashboard.html', chef_naam=chef_naam, form=FlaskForm())
 
@@ -2542,4 +2674,3 @@ if __name__ == '__main__':
     else:
         # Use gunicorn in production (Heroku)
         application.run(host='0.0.0.0', port=port)
-
