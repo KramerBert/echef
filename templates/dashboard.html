@@ -45,7 +45,7 @@
                 <a href="{{ url_for('haccp_dashboard', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="HACCP Dashboard">
                     <i class="fas fa-clipboard-check"></i> HACCP automatiseren
                 </a>
-                <a href="{{ url_for('profile', chef_naam=chef_naam) }}" class="dashboard-btn">
+                <a href="{{ url_for('profile.profile', chef_naam=chef_naam) }}" class="dashboard-btn">
                     <i class="fas fa-user-cog"></i> Profiel Instellingen
                 </a>
                 <a href="{{ url_for('beheer', chef_naam=chef_naam) }}" class="dashboard-btn">
