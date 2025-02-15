@@ -36,6 +36,7 @@ from blueprints.auth.routes import LoginForm, ForgotPasswordForm, ResetPasswordF
 from blueprints.auth.utils import generate_confirmation_token, confirm_token, send_confirmation_email, send_reset_email, hash_password
 from blueprints import auth
 from utils.db import get_db_connection
+from blueprints.profile.routes import bp as profile_bp
 
 load_dotenv()  # Load the values from .env
 
@@ -74,6 +75,7 @@ def create_app():
     app.register_blueprint(terms_bp, url_prefix='/terms')
     app.register_blueprint(privacy_bp, url_prefix='/privacy')
     app.register_blueprint(auth_bp, template_folder='templates')
+    app.register_blueprint(profile_bp)
 
     # Register template filters and helper functions inside create_app
     def nl2br(value):
