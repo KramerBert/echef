@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.form-group {
+    margin-bottom: 1.5rem;
+    width: 100%;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    color: var(--text-light);
+}
+
+input[type="text"],
+input[type="number"],
+textarea,
+select {
+    width: 100%;
+    min-width: 300px;
+    max-width: 800px;
+    padding: 8px;
+    margin-top: 5px;
+    background-color: var(--kitchen-dark);
+    color: var(--text-light);
+    box-sizing: border-box;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+textarea:focus,
+input:focus {
+    background-color: var(--focus-bg-color, #444);
+    color: var(--focus-text-color, #fff);
+    outline: none;
+    border-color: var(--highlight-color, #6c757d);
+}
+
+textarea {
+    min-height: 100px;
+}
+
+.ingredient-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    max-width: 1200px;
+    margin-bottom: 20px;
+}
+
+.ingredient-form select#categorie_filter {
+    flex: 1;
+}
+
+.ingredient-form select#ingredient_id {
+    flex: 3;
+}
+
+.ingredient-form input {
+    flex: 0.25;
+    max-width: 50px;
+    padding: 8px;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+}
+
+.ingredient-form button {
+    white-space: nowrap;
+    flex: 0.5;
+}
+
+.hoeveelheid-wrapper {
+    width: 80px;
+    flex-shrink: 0;
+}
+
+.hoeveelheid-wrapper input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+}
+
+.ingredient-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ingredient-table th {
+    text-align: left;
+    padding: 8px;
+    white-space: nowrap;
+    background-color: var(--table-header-bg, #f8f9fa);
+    color: var(--text-dark);
+    border-bottom: 2px solid var(--border-color, #ccc);
+}
+
+.ingredient-table td {
+    padding: 8px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-color, #ddd);
+}
+
+.ingredient-table input[type="number"] {
+    width: 60px;
+    padding: 4px;
+    margin: 0;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+}
+
+.ingredient-table .small-button {
+    padding: 4px 8px;
+    margin-left: 4px;
+    font-size: 12px;
+}
+
+.edit-dish-form {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.edit-section {
+    margin-bottom: 2rem;
+    width: 100%;
+}
+
+.edit-section h3,
+.form-group h3 {
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+form {
+    margin: 0;
+    padding: 0;
+}
+
+.form-group,
+.edit-section .form-control {
+    width: 100%;
+    max-width: 100%;
+}
+
+h2, h3, p {
+    margin-left: 0;
+    padding-left: 0;
+}
+
+.total-cost {
+    font-size: 24px;
+    margin: 20px 0;
+    padding: 10px 0;
+    color: #2c3e50;
+    font-weight: bold;
+}
+
+.verkoopprijs-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+}
+
+.verkoopprijs-input {
+    width: 10%;
+    padding: 0.5rem;
+    border: 1px solid var(--kitchen-steel);
+    border-radius: 4px;
+    background-color: var(--kitchen-dark);
+    color: var(--text-light);
+}
+
+@media (max-width: 768px) {
+    .ingredient-form,
+    .verkoopprijs-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+
+    .ingredient-form input,
+    .ingredient-form select,
+    .verkoopprijs-input {
+        width: 100%;
+        max-width: none;
+    }
+}
+
+.dieet-icon {
+    margin-right: 5px;
+}
+
+.allergen-label,
+.diet-label {
+    color: var(--kitchen-steel);
+}
+
+
+</style>
+
+<div class="edit-dish-form">
+    <h2>Kostprijs bewerken: {{ gerecht.naam }}</h2>
+    <p>Plaats in het menu: {{ gerecht.categorie }}</p>
+    <p>Verkoopprijs: {{ gerecht.verkoopprijs if gerecht.verkoopprijs else 'n.v.t.' }}</p>
+
+    <div class="form-group">
+        <h3>Kostprijsberekening: Ingrediënten toevoegen</h3>
+        <form method="POST" action="{{ url_for('manage_dish_costs', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}" class="ingredient-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="ingredientForm" value="1">
+            
+            <select id="categorie_filter" class="form-control" onchange="filterIngredients()">
+                <option value="">Selecteer categorieën</option>
+                {% set categories = [] %}
+                {% for ingr in alle_ingredienten %}
+                    {% if ingr.categorie not in categories %}
+                        {% set _ = categories.append(ingr.categorie) %}
+                        <option value="{{ ingr.categorie }}">{{ ingr.categorie }}</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+            
+            <select id="ingredient_id" name="ingredient_id" class="form-control" required>
+                <option value="" disabled selected>Selecteer Ingrediënt</option>
+                {% for ingr in alle_ingredienten %}
+                <option value="{{ ingr.ingredient_id }}" data-category="{{ ingr.categorie }}">
+                    {{ ingr.naam }} ({{ ingr.eenheid }}) - €{{ ingr.prijs_per_eenheid }} per {{ ingr.eenheid }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <div class="hoeveelheid-wrapper">
+                <input type="number" 
+                       step="0.01" 
+                       id="hoeveelheid" 
+                       name="hoeveelheid" 
+                       required 
+                       placeholder="Hoev.">
+            </div>
+
+            <div style="width: 100%; margin-top: 15px;">
+                <button type="submit" class="btn btn-primary">Ingrediënt toevoegen</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="form-group">
+        <hr style="border-top: 1px solid var(--border-color, #ccc); margin: 2rem 0;">
+        <h3>Kostprijsberekening:</h3>
+        <div id="ingredienten-tabel">  <!-- Voeg deze div met ID toe -->
+        {% if gerecht_ingredienten %}
+        <table class="ingredient-table">
+            <tr>
+                <th>Ingrediënt</th>
+                <th class="col-hoeveelheid">Hoeveelheid</th>
+                <th>Eenheid</th>
+                <th class="col-prijs">Prijs/E</th>
+                <th class="col-prijs">Totaal</th>
+                <th>Acties</th>
+            </tr>
+            {% for gi in gerecht_ingredienten %}
+            <tr>
+                <td>{{ gi.ingredient_naam }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('update_dish_ingredient', chef_naam=chef_naam, dish_id=gerecht.dish_id, ingredient_id=gi.ingredient_id) }}" style="display: inline-flex; align-items: center;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="number" 
+                               step="0.01" 
+                               name="nieuwe_hoeveelheid" 
+                               value="{{ gi.hoeveelheid }}"
+                               class="form-control">
+                        <button type="submit" class="small-button">Update</button>
+                    </form>
+                </td>
+                <td>{{ gi.eenheid }}</td>
+                <td>€{{ gi.prijs_per_eenheid }}</td>
+                <td>€{{ gi.prijs_totaal }}</td>
+                <td>
+                    
+                    <form method="POST" action="{{ url_for('remove_dish_ingredient', chef_naam=chef_naam, dish_id=gerecht.dish_id, ingredient_id=gi.ingredient_id) }}" style="display: inline;" onsubmit="return confirm('Weet u zeker dat u dit ingrediënt wilt verwijderen?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="small-button">Ingredient loskoppelen</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        <p><strong>Totale kostprijs: € {{ "%.2f"|format(totaal_ingredient_prijs|float) }}</strong></p>
+        <hr>
+        <p class="total-cost">Totaal kostprijs: € {{ totaal_ingredient_prijs }}</p>
+
+        <div class="form-group" id="verkoopprijs-sectie">
+            <h3>Verkoopprijs bijwerken</h3>
+            <form method="POST" action="{{ url_for('manage_dish_costs', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="priceForm" value="1">
+                <div class="form-group verkoopprijs-form">
+                    € <input type="number" step="0.01" id="verkoopprijs" name="verkoopprijs" value="{{ gerecht.verkoopprijs }}" class="form-control verkoopprijs-input" oninput="adjustWidth(this)"> 
+                    <button type="submit" class="btn btn-primary">Verkoopprijs Opslaan</button>
+                </div>
+            </form>
+        </div>
+
+        {% else %}
+        <p>Er zijn nog geen ingrediënten aan dit gerecht toegevoegd.</p>
+        {% endif %}
+        </div>
+    </div>
+    <div class="edit-section">
+        <a href="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}" class="btn btn-secondary">Terug naar gerecht bewerken</a>
+    </div>
+</div>
+
+<script>
+function filterIngredients() {
+    const category = document.getElementById('categorie_filter').value;
+    const ingredientSelect = document.getElementById('ingredient_id');
+    const options = ingredientSelect.getElementsByTagName('option');
+
+    for (let option of options) {
+        if (option.disabled) continue; // Skip de "Selecteer Ingrediënt" optie
+        
+        if (!category || option.getAttribute('data-category') === category) {
+            option.style.display = '';
+        } else {
+            option.style.display = 'none';
+        }
+    }
+}
+
+// Filter direct bij het laden van de pagina
+document.addEventListener('DOMContentLoaded', function() {
+    filterIngredients();
+});
+
+function adjustWidth(element) {
+    element.style.width = ((element.value.length * 0.6) + 2) + 'em';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const verkoopprijsInput = document.getElementById('verkoopprijs');
+    if (verkoopprijsInput) {
+        adjustWidth(verkoopprijsInput);
+    }
+});
+</script>
+
+{% endblock %}

@@ -1435,7 +1435,13 @@ def create_app():
             cur.close()
             conn.close()
 
-    
+    # -----------------------------------------------------------
+    #  Werkinstructie
+    # -----------------------------------------------------------
+    # @app.route('/instructions')
+    # def instructions():
+    #     return render_template('instructions.html', form=FlaskForm())
+
     # -----------------------------------------------------------
     #  Bestellijst Beheren
     # -----------------------------------------------------------
@@ -1496,14 +1502,13 @@ def create_app():
 
         try:
             total_cost = 0  # Variabele voor totale kostprijs
-            ingredient_total = 0
+            ingredient_total = 0  # Verplaatst naar hier voor betere scope
+
+            # Gebruik een dictionary met tuple als key voor de ingrediënten
             total_ingredients = {}
             dishes_info = {}
-            total_order_cost = 0  # New variable for total ordering costs
 
             for dish_id, quantity in dish_quantities.items():
-                # Initialize ingredient cost for this dish
-                dish_ingredient_cost = 0
                 # Haal gerecht informatie op
                 cur.execute("""
                     SELECT * FROM dishes 
@@ -1538,21 +1543,12 @@ def create_app():
                             supplier_key = ing['leverancier_naam'] or 'Geen leverancier'
                             if supplier_key not in total_ingredients:
                                 total_ingredients[supplier_key] = []
-
-                            # Calculate the cost for this ingredient
-                            ingredient_cost = float(ing['hoeveelheid']) * float(ing['prijs_per_eenheid'] or 0) * quantity
-                            total_order_cost += ingredient_cost  # Add to total order cost
-
                             total_ingredients[supplier_key].append({
                                 'naam': ing['ingredient_naam'],
                                 'hoeveelheid': float(ing['hoeveelheid']) * quantity,
                                 'eenheid': ing['eenheid'],
-                                'prijs': float(ing['prijs_per_eenheid'] or 0),
-                                'totaal_prijs': ingredient_cost  # Add total price for this ingredient
+                                'prijs': float(ing['prijs_per_eenheid'] or 0)
                             })
-                            # Calculate ingredient cost
-                            dish_ingredient_cost += ingredient_cost
-                            ingredient_total += dish_ingredient_cost
                     except Exception as e:
                         logger.error(f'Error processing ingredients for dish {dish_id}: {str(e)}')
                         continue
@@ -1563,32 +1559,15 @@ def create_app():
 
             for supplier, ingredients in total_ingredients.items():
                 doc.add_heading(f'Leverancier: {supplier}', level=1)
-                table = doc.add_table(rows=1, cols=5)  # Added column for total price
+                table = doc.add_table(rows=1, cols=4)
                 table.style = 'Table Grid'
                 
-                # Add headers
-                headers = table.rows[0].cells
-                headers[0].text = 'Ingrediënt'
-                headers[1].text = 'Hoeveelheid'
-                headers[2].text = 'Eenheid'
-                headers[3].text = 'Prijs per eenheid'
-                headers[4].text = 'Totaal'
-                
-                supplier_total = 0
                 for ingredient in ingredients:
                     row = table.add_row().cells
                     row[0].text = ingredient['naam']
                     row[1].text = f"{ingredient['hoeveelheid']:.2f}"
                     row[2].text = ingredient['eenheid']
                     row[3].text = f"€{ingredient['prijs']:.2f}"
-                    row[4].text = f"€{ingredient['totaal_prijs']:.2f}"
-                    supplier_total += ingredient['totaal_prijs']
-
-                # Add supplier total with bold formatting
-                total_row = table.add_row().cells
-                # Add bold styling to the cells
-                total_row[0].paragraphs[0].add_run('Totaal voor leverancier:').bold = True
-                total_row[4].paragraphs[0].add_run(f"€{supplier_total:.2f}").bold = True
 
                 doc.add_paragraph()
 
@@ -1600,7 +1579,7 @@ def create_app():
             cost_table.style = 'Table Grid'
             cost_row = cost_table.rows[0].cells
             cost_row[0].text = 'Totale Ingrediëntenkosten:'
-            cost_row[1].text = f"€{total_order_cost:.2f}"
+            cost_row[1].text = f"€{ingredient_total:.2f}"
 
             # Verwachte verkoopprijs
             price_row = cost_table.add_row().cells
@@ -1608,7 +1587,7 @@ def create_app():
             price_row[1].text = f"€{total_cost:.2f}"
 
             # Verwachte winst
-            expected_profit = total_cost - total_order_cost
+            expected_profit = total_cost - ingredient_total
             profit_row = cost_table.add_row().cells
             profit_row[0].text = 'Verwachte Winst:'
             profit_row[1].text = f"€{expected_profit:.2f}"
@@ -2674,6 +2653,132 @@ def create_app():
             return redirect(url_for('login'))
             
         return render_template('dashboard.html', chef_naam=chef_naam, form=FlaskForm())
+
+    @app.route('/dashboard/<chef_naam>/dish/<int:dish_id>/costs', methods=['GET', 'POST'])
+    @login_required
+    def manage_dish_costs(chef_naam, dish_id):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
+        
+        form = FlaskForm()
+        if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('login'))
+
+        conn = get_db_connection()
+        if conn is None:
+            flash("Database connection error.", "danger")
+            return redirect(url_for('all_dishes'))
+        
+        cur = conn.cursor(dictionary=True)
+
+        try:
+            # Fetch dish info
+            cur.execute("""
+                SELECT * FROM dishes 
+                WHERE dish_id = %s AND chef_id = %s
+            """, (dish_id, session['chef_id']))
+            gerecht = cur.fetchone()
+
+            if not gerecht:
+                flash("Gerecht niet gevonden.", "danger")
+                return redirect(url_for('all_dishes'))
+
+            if request.method == 'POST':
+                if not form.validate_on_submit():
+                    flash("Ongeldige CSRF-token.", "danger")
+                    return redirect(url_for('manage_dish_costs', chef_naam=chef_naam, dish_id=dish_id))
+
+                if 'ingredientForm' in request.form:
+                    ingredient_id = request.form.get('ingredient_id')
+                    hoeveelheid = request.form.get('hoeveelheid')
+
+                    # Calculate total price
+                    cur.execute("""
+                        SELECT prijs_per_eenheid 
+                        FROM ingredients 
+                        WHERE ingredient_id = %s 
+                        AND chef_id = %s
+                    """, (ingredient_id, session['chef_id']))
+                    ingredient_info = cur.fetchone()
+                    
+                    if ingredient_info:
+                        prijs_per_eenheid = ingredient_info['prijs_per_eenheid']
+                        prijs_totaal = float(hoeveelheid) * float(prijs_per_eenheid)
+
+                        try:
+                            # Check if ingredient already exists
+                            cur.execute("""
+                                SELECT * FROM dish_ingredients 
+                                WHERE dish_id = %s AND ingredient_id = %s
+                            """, (dish_id, ingredient_id))
+                            if cur.fetchone():
+                                flash("Dit ingrediënt is al toegevoegd.", "danger")
+                            else:
+                                cur.execute("""
+                                    INSERT INTO dish_ingredients 
+                                    (dish_id, ingredient_id, hoeveelheid, prijs_totaal)
+                                    VALUES (%s, %s, %s, %s)
+                                """, (dish_id, ingredient_id, hoeveelheid, prijs_totaal))
+                                conn.commit()
+                                flash("Ingrediënt toegevoegd!", "success")
+                        except Exception as e:
+                            conn.rollback()
+                            flash(f"Fout bij toevoegen: {str(e)}", "danger")
+
+                elif 'priceForm' in request.form:
+                    nieuwe_verkoopprijs = request.form.get('verkoopprijs')
+                    try:
+                        cur.execute("""
+                            UPDATE dishes
+                            SET verkoopprijs = %s
+                            WHERE dish_id = %s AND chef_id = %s
+                        """, (nieuwe_verkoopprijs, dish_id, session['chef_id']))
+                        conn.commit()
+                        flash("Verkoopprijs bijgewerkt!", "success")
+                        return redirect(url_for('manage_dish_costs', chef_naam=chef_naam, dish_id=dish_id))
+                    except Exception as e:
+                        conn.rollback()
+                        flash(f"Fout bij bijwerken prijs: {str(e)}", "danger")
+
+            # Get all ingredients
+            cur.execute("""
+                SELECT * FROM ingredients 
+                WHERE chef_id = %s
+                ORDER BY naam
+            """, (session['chef_id'],))
+            alle_ingredienten = cur.fetchall()
+
+            # Get linked ingredients
+            cur.execute("""
+                SELECT di.*, i.naam AS ingredient_naam, i.eenheid, i.prijs_per_eenheid
+                FROM dish_ingredients di
+                JOIN ingredients i ON di.ingredient_id = i.ingredient_id
+                WHERE di.dish_id = %s
+            """, (dish_id,))
+            gerecht_ingredienten = cur.fetchall()
+
+            # Calculate total cost
+            totaal_ingredient_prijs = sum(float(gi['prijs_totaal']) for gi in gerecht_ingredienten)
+
+            return render_template(
+                'manage_dish_costs.html',
+                chef_naam=chef_naam,
+                gerecht=gerecht,
+                alle_ingredienten=alle_ingredienten,
+                gerecht_ingredienten=gerecht_ingredienten,
+                totaal_ingredient_prijs=totaal_ingredient_prijs,
+                form=form
+            )
+
+        except Exception as e:
+            logger.error(f'Error in manage_dish_costs: {str(e)}')
+            flash("Er is een fout opgetreden.", "danger")
+            return redirect(url_for('all_dishes'))
+        finally:
+            cur.close()
+            conn.close()
 
     return app
 

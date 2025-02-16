@@ -6,9 +6,6 @@
         <a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}" class="btn-action">
             <i class="fas fa-arrow-left"></i> Dashboard
         </a>
-        <a href="{{ url_for('manage_dishes', chef_naam=session.get('chef_naam')) }}" class="btn-action">
-            <i class="fas fa-plus"></i> Nieuw gerecht
-        </a>
     </div>
 
     <h2>Alle Gerechten</h2>
@@ -46,6 +43,7 @@
                             <a href="{{ url_for('edit_dish', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" class="btn-action btn-edit">
                                 <i class="fas fa-edit"></i> Gerecht Bewerken
                             </a>
+                            <a href="{{ url_for('manage_dish_costs', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" class="btn btn-secondary">Kostprijs</a>
                             <form method="POST" action="{{ url_for('export_dish', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" style="display: inline;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn-action btn-export">
