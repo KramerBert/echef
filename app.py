@@ -39,6 +39,7 @@ from utils.db import get_db_connection
 from blueprints.profile.routes import bp as profile_bp
 from blueprints.about.routes import bp as about_bp  # Add this import
 from forms import LeverancierForm, EenheidForm, CategorieForm, DishCategoryForm
+from blueprints.haccp_api import bp as haccp_api_bp
 
 load_dotenv()  # Load the values from .env
 
@@ -80,6 +81,7 @@ def create_app():
     app.register_blueprint(auth_bp, template_folder='templates')
     app.register_blueprint(profile_bp)
     app.register_blueprint(about_bp)
+    app.register_blueprint(haccp_api_bp)
     
     # Register template filters and helper functions inside create_app
     def nl2br(value):
@@ -1433,13 +1435,7 @@ def create_app():
             cur.close()
             conn.close()
 
-    # -----------------------------------------------------------
-    #  Werkinstructie
-    # -----------------------------------------------------------
-    # @app.route('/instructions')
-    # def instructions():
-    #     return render_template('instructions.html', form=FlaskForm())
-
+    
     # -----------------------------------------------------------
     #  Bestellijst Beheren
     # -----------------------------------------------------------
@@ -1500,13 +1496,14 @@ def create_app():
 
         try:
             total_cost = 0  # Variabele voor totale kostprijs
-            ingredient_total = 0  # Verplaatst naar hier voor betere scope
-
-            # Gebruik een dictionary met tuple als key voor de ingrediënten
+            ingredient_total = 0
             total_ingredients = {}
             dishes_info = {}
+            total_order_cost = 0  # New variable for total ordering costs
 
             for dish_id, quantity in dish_quantities.items():
+                # Initialize ingredient cost for this dish
+                dish_ingredient_cost = 0
                 # Haal gerecht informatie op
                 cur.execute("""
                     SELECT * FROM dishes 
@@ -1541,12 +1538,21 @@ def create_app():
                             supplier_key = ing['leverancier_naam'] or 'Geen leverancier'
                             if supplier_key not in total_ingredients:
                                 total_ingredients[supplier_key] = []
+
+                            # Calculate the cost for this ingredient
+                            ingredient_cost = float(ing['hoeveelheid']) * float(ing['prijs_per_eenheid'] or 0) * quantity
+                            total_order_cost += ingredient_cost  # Add to total order cost
+
                             total_ingredients[supplier_key].append({
                                 'naam': ing['ingredient_naam'],
                                 'hoeveelheid': float(ing['hoeveelheid']) * quantity,
                                 'eenheid': ing['eenheid'],
-                                'prijs': float(ing['prijs_per_eenheid'] or 0)
+                                'prijs': float(ing['prijs_per_eenheid'] or 0),
+                                'totaal_prijs': ingredient_cost  # Add total price for this ingredient
                             })
+                            # Calculate ingredient cost
+                            dish_ingredient_cost += ingredient_cost
+                            ingredient_total += dish_ingredient_cost
                     except Exception as e:
                         logger.error(f'Error processing ingredients for dish {dish_id}: {str(e)}')
                         continue
@@ -1557,15 +1563,32 @@ def create_app():
 
             for supplier, ingredients in total_ingredients.items():
                 doc.add_heading(f'Leverancier: {supplier}', level=1)
-                table = doc.add_table(rows=1, cols=4)
+                table = doc.add_table(rows=1, cols=5)  # Added column for total price
                 table.style = 'Table Grid'
                 
+                # Add headers
+                headers = table.rows[0].cells
+                headers[0].text = 'Ingrediënt'
+                headers[1].text = 'Hoeveelheid'
+                headers[2].text = 'Eenheid'
+                headers[3].text = 'Prijs per eenheid'
+                headers[4].text = 'Totaal'
+                
+                supplier_total = 0
                 for ingredient in ingredients:
                     row = table.add_row().cells
                     row[0].text = ingredient['naam']
                     row[1].text = f"{ingredient['hoeveelheid']:.2f}"
                     row[2].text = ingredient['eenheid']
                     row[3].text = f"€{ingredient['prijs']:.2f}"
+                    row[4].text = f"€{ingredient['totaal_prijs']:.2f}"
+                    supplier_total += ingredient['totaal_prijs']
+
+                # Add supplier total with bold formatting
+                total_row = table.add_row().cells
+                # Add bold styling to the cells
+                total_row[0].paragraphs[0].add_run('Totaal voor leverancier:').bold = True
+                total_row[4].paragraphs[0].add_run(f"€{supplier_total:.2f}").bold = True
 
                 doc.add_paragraph()
 
@@ -1577,7 +1600,7 @@ def create_app():
             cost_table.style = 'Table Grid'
             cost_row = cost_table.rows[0].cells
             cost_row[0].text = 'Totale Ingrediëntenkosten:'
-            cost_row[1].text = f"€{ingredient_total:.2f}"
+            cost_row[1].text = f"€{total_order_cost:.2f}"
 
             # Verwachte verkoopprijs
             price_row = cost_table.add_row().cells
@@ -1585,7 +1608,7 @@ def create_app():
             price_row[1].text = f"€{total_cost:.2f}"
 
             # Verwachte winst
-            expected_profit = total_cost - ingredient_total
+            expected_profit = total_cost - total_order_cost
             profit_row = cost_table.add_row().cells
             profit_row[0].text = 'Verwachte Winst:'
             profit_row[1].text = f"€{expected_profit:.2f}"

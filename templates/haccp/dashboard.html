@@ -337,7 +337,7 @@ function updateMeting() {
         actie: formData.get('actie_ondernomen')
     });
 
-    fetch(`/dashboard/${chef_naam}/haccp/meting/${metingId}/update`, {
+    fetch(`/api/haccp/meting/${metingId}/update`, {
         method: 'POST',
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
@@ -369,7 +369,7 @@ function updateMeting() {
 
 function verwijderChecklist(checklistId, checklistNaam) {
     if (confirm(`Weet je zeker dat je de checklist "${checklistNaam}" wilt verwijderen? Alle metingen worden ook verwijderd.`)) {
-        fetch(`/dashboard/{{ chef_naam }}/haccp/checklist/${checklistId}/delete`, {
+        fetch(`/api/haccp/checklist/${checklistId}/delete`, {
             method: 'POST',
         })
         .then(response => response.json())

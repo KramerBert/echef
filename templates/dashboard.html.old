@@ -49,14 +49,11 @@
                     <i class="fas fa-user-cog"></i> Profiel Instellingen
                 </a>
                 <a href="{{ url_for('beheer', chef_naam=chef_naam) }}" class="dashboard-btn">
-                    <i class="fas fa-cog"></i> Dropdowns beheren
-                </a>
-                <a href="{{ url_for('manage_suppliers', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Manage suppliers">
-                    <i class="fas fa-truck"></i> Leveranciers 
+                    <i class="fas fa-cog"></i> Beheer Stamgegevens
                 </a>
 
                 <a href="{{ url_for('instructions.index') }}" class="dashboard-btn" aria-label="Instructions">
-                    <i class="fas fa-book"></i> e-Chef Werkinstructie
+                    <i class="fas fa-book"></i> E-chef Werkinstructie
                 </a>
             </div>
         </div>

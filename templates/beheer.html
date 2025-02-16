@@ -7,76 +7,8 @@
         </a>
     </div>
 
-    <h2>Beheer Stamgegevens</h2>
-
-    <!-- Leveranciers Sectie -->
-    <div class="manage-section">
-        <h3>Leveranciers</h3>
-        <div class="table-responsive">
-            <table class="management-table">
-                <thead>
-                    <tr>
-                        <th>Naam</th>
-                        <th>Contact</th>
-                        <th>Telefoon</th>
-                        <th>E-mail</th>
-                        <th>Acties</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for leverancier in leveranciers %}
-                    <tr id="leverancier-row-{{ leverancier.leverancier_id }}"
-                        data-id="{{ leverancier.leverancier_id }}"
-                        data-naam="{{ leverancier.naam|tojson|safe }}"
-                        data-contact="{{ leverancier.contact|tojson|safe }}"
-                        data-telefoon="{{ leverancier.telefoon|tojson|safe }}"
-                        data-email="{{ leverancier.email|tojson|safe }}"
-                        data-type="leverancier">
-                        <td>
-                            <span class="display-value">{{ leverancier.naam }}</span>
-                            <input type="text" class="edit-input form-control" 
-                                   value="{{ leverancier.naam }}" style="display: none;">
-                        </td>
-                        <td>
-                            <span class="display-value">{{ leverancier.contact }}</span>
-                            <input type="text" class="edit-input form-control" 
-                                   value="{{ leverancier.contact }}" style="display: none;">
-                        </td>
-                        <td>
-                            <span class="display-value">{{ leverancier.telefoon }}</span>
-                            <input type="text" class="edit-input form-control" 
-                                   value="{{ leverancier.telefoon }}" style="display: none;">
-                        </td>
-                        <td>
-                            <span class="display-value">{{ leverancier.email }}</span>
-                            <input type="text" class="edit-input form-control" 
-                                   value="{{ leverancier.email }}" style="display: none;">
-                        </td>
-                        <td>
-                            <button class="btn-action btn-edit"><i class="fas fa-edit"></i></button>
-                            <button class="btn-action btn-save" style="display: none;"><i class="fas fa-save"></i></button>
-                            <button class="btn-action btn-delete"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        
-        <form method="POST" class="add-form">
-            {{ form.csrf_token }}
-            <input type="text" name="leverancier_naam" class="form-control" 
-                   placeholder="Naam nieuwe leverancier" required>
-            <input type="text" name="leverancier_contact" class="form-control" 
-                   placeholder="Naam contactper">
-            <input type="tel" name="leverancier_telefoon" class="form-control" 
-                   placeholder="Telefoonnummer">
-            <input type="email" name="leverancier_email" class="form-control" 
-                   placeholder="E-mail">
-            <button type="submit" class="btn-action">Leverancier Toevoegen</button>
-        </form>
-    </div>
-
+    <h2>Beheer Dropdowns</h2>
+    <p>Voeg nieuwe eenheden, categorieën en gerecht categorieën toe of bewerk bestaande.</p>
     <!-- Eenheden Sectie -->
     <div class="manage-section">
         <h3>Eenheden</h3>
