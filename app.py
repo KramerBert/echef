@@ -666,7 +666,6 @@ def create_app():
             alle_allergenen=alle_allergenen,
             gerecht_allergenen=gerecht_allergenen,
             alle_dieten=alle_dieten,
-            gerecht_dieten=gerecht_dieten,
             dish_categories=dish_categories, # Deze regel was al aanwezig, maar ik herhaal hem voor de zekerheid
             form=form  # Add form to template context
         )
@@ -1006,9 +1005,10 @@ def create_app():
                 price_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 price_paragraph.add_run(f"{naam} - €{verkoopprijs}").bold = True
 
-                # Voeg beschrijving toe
+                # Voeg beschrijving toe en converteer van HTML naar tekst
                 if dish['beschrijving']:
-                    desc_paragraph = doc.add_paragraph(dish['beschrijving'])
+                    desc_text = html_to_text(dish['beschrijving'])
+                    desc_paragraph = doc.add_paragraph(desc_text)
                     desc_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
                 # Haal allergenen op voor dit gerecht
