@@ -27,14 +27,14 @@ class LeverancierForm(FlaskForm):
     submit = SubmitField('Toevoegen')
 
 class EenheidForm(FlaskForm):
-    nieuwe_eenheid = StringField('Naam', validators=[DataRequired()])
+    nieuwe_eenheid = StringField('Nieuwe eenheid', validators=[DataRequired()])
     submit = SubmitField('Toevoegen')
 
 class CategorieForm(FlaskForm):
-    nieuwe_categorie = StringField('Naam', validators=[DataRequired()])
+    nieuwe_categorie = StringField('Nieuwe categorie', validators=[DataRequired()])
     submit = SubmitField('Toevoegen')
 
 class DishCategoryForm(FlaskForm):
-    nieuwe_dish_category = StringField('Naam', validators=[DataRequired()])
+    nieuwe_dish_category = StringField('Nieuwe gang', validators=[DataRequired()])
     volgorde = IntegerField('Volgorde', validators=[Optional()])
     submit = SubmitField('Toevoegen')

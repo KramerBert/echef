@@ -2188,7 +2188,7 @@ def create_app():
                     return redirect(url_for('beheer', chef_naam=chef_naam))
 
                 elif eenheid_form.validate_on_submit() and eenheid_form.submit.data:
-                    naam = eenheid_form.nieuwe_eenheid.data
+                    naam = eenheid_form.nieuwe_eenheid.data  # Changed from eenheid_nieuwe_eenheid
                     cur.execute("""
                         INSERT INTO eenheden (chef_id, naam)
                         VALUES (%s, %s)
@@ -2198,7 +2198,7 @@ def create_app():
                     return redirect(url_for('beheer', chef_naam=chef_naam))
 
                 elif categorie_form.validate_on_submit() and categorie_form.submit.data:
-                    naam = categorie_form.nieuwe_categorie.data
+                    naam = categorie_form.nieuwe_categorie.data  # Changed from categorie_nieuwe_categorie
                     cur.execute("""
                         INSERT INTO categorieen (chef_id, naam)
                         VALUES (%s, %s)
@@ -2208,14 +2208,14 @@ def create_app():
                     return redirect(url_for('beheer', chef_naam=chef_naam))
 
                 elif dish_category_form.validate_on_submit() and dish_category_form.submit.data:
-                    naam = dish_category_form.nieuwe_dish_category.data
-                    volgorde = dish_category_form.volgorde.data
+                    naam = dish_category_form.nieuwe_dish_category.data  # Changed from dish_category_nieuwe_dish_category
+                    volgorde = dish_category_form.volgorde.data  # Changed from dish_category_volgorde
                     cur.execute("""
                         INSERT INTO dish_categories (chef_id, naam, volgorde)
                         VALUES (%s, %s, %s)
                     """, (session['chef_id'], naam, volgorde))
                     conn.commit()
-                    flash("Dish Category toegevoegd!", "success")
+                    flash("Gang toegevoegd!", "success")
                     return redirect(url_for('beheer', chef_naam=chef_naam))
 
             return render_template('beheer.html',

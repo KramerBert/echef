@@ -44,9 +44,8 @@
         
         <form method="POST" class="add-form">
             {{ form.csrf_token }}
-            <input type="text" name="nieuwe_eenheid" class="form-control" 
-                   placeholder="Voer een nieuwe eenheid in..." required>
-            <button type="submit" class="btn-action">Eenheid Toevoegen</button>
+            {{ eenheid_form.nieuwe_eenheid(class="form-control", placeholder="Voer een nieuwe eenheid in...") }}
+            {{ eenheid_form.submit(class="btn-action") }}
         </form>
     </div>
 
@@ -85,9 +84,8 @@
         
         <form method="POST" class="add-form">
             {{ form.csrf_token }}
-            <input type="text" name="nieuwe_categorie" class="form-control" 
-                   placeholder="Voer een nieuwe categorie in..." required>
-            <button type="submit" class="btn-action">Categorie Toevoegen</button>
+            {{ categorie_form.nieuwe_categorie(class="form-control", placeholder="Voer een nieuwe categorie in...") }}
+            {{ categorie_form.submit(class="btn-action") }}
         </form>
     </div>
 
@@ -133,11 +131,9 @@
         
         <form method="POST" class="add-form">
             {{ form.csrf_token }}
-            <input type="text" name="nieuwe_dish_category" class="form-control" 
-                   placeholder="Voer een nieuwe gerecht categorie in..." required>
-            <input type="number" name="volgorde" class="form-control"
-                   placeholder="Volgorde nummer" required>
-            <button type="submit" class="btn-action">Categorie Toevoegen</button>
+            {{ dish_category_form.nieuwe_dish_category(class="form-control", placeholder="Voer een nieuwe gang in...") }}
+            {{ dish_category_form.volgorde(class="form-control", placeholder="Volgorde nummer") }}
+            {{ dish_category_form.submit(class="btn-action") }}
         </form> 
     </div>
 </div>
