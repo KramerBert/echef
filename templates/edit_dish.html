@@ -17,22 +17,35 @@
 input[type="text"],
 input[type="number"],
 textarea,
-select {
+select,
+.ck-editor__editable {
     width: 100%;
     padding: 8px;
     margin-top: 5px;
-    background-color: var(--kitchen-dark);
-    color: var(--text-light);
+    background-color: var(--kitchen-light, #fff) !important;
+    color: var(--text-dark, #333) !important;
     box-sizing: border-box;
     border: 1px solid var(--border-color, #ccc);
     border-radius: 4px;
     transition: background-color 0.3s ease, border-color 0.3s ease;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.ck.ck-editor__editable_inline {
+    max-height: 300px;
+    overflow-y: auto !important;
+}
+
+.ck-editor__editable {
+    min-height: 200px;
 }
 
 textarea:focus,
-input:focus {
-    background-color: var(--focus-bg-color, #444);
-    color: var(--focus-text-color, #fff);
+input:focus,
+.ck-focused {
+    background-color: var(--kitchen-light, #fff) !important;
+    color: var(--text-dark, #333) !important;
     outline: none;
     border-color: var(--highlight-color, #6c757d);
 }
@@ -202,6 +215,10 @@ h2, h3, p {
 
 </style>
 
+<head>
+    <script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+</head>
+
 <div class="edit-dish-form">
     <h2>Gerecht Bewerken: {{ gerecht.naam }}</h2>
     <p>Plaats in het menu: {{ gerecht.categorie }}</p>
@@ -220,7 +237,7 @@ h2, h3, p {
 
         <div class="form-group">
             <h3>Beschrijving bijwerken <i>(Deze tekst komt onder de naam van het gerecht op de menukaart)</i></h3>
-            <textarea id="beschrijving" name="beschrijving" class="form-control">{{ gerecht.beschrijving if gerecht.beschrijving else '' }}</textarea>
+            <textarea id="beschrijving" name="beschrijving" class="form-control editor">{{ gerecht.beschrijving if gerecht.beschrijving else '' }}</textarea>
         </div>
 
         <div class="form-group">
@@ -236,13 +253,13 @@ h2, h3, p {
         </div>
 
         <div class="form-group">
-            <h3>Ingrediënten<i>()</i></h3>
-            <textarea id="ingredienten" name="ingredienten" class="form-control">{{ gerecht.ingredienten if gerecht.ingredienten else '' }}</textarea>
+            <h3>Ingrediënten<i>(Lijst van ingrediënten voor op de menukaart)</i></h3>
+            <textarea id="ingredienten" name="ingredienten" class="form-control editor">{{ gerecht.ingredienten if gerecht.ingredienten else '' }}</textarea>
         </div>
 
         <div class="form-group">
             <h3>Bereidingswijze bijwerken <i>(Belangrijk voor het draaiboek)</i></h3>
-            <textarea id="bereidingswijze" name="bereidingswijze" class="form-control">{{ gerecht.bereidingswijze if gerecht.bereidingswijze else '' }}</textarea>
+            <textarea id="bereidingswijze" name="bereidingswijze" class="form-control editor">{{ gerecht.bereidingswijze if gerecht.bereidingswijze else '' }}</textarea>
         </div>
 
         <button type="submit" class="btn btn-primary">Opslaan</button>
@@ -346,6 +363,18 @@ document.addEventListener('DOMContentLoaded', function() {
     if (verkoopprijsInput) {
         adjustWidth(verkoopprijsInput);
     }
+});
+
+// Initialiseer CKEditor voor elk tekstveld met de 'editor' class
+document.querySelectorAll('.editor').forEach(editor => {
+    ClassicEditor
+        .create(editor, {
+            toolbar: ['heading', '|', 'bold', 'italic', 'bulletedList', 'numberedList'],
+            language: 'nl'
+        })
+        .catch(error => {
+            console.error(error);
+        });
 });
 </script>
 

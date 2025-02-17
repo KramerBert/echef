@@ -40,6 +40,8 @@ from blueprints.profile.routes import bp as profile_bp
 from blueprints.about.routes import bp as about_bp  # Add this import
 from forms import LeverancierForm, EenheidForm, CategorieForm, DishCategoryForm
 from blueprints.haccp_api import bp as haccp_api_bp
+import re  # Add this import
+import html  # Add this import
 
 load_dotenv()  # Load the values from .env
 
@@ -1132,7 +1134,7 @@ def create_app():
                 naam = dish['naam'] if dish['naam'] else 'Onbekend gerecht'
                 heading = doc.add_heading(f"{naam} - €{verkoopprijs}", level=1)
                 heading.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                description_text = dish['beschrijving'] if dish['beschrijving'] else 'Geen beschrijving'
+                description_text = html_to_text(dish['beschrijving']) if dish['beschrijving'] else 'Geen beschrijving'
                 description = doc.add_paragraph(description_text)
                 description.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
@@ -1152,7 +1154,7 @@ def create_app():
                         ingredient_text = f"{gi['hoeveelheid']} {gi['eenheid']} {gi['ingredient_naam']}"
                         doc.add_paragraph(ingredient_text).alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-                method_text = dish['bereidingswijze'] if dish['bereidingswijze'] else 'Geen bereidingswijze'
+                method_text = html_to_text(dish['bereidingswijze']) if dish['bereidingswijze'] else 'Geen bereidingswijze'
                 doc.add_heading('Bereidingswijze', level=2)
                 method = doc.add_paragraph(method_text)
                 method.alignment = WD_ALIGN_PARAGRAPH.LEFT
@@ -1379,6 +1381,26 @@ def create_app():
     # -----------------------------------------------------------
     #  Export Dish to MS Word
     # -----------------------------------------------------------
+    def html_to_text(html_content):
+        """Convert HTML content to plain text by removing HTML tags"""
+        if not html_content:
+            return ''
+        # Remove style tags and their content safely
+        try:
+            html_content = re.sub(r'<style[^>]*>[\s\S]*?</style>', '', html_content)
+        except (TypeError, AttributeError):
+            html_content = ''
+        # Remove all HTML tags
+        text = re.sub(r'<[^>]+>', '', html_content)
+        # Convert HTML entities
+        text = html.unescape(text)
+        # Replace multiple whitespace with single space
+        text = re.sub(r'\s+', ' ', text)
+        # Convert <br> and </p> to newlines
+        text = re.sub(r'<br\s*/?>', '\n', text)
+        text = re.sub(r'</p>', '\n\n', text)
+        return text.strip()
+
     @app.route('/export_dish/<chef_naam>/<dish_id>', methods=['POST'])
     @login_required
     def export_dish(chef_naam, dish_id):
@@ -1427,7 +1449,7 @@ def create_app():
             
             if gerecht['beschrijving']:
                 doc.add_heading('Beschrijving', level=2)
-                doc.add_paragraph(gerecht['beschrijving'])
+                doc.add_paragraph(html_to_text(gerecht['beschrijving']))
             
             # Voeg ingrediëntenlijst toe
             doc.add_heading('Ingrediënten', level=2)
@@ -1449,7 +1471,7 @@ def create_app():
 
             if gerecht['bereidingswijze']:
                 doc.add_heading('Bereidingswijze', level=2)
-                doc.add_paragraph(gerecht['bereidingswijze'])
+                doc.add_paragraph(html_to_text(gerecht['bereidingswijze']))
 
             # Sla document op in memory
             buffer = io.BytesIO()

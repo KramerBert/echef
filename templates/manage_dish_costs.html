@@ -200,6 +200,14 @@ h2, h3, p {
     color: var(--kitchen-steel);
 }
 
+.ingredients-display {
+    background-color: var(--kitchen-dark);
+    border: 1px solid var(--kitchen-steel);
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 20px;
+    color: var(--text-light);
+}
 
 </style>
 
@@ -207,6 +215,7 @@ h2, h3, p {
     <h2>Kostprijs bewerken: {{ gerecht.naam }}</h2>
     <p>Plaats in het menu: {{ gerecht.categorie }}</p>
     <p>Verkoopprijs: {{ gerecht.verkoopprijs if gerecht.verkoopprijs else 'n.v.t.' }}</p>
+
 
     <div class="form-group">
         <h3>Kostprijsberekening: Ingrediënten toevoegen</h3>
@@ -313,6 +322,13 @@ h2, h3, p {
     </div>
     <div class="edit-section">
         <a href="{{ url_for('edit_dish', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}" class="btn btn-secondary">Terug naar gerecht bewerken</a>
+    </div>
+</div>
+
+<div class="form-group">
+    <h3>Ingrediënten van het gerecht (menukaart)</h3>
+    <div class="ingredients-display">
+        {{ gerecht.ingredienten|safe if gerecht.ingredienten else 'Geen ingrediënten opgegeven' }}
     </div>
 </div>
 
