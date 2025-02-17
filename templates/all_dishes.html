@@ -44,8 +44,25 @@
                 <tr>
                     <td>{{ gerecht.naam }}</td>
                     <td>{{ gerecht.categorie }}</td>
-                    <td class="col-price">€ {{ gerecht.verkoopprijs if gerecht.verkoopprijs else 'n.v.t.' }}</td>
-                    <td>€ {{ gerecht.totaal_ingredient_prijs if gerecht.totaal_ingredient_prijs else '0.00' }}</td>
+                    <td class="col-price">
+                        <form method="POST" action="{{ url_for('update_dish_price', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" 
+                              class="price-form" style="display: inline-flex; align-items: center;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <span>€</span>
+                            <input type="text" 
+                                   pattern="[0-9]*[.,]?[0-9]{0,2}"
+                                   inputmode="decimal"
+                                   name="verkoopprijs" 
+                                   value="{{ '%.2f'|format(gerecht.verkoopprijs|float) if gerecht.verkoopprijs else '0.00' }}"
+                                   class="price-input"
+                                   style="width: 80px;"
+                                   onkeypress="return (event.charCode >= 48 && event.charCode <= 57) || event.charCode === 44 || event.charCode === 46">
+                            <button type="submit" class="btn-action btn-save" style="padding: 2px 8px; margin-left: 4px;">
+                                <i class="fas fa-save"></i>
+                            </button>
+                        </form>
+                    </td>
+                    <td>€ {{ '%.2f'|format(gerecht.totaal_ingredient_prijs|float) if gerecht.totaal_ingredient_prijs else '0.00' }}</td>
                     <td class="no-print">
                         <a href="{{ url_for('edit_dish', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" class="btn-action btn-edit">
                             <i class="fas fa-edit"></i>
@@ -79,4 +96,32 @@
     </div>
 </div>
 <script src="{{ url_for('static', filename='js/dishes.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize all price inputs
+    document.querySelectorAll('.price-input').forEach(input => {
+        input.addEventListener('input', function(e) {
+            // Replace comma with dot for consistency
+            let value = this.value.replace(',', '.');
+            
+            // Remove any non-numeric chars except the decimal point
+            value = value.replace(/[^\d.]/g, '');
+            
+            // Ensure only one decimal point
+            let parts = value.split('.');
+            if (parts.length > 2) {
+                value = parts[0] + '.' + parts.slice(1).join('');
+            }
+            
+            // Limit to 2 decimal places
+            if (parts[1] && parts[1].length > 2) {
+                value = parseFloat(value).toFixed(2);
+            }
+            
+            // Update the input value
+            this.value = value;
+        });
+    });
+});
+</script>
 {% endblock %}

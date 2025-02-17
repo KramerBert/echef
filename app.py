@@ -2877,6 +2877,60 @@ def create_app():
             cur.close()
             conn.close()
 
+    @app.route('/dashboard/<chef_naam>/dishes/<int:dish_id>/price', methods=['POST'])
+    @login_required
+    def update_dish_price(chef_naam, dish_id):
+        """Update verkoopprijs van een gerecht"""
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
+        
+        form = FlaskForm()
+        if not form.validate_on_submit():
+            flash("Ongeldige CSRF-token.", "danger")
+            return redirect(url_for('all_dishes'))
+
+        conn = get_db_connection()
+        if conn is None:
+            flash("Database connection error.", "danger")
+            return redirect(url_for('all_dishes'))
+        
+        cur = conn.cursor()
+
+        try:
+            # Handle both dot and comma as decimal separator
+            prijs = request.form.get('verkoopprijs', '0.00')
+            prijs = prijs.replace(',', '.')  # Convert comma to dot
+            
+            try:
+                # Validate and convert to proper decimal format
+                prijs_float = float(prijs)
+                if prijs_float < 0:
+                    raise ValueError("Prijs mag niet negatief zijn")
+                
+                nieuwe_verkoopprijs = '{:.2f}'.format(prijs_float)
+                
+                cur.execute("""
+                    UPDATE dishes
+                    SET verkoopprijs = %s
+                    WHERE dish_id = %s AND chef_id = %s
+                """, (nieuwe_verkoopprijs, dish_id, session['chef_id']))
+                
+                conn.commit()
+                flash("Verkoopprijs bijgewerkt!", "success")
+            except ValueError as e:
+                flash(f"Ongeldige prijs ingevoerd: {str(e)}", "danger")
+                return redirect(url_for('all_dishes'))
+                
+        except Exception as e:
+            conn.rollback()
+            flash(f"Fout bij bijwerken prijs: {str(e)}", "danger")
+        finally:
+            cur.close()
+            conn.close()
+
+        return redirect(url_for('all_dishes'))
+
     return app
 
 # Move configuration constants outside create_app
