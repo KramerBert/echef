@@ -82,6 +82,8 @@ def create_app():
     app.register_blueprint(profile_bp)
     app.register_blueprint(about_bp)
     app.register_blueprint(haccp_api_bp)
+    from blueprints.errors import bp as errors_bp
+    app.register_blueprint(errors_bp)
     
     # Register template filters and helper functions inside create_app
     def nl2br(value):
@@ -100,27 +102,14 @@ def create_app():
 
     # Move all route handlers and helper functions inside create_app
     # Improved error handlers
-    @app.errorhandler(404)
-    def not_found_error(error):
-        logger.error(f'Page not found: {request.url}')
-        return render_template('404.html'), 404
-
-    @app.errorhandler(500)
-    def internal_error(error):
-        logger.error(f'Server Error: {error}')
-        db = get_db_connection()
-        if db is not None:
-            db.close()
-        return render_template('500.html'), 500
-
     @app.errorhandler(Exception)
     def handle_exception(e):
         logger.error(f'Unhandled exception: {str(e)}')
         if isinstance(e, HTTPException):
-            return render_template('error.html', error=e), e.code
+            return render_template('errors/error.html', error=e), e.code
         
         error = InternalServerError()
-        return render_template('error.html', error=error), 500
+        return render_template('errors/500.html', error=error), 500
 
     # Database configuration from .env
     DB_NAME = os.getenv("DB_NAME")
