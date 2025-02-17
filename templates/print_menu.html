@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Menukaart Printen{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <div class="navigation-buttons mb-4">
+        <a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}" class="btn-action">
+            <i class="fas fa-arrow-left"></i> Dashboard
+        </a>
+    </div>
+
+    <h2>Menukaart Samenstellen en Printen</h2>
+    <p>Selecteer de gerechten die u wilt opnemen in de menukaart:</p>
+
+    <form method="POST" action="{{ url_for('export_dishes') }}" class="export-dishes-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Gerecht</th>
+                    <th>Gang</th>
+                    <th>Prijs</th>
+                    <th>Selecteer</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for gerecht in gerechten %}
+                <tr>
+                    <td>{{ gerecht.naam }}</td>
+                    <td>{{ gerecht.categorie }}</td>
+                    <td>€ {{ gerecht.verkoopprijs if gerecht.verkoopprijs else 'n.v.t.' }}</td>
+                    <td><input type="checkbox" id="selected_dishes_{{ gerecht.dish_id }}" name="selected_dishes" value="{{ gerecht.dish_id }}"></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="submit" class="btn-action">
+            <i class="fas fa-print"></i> Menukaart Genereren
+        </button>
+    </form>
+</div>
+{% endblock %}

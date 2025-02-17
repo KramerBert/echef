@@ -226,8 +226,8 @@ h2, h3, p {
 
         <div class="form-group">
             <h3>Plaats in het menu - gang <i>(belangrijk voor de volgorde bij het printen van de menukaart)</i></h3>
-            <select id="gerecht_categorie" name="gerecht_categorie" class="form-control" required>
-                <option value="" disabled {% if not gerecht.categorie %}selected{% endif %}>Kies menu-item</option>
+            <select class="form-control" id="gerecht_categorie" name="gerecht_categorie">
+                <option value="">Kies een categorie</option>
                 {% for categorie in dish_categories %}
                     <option value="{{ categorie.naam }}" {% if gerecht.categorie == categorie.naam %}selected{% endif %}>
                         {{ categorie.naam }}
@@ -250,9 +250,7 @@ h2, h3, p {
     </form>
     <hr style="border-top: 1px solid var(--border-color, #ccc); margin: 2rem 0;">
     <div style="margin: 2rem 0;"><!-- spacer --></div>
-    <div class="edit-section">
-        <a href="{{ url_for('manage_dish_costs', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}" class="btn btn-secondary">Kostprijs bewerken</a>
-    </div>
+    
     <div class="edit-section">
         <div class="card mb-4">
             <div class="card-header">

@@ -407,7 +407,7 @@ def create_app():
 
                 naam = request.form['naam']
                 beschrijving = request.form['beschrijving']
-                gerecht_categorie = request.form['gerecht_categorie']
+                gerecht_categorie = request.form.get('gerecht_categorie')  # Use .get() to handle missing value
                 ingredienten = request.form.get('ingredienten', '')  # Get ingredients from form and ensure it's not None
                 bereidingswijze = request.form['bereidingswijze']
 
@@ -889,6 +889,55 @@ def create_app():
         return render_template('all_dishes.html', 
                             gerechten=alle_gerechten,
                             form=FlaskForm())  # Add form to template context
+
+    # -----------------------------------------------------------
+    #  Nieuw Gerecht (alleen naam)
+    # -----------------------------------------------------------
+    @app.route('/create_dish', methods=['GET', 'POST'])
+    @login_required
+    def create_dish():
+        """
+        Route om een nieuw gerecht aan te maken met alleen de naam.
+        """
+        if 'chef_id' not in session:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('login'))
+
+        form = FlaskForm()
+        if request.method == 'POST':
+            if not form.validate_on_submit():
+                flash("Ongeldige CSRF-token.", "danger")
+                return redirect(url_for('create_dish'))
+
+            naam = request.form.get('naam')
+            if not naam:
+                flash("Naam is verplicht.", "danger")
+                return redirect(url_for('create_dish'))
+
+            conn = get_db_connection()
+            if conn is None:
+                flash("Database connection error.", "danger")
+                return redirect(url_for('all_dishes'))
+            cur = conn.cursor()
+
+            try:
+                cur.execute("""
+                    INSERT INTO dishes (chef_id, naam)
+                    VALUES (%s, %s)
+                """, (session['chef_id'], naam))
+                conn.commit()
+                new_dish_id = cur.lastrowid
+                flash("Gerecht succesvol aangemaakt! U kunt nu de overige gegevens invullen.", "success")
+                return redirect(url_for('edit_dish', chef_naam=session['chef_naam'], dish_id=new_dish_id))
+            except Exception as e:
+                conn.rollback()
+                flash(f"Fout bij aanmaken gerecht: {str(e)}", "danger")
+                return redirect(url_for('all_dishes'))
+            finally:
+                cur.close()
+                conn.close()
+
+        return render_template('create_dish.html', form=form)
 
     # -----------------------------------------------------------
     #  Export Dishes to MS Word
@@ -2765,6 +2814,43 @@ def create_app():
             logger.error(f'Error in manage_dish_costs: {str(e)}')
             flash("Er is een fout opgetreden.", "danger")
             return redirect(url_for('all_dishes'))
+        finally:
+            cur.close()
+            conn.close()
+
+    @app.route('/print_menu')
+    @login_required
+    def print_menu():
+        """
+        Pagina om menukaart samen te stellen en te printen.
+        """
+        if 'chef_id' not in session:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('login'))
+
+        conn = get_db_connection()
+        if conn is None:
+            flash("Database connection error.", "danger")
+            return redirect(url_for('home'))
+        cur = conn.cursor(dictionary=True)
+
+        try:
+            # Haal alle gerechten van de ingelogde chef op
+            cur.execute("""
+                SELECT d.*, c.naam as chef_naam 
+                FROM dishes d
+                JOIN chefs c ON d.chef_id = c.chef_id
+                WHERE d.chef_id = %s
+                ORDER BY d.categorie, d.naam
+            """, (session['chef_id'],))
+            gerechten = cur.fetchall()
+
+            return render_template('print_menu.html', 
+                                gerechten=gerechten,
+                                form=FlaskForm())
+        except Exception as e:
+            flash(f"Error: {str(e)}", "danger")
+            return redirect(url_for('dashboard', chef_naam=session.get('chef_naam')))
         finally:
             cur.close()
             conn.close()

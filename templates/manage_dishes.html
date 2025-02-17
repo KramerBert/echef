@@ -26,7 +26,7 @@
 
         <div class="form-group">
             <label for="gerecht_categorie">Categorie:</label>
-            <select id="gerecht_categorie" name="gerecht_categorie" class="form-control" required>
+            <select id="gerecht_categorie" name="gerecht_categorie" class="form-control">
             <option value="" disabled selected>Kies plaats in het menu (gang)</option>
             {% for categorie in dish_categories %}
                 <option value="{{ categorie.naam }}">{{ categorie.naam }}</option>
