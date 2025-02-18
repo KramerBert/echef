@@ -7,9 +7,6 @@
     <a href="{{ url_for('dashboard', chef_naam=chef_naam) }}" class="btn-action">
         <i class="fas fa-arrow-left"></i> Dashboard
     </a>
-    <button onclick="recalculatePrices()" class="btn-action">
-        <i class="fas fa-calculator"></i> Herbereken alle kostprijzen
-    </button>
 </div>
 
 <!-- Nieuw ingrediënt formulier -->
@@ -54,7 +51,7 @@
     <input type="text" id="ingredientSearch" class="form-control" 
            placeholder="Zoek ingrediënt..." style="max-width: 300px; display: inline-block;">
     <select id="categoryFilter" class="form-control" style="max-width: 300px; display: inline-block">
-        <option value="">Filter op...</option>
+        <option value="">Of filter op...</option>
         {% for categorie in unieke_categorieen %} 
             <option value="{{ categorie }}">{{ categorie }}</option>
         {% endfor %}
@@ -271,90 +268,30 @@
 
         function filterTable() {
             const searchTerm = searchInput.value.toLowerCase();
-            const category = categoryFilter.value.toLowerCase();
+            const category = categoryFilter.value;
 
             for (let i = 1; i < rows.length; i++) {
                 const row = rows[i];
-                const name = row.cells[0].textContent.toLowerCase();
-                const rowCategory = row.cells[1].textContent.toLowerCase();
-                
-                const matchesSearch = name.includes(searchTerm);
-                const matchesCategory = category === '' || rowCategory === category;
+                const cells = row.getElementsByTagName('td');
+                const name = cells[0].textContent.toLowerCase();
+                const categoryCell = cells[1].querySelector('select');
+                const rowCategory = categoryCell ? categoryCell.value : '';
 
-                row.style.display = matchesSearch && matchesCategory ? '' : 'none';
+                const matchesSearch = name.includes(searchTerm);
+                const matchesCategory = !category || rowCategory.toLowerCase() === category.toLowerCase();
+
+                row.style.display = (matchesSearch && matchesCategory) ? '' : 'none';
             }
         }
 
-        searchInput.addEventListener('input', filterTable);
+        // Categoriefilter zonder automatische zoekveld invulling
         categoryFilter.addEventListener('change', filterTable);
 
-        // Initialize all price inputs
-        document.querySelectorAll('.price-input').forEach(input => {
-            input.addEventListener('input', function(e) {
-                // Replace comma with dot for consistency
-                let value = this.value.replace(',', '.');
-                
-                // Remove any non-numeric chars except the decimal point
-                value = value.replace(/[^\d.]/g, '');
-                
-                // Ensure only one decimal point
-                let parts = value.split('.');
-                if (parts.length > 2) {
-                    value = parts[0] + '.' + parts.slice(1).join('');
-                }
-                
-                // Update the input value
-                this.value = value;
+        // Zoeken op tekst
+        searchInput.addEventListener('input', filterTable);
 
-                // Mark as modified
-                const row = this.closest('tr');
-                const saveBtn = row.querySelector('.btn-save');
-                const originalValue = this.dataset.original;
-                
-                if (value !== originalValue) {
-                    this.classList.add('modified');
-                    saveBtn.classList.add('active');
-                } else {
-                    this.classList.remove('modified');
-                    if (!row.querySelector('.modified')) {
-                        saveBtn.classList.remove('active');
-                    }
-                }
-            });
-
-            // Only format when leaving the field
-            input.addEventListener('blur', function() {
-                if (this.value) {
-                    try {
-                        const numValue = parseFloat(this.value);
-                        if (!isNaN(numValue)) {
-                            this.value = numValue.toFixed(2);
-                        }
-                    } catch (e) {
-                        console.error('Error formatting price:', e);
-                    }
-                }
-            });
-        });
-
-        // Initialize all select inputs
-        document.querySelectorAll('select.inline-edit').forEach(select => {
-            select.addEventListener('change', function() {
-                const row = this.closest('tr');
-                const saveBtn = row.querySelector('.btn-save');
-                const originalValue = this.dataset.original;
-                
-                if (this.value !== originalValue) {
-                    this.classList.add('modified');
-                    saveBtn.classList.add('active');
-                } else {
-                    this.classList.remove('modified');
-                    if (!row.querySelector('.modified')) {
-                        saveBtn.classList.remove('active');
-                    }
-                }
-            });
-        });
+        // Pas filter direct toe bij laden van de pagina
+        filterTable();
     });
 
     // Global save function
@@ -408,38 +345,5 @@
             setTimeout(() => flashDiv.remove(), 3000);
         }
     };
-
-    async function recalculatePrices() {
-        if (!confirm('Wilt u alle kostprijzen herberekenen? Dit kan even duren.')) {
-            return;
-        }
-        
-        try {
-            const response = await fetch(`/dashboard/{{ chef_naam }}/recalculate-prices`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': "{{ csrf_token() }}"
-                }
-            });
-            
-            const result = await response.json();
-            if (result.success) {
-                const flashDiv = document.createElement('div');
-                flashDiv.className = 'alert alert-success';
-                flashDiv.innerHTML = `Kostprijzen herberekend! ${result.updated_dishes} gerechten bijgewerkt.`;
-                document.querySelector('.container').insertAdjacentElement('afterbegin', flashDiv);
-                setTimeout(() => flashDiv.remove(), 5000);
-            } else {
-                throw new Error(result.error);
-            }
-        } catch (error) {
-            const flashDiv = document.createElement('div');
-            flashDiv.className = 'alert alert-danger';
-            flashDiv.innerHTML = "Fout bij herberekenen: " + error.message;
-            document.querySelector('.container').insertAdjacentElement('afterbegin', flashDiv);
-            setTimeout(() => flashDiv.remove(), 5000);
-        }
-    }
 </script>
 {% endblock %}

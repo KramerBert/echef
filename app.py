@@ -2867,7 +2867,7 @@ def create_app():
                                 WHERE dish_id = %s AND ingredient_id = %s
                             """, (dish_id, ingredient_id))
                             if cur.fetchone():
-                                flash("Dit ingrediënt is al toegevoegd.", "danger")
+                                flash("Dit ingrediënt is al gekoppeld aan de kostprijsberekening.", "danger")
                             else:
                                 cur.execute("""
                                     INSERT INTO dish_ingredients 
