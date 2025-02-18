@@ -54,7 +54,7 @@
     <input type="text" id="ingredientSearch" class="form-control" 
            placeholder="Zoek ingrediënt..." style="max-width: 300px; display: inline-block;">
     <select id="categoryFilter" class="form-control" style="max-width: 300px; display: inline-block">
-        <option value="">Zoek in...</option>
+        <option value="">Filter op...</option>
         {% for categorie in unieke_categorieen %} 
             <option value="{{ categorie }}">{{ categorie }}</option>
         {% endfor %}

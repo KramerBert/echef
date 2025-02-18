@@ -2880,43 +2880,6 @@ def create_app():
                             conn.rollback()
                             flash(f"Fout bij toevoegen: {str(e)}", "danger")
 
-                elif 'priceForm' in request.form:
-                    nieuwe_verkoopprijs = request.form.get('verkoopprijs')
-                    try:
-                        cur.execute("""
-                            UPDATE dishes
-                            SET verkoopprijs = %s
-                            WHERE dish_id = %s AND chef_id = %s
-                        """, (nieuwe_verkoopprijs, dish_id, session['chef_id']))
-                        conn.commit()
-                        flash("Verkoopprijs bijgewerkt!", "success")
-                        
-                        # Herbereken de totale kostprijs van het gerecht
-                        cur.execute("""
-                            SELECT di.ingredient_id, di.hoeveelheid, i.prijs_per_eenheid
-                            FROM dish_ingredients di
-                            JOIN ingredients i ON di.ingredient_id = i.ingredient_id
-                            WHERE di.dish_id = %s
-                        """, (dish_id,))
-                        gerecht_ingredienten = cur.fetchall()
-                        
-                        totaal_ingredient_prijs = 0
-                        for ingredient in gerecht_ingredienten:
-                            totaal_ingredient_prijs += ingredient['hoeveelheid'] * float(ingredient['prijs_per_eenheid'])
-                        
-                        # Update de totale kostprijs in de dishes tabel
-                        cur.execute("""
-                            UPDATE dishes
-                            SET totaal_ingredient_prijs = %s
-                            WHERE dish_id = %s AND chef_id = %s
-                        """, (totaal_ingredient_prijs, dish_id, session['chef_id']))
-                        conn.commit()
-                        
-                        return redirect(url_for('manage_dish_costs', chef_naam=chef_naam, dish_id=dish_id) + '#verkoopprijs-sectie')
-                    except Exception as e:
-                        conn.rollback()
-                        flash(f"Fout bij bijwerken prijs: {str(e)}", "danger")
-
             # Get all ingredients
             cur.execute("""
                 SELECT * FROM ingredients 
