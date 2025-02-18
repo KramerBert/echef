@@ -7,6 +7,9 @@
     <a href="{{ url_for('dashboard', chef_naam=chef_naam) }}" class="btn-action">
         <i class="fas fa-arrow-left"></i> Dashboard
     </a>
+    <button onclick="recalculatePrices()" class="btn-action">
+        <i class="fas fa-calculator"></i> Herbereken alle kostprijzen
+    </button>
 </div>
 
 <!-- Nieuw ingrediënt formulier -->
@@ -405,5 +408,38 @@
             setTimeout(() => flashDiv.remove(), 3000);
         }
     };
+
+    async function recalculatePrices() {
+        if (!confirm('Wilt u alle kostprijzen herberekenen? Dit kan even duren.')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/dashboard/{{ chef_naam }}/recalculate-prices`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': "{{ csrf_token() }}"
+                }
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                const flashDiv = document.createElement('div');
+                flashDiv.className = 'alert alert-success';
+                flashDiv.innerHTML = `Kostprijzen herberekend! ${result.updated_dishes} gerechten bijgewerkt.`;
+                document.querySelector('.container').insertAdjacentElement('afterbegin', flashDiv);
+                setTimeout(() => flashDiv.remove(), 5000);
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (error) {
+            const flashDiv = document.createElement('div');
+            flashDiv.className = 'alert alert-danger';
+            flashDiv.innerHTML = "Fout bij herberekenen: " + error.message;
+            document.querySelector('.container').insertAdjacentElement('afterbegin', flashDiv);
+            setTimeout(() => flashDiv.remove(), 5000);
+        }
+    }
 </script>
 {% endblock %}

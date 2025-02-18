@@ -42,6 +42,7 @@ from forms import LeverancierForm, EenheidForm, CategorieForm, DishCategoryForm
 from blueprints.haccp_api import bp as haccp_api_bp
 import re  # Add this import
 import html  # Add this import
+from decimal import Decimal  # Add this import at the top
 
 load_dotenv()  # Load the values from .env
 
@@ -1349,6 +1350,7 @@ def create_app():
     @app.route('/dashboard/<chef_naam>/ingredients/<int:ingredient_id>/update-field', methods=['POST'])
     @login_required
     def update_ingredient_field(chef_naam, ingredient_id):
+        """Update een ingrediëntveld en herbereken kostprijzen indien nodig"""
         if session['chef_naam'] != chef_naam:
             return jsonify({'success': False, 'error': 'Geen toegang'}), 403
 
@@ -1357,41 +1359,69 @@ def create_app():
             field = data['field']
             value = data['value']
 
-            if field == 'prijs_per_eenheid':
-                try:
-                    # Converteer naar float en format naar 2 decimalen
-                    value = '{:.2f}'.format(float(value))
-                except ValueError:
-                    return jsonify({'success': False, 'error': 'Ongeldige prijs'}), 400
-
             conn = get_db_connection()
             if conn is None:
                 return jsonify({'success': False, 'error': 'Database verbindingsfout'}), 500
 
             cur = conn.cursor(dictionary=True)
             try:
-                # Update het ingrediënt
+                # Als de prijs wordt aangepast, bereken dan alle kostprijzen opnieuw
+                if field == 'prijs_per_eenheid':
+                    try:
+                        # Convert price to Decimal for precise calculation
+                        value = str(Decimal(value).quantize(Decimal('0.01')))
+                        
+                        # Update eerst het ingrediënt
+                        cur.execute("""
+                            UPDATE ingredients 
+                            SET prijs_per_eenheid = %s
+                            WHERE ingredient_id = %s AND chef_id = %s
+                        """, (value, ingredient_id, session['chef_id']))
+                        
+                        # Update alle gerechten die dit ingrediënt gebruiken
+                        cur.execute("""
+                            UPDATE dish_ingredients di
+                            SET prijs_totaal = di.hoeveelheid * %s
+                            WHERE di.ingredient_id = %s
+                        """, (value, ingredient_id))
+
+                        # Update totaal_ingredient_prijs for all affected dishes
+                        cur.execute("""
+                            UPDATE dishes d
+                            SET totaal_ingredient_prijs = (
+                                SELECT COALESCE(SUM(di.prijs_totaal), 0)
+                                FROM dish_ingredients di
+                                WHERE di.dish_id = d.dish_id
+                            )
+                            WHERE d.dish_id IN (
+                                SELECT DISTINCT dish_id
+                                FROM dish_ingredients
+                                WHERE ingredient_id = %s
+                            )
+                        """, (ingredient_id,))
+                        
+                        conn.commit()
+                        return jsonify({
+                            'success': True,
+                            'value': value,
+                            'message': 'Prijs bijgewerkt en kostprijzen herberekend'
+                        })
+                        
+                    except ValueError as e:
+                        return jsonify({'success': False, 'error': f'Ongeldige prijs: {str(e)}'}), 400
+
+                # Voor andere velden, gewoon updaten
                 cur.execute(f"""
                     UPDATE ingredients 
                     SET {field} = %s
                     WHERE ingredient_id = %s AND chef_id = %s
                 """, (value, ingredient_id, session['chef_id']))
                 
-                # Fetch the updated value in a separate query
-                if cur.rowcount > 0:
-                    cur.execute(f"""
-                        SELECT {field} as updated_value 
-                        FROM ingredients 
-                        WHERE ingredient_id = %s
-                    """, (ingredient_id,))
-                    result = cur.fetchone()
-                    conn.commit()
-                    return jsonify({
-                        'success': True,
-                        'value': result['updated_value']
-                    })
-                else:
+                if cur.rowcount == 0:
                     return jsonify({'success': False, 'error': 'Ingrediënt niet gevonden'}), 404
+
+                conn.commit()
+                return jsonify({'success': True, 'value': value})
 
             except Exception as e:
                 conn.rollback()
@@ -3009,6 +3039,64 @@ def create_app():
             conn.close()
 
         return redirect(url_for('all_dishes'))
+
+    @app.route('/dashboard/<chef_naam>/recalculate-prices', methods=['POST'])
+    @login_required
+    def recalculate_all_prices(chef_naam):
+        """Handmatig alle kostprijzen herberekenen"""
+        if session['chef_naam'] != chef_naam:
+            return jsonify({'success': False, 'error': 'Geen toegang'}), 403
+
+        conn = get_db_connection()
+        if conn is None:
+            return jsonify({'success': False, 'error': 'Database verbindingsfout'}), 500
+
+        cur = conn.cursor(dictionary=True)
+        try:
+            # Haal alle gerechten op met hun ingrediënten
+            cur.execute("""
+                SELECT d.dish_id, di.ingredient_id, di.hoeveelheid, i.prijs_per_eenheid
+                FROM dishes d
+                JOIN dish_ingredients di ON d.dish_id = di.dish_id
+                JOIN ingredients i ON di.ingredient_id = i.ingredient_id
+                WHERE d.chef_id = %s
+            """, (session['chef_id'],))
+            
+            all_ingredients = cur.fetchall()
+            
+            # Groepeer per gerecht
+            dishes = {}
+            for row in all_ingredients:
+                if row['dish_id'] not in dishes:
+                    dishes[row['dish_id']] = []
+                dishes[row['dish_id']].append(row)
+            
+            # Update kostprijs per gerecht
+            updated_dishes = 0
+            for dish_id, ingredients in dishes.items():
+                total_cost = sum(ing['hoeveelheid'] * float(ing['prijs_per_eenheid']) for ing in ingredients)
+                
+                # Update dish_ingredients tabel
+                for ingredient in ingredients:
+                    price = ingredient['hoeveelheid'] * float(ingredient['prijs_per_eenheid'])
+                    cur.execute("""
+                        UPDATE dish_ingredients 
+                        SET prijs_totaal = %s
+                        WHERE dish_id = %s AND ingredient_id = %s
+                    """, (price, dish_id, ingredient['ingredient_id']))
+                
+                updated_dishes += 1
+
+            conn.commit()
+            return jsonify({'success': True, 'updated_dishes': updated_dishes})
+
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"Error recalculating prices: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            cur.close()
+            conn.close()
 
     return app
 
