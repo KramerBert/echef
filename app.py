@@ -742,7 +742,7 @@ def create_app():
         form = FlaskForm()
         if not form.validate_on_submit():
             flash("Ongeldige CSRF-token.", "danger")
-            return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
+            return redirect(url_for('manage_dish_costs', chef_naam=chef_naam, dish_id=dish_id))  # Aangepaste redirect
 
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
             flash("Geen toegang. Log opnieuw in.", "danger")
@@ -751,7 +751,7 @@ def create_app():
         conn = get_db_connection()
         if conn is None:
             flash("Database connection error.", "danger")
-            return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
+            return redirect(url_for('manage_dish_costs', chef_naam=chef_naam, dish_id=dish_id))  # Aangepaste redirect
         cur = conn.cursor()
 
         try:
@@ -762,7 +762,7 @@ def create_app():
             """, (dish_id, ingredient_id))
             
             conn.commit()
-            flash("Ingrediënt verwijderd uit gerecht!", "success")
+            flash("Ingrediënt verwijderd uit kostprijsberekening!", "success")
         except Exception as e:
             conn.rollback()
             flash(f"Fout bij verwijderen: {str(e)}", "danger")
@@ -770,7 +770,7 @@ def create_app():
             cur.close()
             conn.close()
 
-        return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id) + '#ingredienten-tabel')
+        return redirect(url_for('manage_dish_costs', chef_naam=chef_naam, dish_id=dish_id))  # Aangepaste redirect
 
     @app.route('/dashboard/<chef_naam>/dish/<int:dish_id>/allergenen', methods=['POST'])
     @login_required
