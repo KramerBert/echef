@@ -33,7 +33,6 @@
                     <th>Gang</th>
                     <th class="col-price">Verkoopprijs</th>
                     <th>Kostprijs</th>
-                    <th class="no-print">Bewerken</th>
                     <th class="no-print">Berekenen</th>
                     <th class="no-print">Exporteren</th>
                     <th class="no-print">Verwijderen</th>
@@ -42,7 +41,12 @@
             <tbody>
                 {% for gerecht in gerechten %}
                 <tr>
-                    <td>{{ gerecht.naam }}</td>
+                    <td>
+                        <a href="{{ url_for('edit_dish', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" 
+                           class="dish-name-link">
+                            {{ gerecht.naam }}
+                        </a>
+                    </td>
                     <td>{{ gerecht.categorie }}</td>
                     <td class="col-price">
                         <form method="POST" action="{{ url_for('update_dish_price', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" 
@@ -63,11 +67,6 @@
                         </form>
                     </td>
                     <td>€ {{ '%.2f'|format(gerecht.totaal_ingredient_prijs|float) if gerecht.totaal_ingredient_prijs else '0.00' }}</td>
-                    <td class="no-print">
-                        <a href="{{ url_for('edit_dish', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" class="btn-action btn-edit">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                    </td>
                     <td class="no-print">
                         <a href="{{ url_for('manage_dish_costs', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" class="btn-action">
                             <i class="fas fa-calculator"></i>
@@ -124,4 +123,17 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+<style>
+.dish-name-link {
+    color: var(--text-light);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--kitchen-steel);
+    transition: all 0.2s ease;
+}
+
+.dish-name-link:hover {
+    color: var(--kitchen-blue);
+    border-bottom: 1px solid var(--kitchen-blue);
+}
+</style>
 {% endblock %}

@@ -1346,6 +1346,63 @@ def create_app():
 
         return render_template('edit_ingredient.html', chef_naam=chef_naam, ingredient=ingredient, leveranciers=leveranciers, form=FlaskForm())
 
+    @app.route('/dashboard/<chef_naam>/ingredients/<int:ingredient_id>/update-field', methods=['POST'])
+    @login_required
+    def update_ingredient_field(chef_naam, ingredient_id):
+        if session['chef_naam'] != chef_naam:
+            return jsonify({'success': False, 'error': 'Geen toegang'}), 403
+
+        try:
+            data = request.get_json()
+            field = data['field']
+            value = data['value']
+
+            if field == 'prijs_per_eenheid':
+                try:
+                    # Converteer naar float en format naar 2 decimalen
+                    value = '{:.2f}'.format(float(value))
+                except ValueError:
+                    return jsonify({'success': False, 'error': 'Ongeldige prijs'}), 400
+
+            conn = get_db_connection()
+            if conn is None:
+                return jsonify({'success': False, 'error': 'Database verbindingsfout'}), 500
+
+            cur = conn.cursor(dictionary=True)
+            try:
+                # Update het ingrediënt
+                cur.execute(f"""
+                    UPDATE ingredients 
+                    SET {field} = %s
+                    WHERE ingredient_id = %s AND chef_id = %s
+                """, (value, ingredient_id, session['chef_id']))
+                
+                # Fetch the updated value in a separate query
+                if cur.rowcount > 0:
+                    cur.execute(f"""
+                        SELECT {field} as updated_value 
+                        FROM ingredients 
+                        WHERE ingredient_id = %s
+                    """, (ingredient_id,))
+                    result = cur.fetchone()
+                    conn.commit()
+                    return jsonify({
+                        'success': True,
+                        'value': result['updated_value']
+                    })
+                else:
+                    return jsonify({'success': False, 'error': 'Ingrediënt niet gevonden'}), 404
+
+            except Exception as e:
+                conn.rollback()
+                return jsonify({'success': False, 'error': str(e)}), 500
+            finally:
+                cur.close()
+                conn.close()
+
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
     # -----------------------------------------------------------
     #  Ingrediënt Verwijderen
     # -----------------------------------------------------------
@@ -2797,7 +2854,29 @@ def create_app():
                         """, (nieuwe_verkoopprijs, dish_id, session['chef_id']))
                         conn.commit()
                         flash("Verkoopprijs bijgewerkt!", "success")
-                        return redirect(url_for('manage_dish_costs', chef_naam=chef_naam, dish_id=dish_id))
+                        
+                        # Herbereken de totale kostprijs van het gerecht
+                        cur.execute("""
+                            SELECT di.ingredient_id, di.hoeveelheid, i.prijs_per_eenheid
+                            FROM dish_ingredients di
+                            JOIN ingredients i ON di.ingredient_id = i.ingredient_id
+                            WHERE di.dish_id = %s
+                        """, (dish_id,))
+                        gerecht_ingredienten = cur.fetchall()
+                        
+                        totaal_ingredient_prijs = 0
+                        for ingredient in gerecht_ingredienten:
+                            totaal_ingredient_prijs += ingredient['hoeveelheid'] * float(ingredient['prijs_per_eenheid'])
+                        
+                        # Update de totale kostprijs in de dishes tabel
+                        cur.execute("""
+                            UPDATE dishes
+                            SET totaal_ingredient_prijs = %s
+                            WHERE dish_id = %s AND chef_id = %s
+                        """, (totaal_ingredient_prijs, dish_id, session['chef_id']))
+                        conn.commit()
+                        
+                        return redirect(url_for('manage_dish_costs', chef_naam=chef_naam, dish_id=dish_id) + '#verkoopprijs-sectie')
                     except Exception as e:
                         conn.rollback()
                         flash(f"Fout bij bijwerken prijs: {str(e)}", "danger")

@@ -309,7 +309,7 @@ h2, h3, p {
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="priceForm" value="1">
                 <div class="form-group verkoopprijs-form">
-                    € <input type="number" step="0." id="verkoopprijs" name="verkoopprijs" value="{{ gerecht.verkoopprijs }}" class="form-control verkoopprijs-input" oninput="adjustWidth(this)"> 
+                    € <input type="number" step="0.01" id="verkoopprijs" name="verkoopprijs" value="{{ gerecht.verkoopprijs }}" class="form-control verkoopprijs-input" oninput="adjustWidth(this)"> 
                     <button type="submit" class="btn btn-primary">Verkoopprijs Opslaan</button>
                 </div>
             </form>
@@ -363,6 +363,35 @@ document.addEventListener('DOMContentLoaded', function() {
     if (verkoopprijsInput) {
         adjustWidth(verkoopprijsInput);
     }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Update totale kostprijs na wijziging prijs per eenheid
+    document.querySelectorAll('.inline-edit').forEach(element => {
+        element.addEventListener('change', async function() {
+            if (this.name === 'prijs_per_eenheid') {
+                const response = await fetch(`/dashboard/{{ chef_naam }}/ingredients/${this.dataset.ingredientId}/update-field`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrf_token
+                    },
+                    body: JSON.stringify({
+                        field: 'prijs_per_eenheid',
+                        value: this.value
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    // Update totaalbedrag op de pagina
+                    document.querySelector('.total-cost').textContent = 
+                        `Totaal kostprijs: € ${parseFloat(result.new_total).toFixed(2)}`;
+                    flash("Prijs bijgewerkt en kostprijs herberekend!", "success");
+                }
+            }
+        });
+    });
 });
 </script>
 

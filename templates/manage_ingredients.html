@@ -69,28 +69,67 @@
         <th class="col-actions">Acties</th>
     </tr>
     {% for ingredient in ingredienten %}
-    <tr>
+    <tr data-ingredient-id="{{ ingredient.ingredient_id }}">
         <td>{{ ingredient.naam }}</td>
-        <td>{{ ingredient.categorie }}</td>
-        <td>{{ ingredient.eenheid }}</td>
-        <td>{{ ingredient.leverancier_naam or 'Geen leverancier' }}</td>
-        <td class="col-price">€ {{ "%.2f"|format(ingredient.prijs_per_eenheid|float) }}</td>
+        <td>
+            <select class="inline-edit form-control" name="categorie" data-original="{{ ingredient.categorie }}">
+                {% for categorie in categorieen %}
+                    <option value="{{ categorie.naam }}" {% if ingredient.categorie == categorie.naam %}selected{% endif %}>
+                        {{ categorie.naam }}
+                    </option>
+                {% endfor %}
+            </select>
+        </td>
+        <td>
+            <select class="inline-edit form-control" name="eenheid" data-original="{{ ingredient.eenheid }}">
+                {% for eenheid in eenheden %}
+                    <option value="{{ eenheid.naam }}" {% if ingredient.eenheid == eenheid.naam %}selected{% endif %}>
+                        {{ eenheid.naam }}
+                    </option>
+                {% endfor %}
+            </select>
+        </td>
+        <td>
+            <select class="inline-edit form-control" name="leverancier_id" data-original="{{ ingredient.leverancier_id }}">
+                <option value="">Geen leverancier</option>
+                {% for leverancier in leveranciers %}
+                    <option value="{{ leverancier.leverancier_id }}" {% if ingredient.leverancier_id == leverancier.leverancier_id %}selected{% endif %}>
+                        {{ leverancier.naam }}
+                    </option>
+                {% endfor %}
+            </select>
+        </td>
+        <td class="col-price">
+            <div class="ingredient-price-group" style="display: flex; align-items: center;">
+                <span style="margin-right: 4px;">€</span>
+                <input type="text" 
+                       pattern="[0-9]*[.,]?[0-9]{0,2}"
+                       inputmode="decimal"
+                       class="inline-edit form-control price-input"
+                       name="prijs_per_eenheid"
+                       value="{{ '%.2f'|format(ingredient.prijs_per_eenheid|float) }}"
+                       data-original="{{ ingredient.prijs_per_eenheid }}"
+                       style="width: 100px; text-align: right;">
+            </div>
+        </td>
         <td class="col-actions">
             <div class="ingredient-actions">
-                <a href="{{ url_for('edit_ingredient', chef_naam=chef_naam, ingredient_id=ingredient.ingredient_id) }}" 
-                   class="btn-action btn-edit" title="Bewerken"><i class="fas fa-edit"></i></a>
+                <button class="btn-action btn-save" onclick="saveField(this)" title="Opslaan">
+                    <i class="fas fa-save"></i>
+                </button>
                 <form method="POST" action="{{ url_for('delete_ingredient', chef_naam=chef_naam, ingredient_id=ingredient.ingredient_id) }}" 
                       style="display: inline;" 
                       onsubmit="return confirm('Weet u zeker dat u dit ingrediënt wilt verwijderen?');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn-action btn-delete" title="Verwijderen"><i class="fas fa-trash-alt"></i></button>
+                    <button type="submit" class="btn-action btn-delete" title="Verwijderen">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
                 </form>
             </div>
         </td>
     </tr>
     {% endfor %}
 </table>
-
 
 <!-- CSV import sectie -->
 <div class="csv-import" style="margin-top: 20px;">
@@ -130,6 +169,92 @@
             display: none;
         }
     }
+
+    .inline-edit {
+        border: 1px solid transparent;
+        background-color: transparent;
+        padding: 2px 4px;
+        width: 100%;
+        min-width: 100px;
+    }
+
+    .inline-edit:hover, .inline-edit:focus {
+        border-color: var(--kitchen-steel);
+        background-color: var(--kitchen-dark);
+    }
+
+    .inline-edit.modified {
+        background-color: rgba(255, 255, 0, 0.1);
+    }
+
+    .save-indicator {
+        margin-left: 5px; /* Adjust spacing as needed */
+    }
+
+    .input-group {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .save-btn {
+        background: none;
+        border: none;
+        color: var(--kitchen-blue);
+        cursor: pointer;
+        padding: 5px;
+        display: none;
+    }
+
+    .save-btn:hover {
+        color: var(--kitchen-highlight);
+    }
+
+    .modified {
+        background-color: rgba(255, 255, 0, 0.1);
+    }
+
+    .btn-save {
+        background: none;
+        border: none;
+        color: var(--kitchen-blue);
+        cursor: pointer;
+        padding: 5px;
+        opacity: 0.5; /* Maak de knop wat doorzichtig wanneer er geen wijzigingen zijn */
+    }
+
+    .btn-save.active {
+        opacity: 1; /* Maak de knop volledig zichtbaar als er wijzigingen zijn */
+    }
+
+    .ingredient-actions {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .price-input {
+        text-align: right !important;
+        padding-right: 8px !important;
+        min-width: 100px !important;
+        width: 100px !important;
+    }
+
+    .ingredient-price-group {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .btn-save {
+        opacity: 0.5;
+        transition: opacity 0.3s ease;
+    }
+
+    .btn-save.active {
+        opacity: 1;
+        color: var(--kitchen-highlight);
+    }
 </style>
 
 
@@ -159,6 +284,126 @@
 
         searchInput.addEventListener('input', filterTable);
         categoryFilter.addEventListener('change', filterTable);
+
+        // Initialize all price inputs
+        document.querySelectorAll('.price-input').forEach(input => {
+            input.addEventListener('input', function(e) {
+                // Replace comma with dot for consistency
+                let value = this.value.replace(',', '.');
+                
+                // Remove any non-numeric chars except the decimal point
+                value = value.replace(/[^\d.]/g, '');
+                
+                // Ensure only one decimal point
+                let parts = value.split('.');
+                if (parts.length > 2) {
+                    value = parts[0] + '.' + parts.slice(1).join('');
+                }
+                
+                // Update the input value
+                this.value = value;
+
+                // Mark as modified
+                const row = this.closest('tr');
+                const saveBtn = row.querySelector('.btn-save');
+                const originalValue = this.dataset.original;
+                
+                if (value !== originalValue) {
+                    this.classList.add('modified');
+                    saveBtn.classList.add('active');
+                } else {
+                    this.classList.remove('modified');
+                    if (!row.querySelector('.modified')) {
+                        saveBtn.classList.remove('active');
+                    }
+                }
+            });
+
+            // Only format when leaving the field
+            input.addEventListener('blur', function() {
+                if (this.value) {
+                    try {
+                        const numValue = parseFloat(this.value);
+                        if (!isNaN(numValue)) {
+                            this.value = numValue.toFixed(2);
+                        }
+                    } catch (e) {
+                        console.error('Error formatting price:', e);
+                    }
+                }
+            });
+        });
+
+        // Initialize all select inputs
+        document.querySelectorAll('select.inline-edit').forEach(select => {
+            select.addEventListener('change', function() {
+                const row = this.closest('tr');
+                const saveBtn = row.querySelector('.btn-save');
+                const originalValue = this.dataset.original;
+                
+                if (this.value !== originalValue) {
+                    this.classList.add('modified');
+                    saveBtn.classList.add('active');
+                } else {
+                    this.classList.remove('modified');
+                    if (!row.querySelector('.modified')) {
+                        saveBtn.classList.remove('active');
+                    }
+                }
+            });
+        });
     });
+
+    // Global save function
+    window.saveField = async function(button) {
+        const row = button.closest('tr');
+        const modifiedInput = row.querySelector('.modified');
+        
+        if (!modifiedInput) return;
+        
+        const ingredient_id = row.dataset.ingredientId;
+        const fieldName = modifiedInput.name;
+        let newValue = modifiedInput.value;
+        
+        try {
+            const response = await fetch(`/dashboard/{{ chef_naam }}/ingredients/${ingredient_id}/update-field`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': "{{ csrf_token() }}"
+                },
+                body: JSON.stringify({
+                    field: fieldName,
+                    value: newValue
+                })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                modifiedInput.dataset.original = result.value;
+                modifiedInput.classList.remove('modified');
+                button.classList.remove('active');
+                // Show success message
+                const flashDiv = document.createElement('div');
+                flashDiv.className = 'alert alert-success';
+                flashDiv.innerHTML = "Wijziging opgeslagen!";
+                document.querySelector('.container').insertAdjacentElement('afterbegin', flashDiv);
+                setTimeout(() => flashDiv.remove(), 3000);
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            modifiedInput.value = modifiedInput.dataset.original;
+            modifiedInput.classList.remove('modified');
+            button.classList.remove('active');
+            // Show error message
+            const flashDiv = document.createElement('div');
+            flashDiv.className = 'alert alert-danger';
+            flashDiv.innerHTML = "Fout bij opslaan: " + error.message;
+            document.querySelector('.container').insertAdjacentElement('afterbegin', flashDiv);
+            setTimeout(() => flashDiv.remove(), 3000);
+        }
+    };
 </script>
 {% endblock %}
