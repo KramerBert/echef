@@ -675,25 +675,16 @@ def create_app():
     @login_required
     def update_dish_ingredient(chef_naam, dish_id, ingredient_id):
         if session['chef_naam'] != chef_naam:
-            flash("Geen toegang. Log opnieuw in.", "danger")
-            return redirect(url_for('auth.login'))
-        form = FlaskForm()
-        if not form.validate_on_submit():
-            flash("Ongeldige CSRF-token.", "danger")
-            return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
-
-        if 'chef_id' not in session or session['chef_naam'] != chef_naam:
-            flash("Geen toegang. Log opnieuw in.", "danger")
-            return redirect(url_for('login'))
-
-        conn = get_db_connection()
-        if conn is None:
-            flash("Database connection error.", "danger")
-            return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
-        cur = conn.cursor(dictionary=True)
+            return jsonify({'success': False, 'error': 'Geen toegang'}), 403
 
         try:
             nieuwe_hoeveelheid = float(request.form['nieuwe_hoeveelheid'])
+
+            conn = get_db_connection()
+            if conn is None:
+                return jsonify({'success': False, 'error': 'Database verbinding mislukt'}), 500
+
+            cur = conn.cursor(dictionary=True)
 
             # Eerst de prijs_per_eenheid ophalen
             cur.execute("""
@@ -714,18 +705,33 @@ def create_app():
                     WHERE dish_id = %s AND ingredient_id = %s
                 """, (nieuwe_hoeveelheid, nieuwe_prijs_totaal, dish_id, ingredient_id))
                 
+                # Update de totale ingrediëntprijs van het gerecht
+                cur.execute("""
+                    UPDATE dishes d
+                    SET totaal_ingredient_prijs = (
+                        SELECT COALESCE(SUM(di.prijs_totaal), 0)
+                        FROM dish_ingredients di
+                        WHERE di.dish_id = d.dish_id
+                    )
+                    WHERE d.dish_id = %s
+                """, (dish_id,))
+                
                 conn.commit()
-                flash("Ingrediënt hoeveelheid bijgewerkt!", "success")
+                return jsonify({'success': True})
             else:
-                flash("Ingrediënt niet gevonden.", "danger")
-        except Exception as e:
-            conn.rollback()
-            flash(f"Fout bij bijwerken: {str(e)}", "danger")
-        finally:
-            cur.close()
-            conn.close()
+                return jsonify({'success': False, 'error': 'Ingrediënt niet gevonden'}), 404
 
-        return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id) + '#ingredienten-tabel')
+        except ValueError as e:
+            return jsonify({'success': False, 'error': 'Ongeldige waarde opgegeven'}), 400
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
 
     @app.route('/chef/<chef_naam>/dish/<int:dish_id>/ingredient/<int:ingredient_id>/remove', methods=['POST'])
     @login_required
