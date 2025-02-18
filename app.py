@@ -1655,7 +1655,7 @@ def create_app():
 
         try:
             total_cost = 0  # Variabele voor totale kostprijs
-            ingredient_total = 0  # Verplaatst naar hier voor betere scope
+            ingredient_total = 0  # Initialize here
 
             # Gebruik een dictionary met tuple als key voor de ingrediënten
             total_ingredients = {}
@@ -1693,6 +1693,10 @@ def create_app():
                         """, (dish_id,))
                         ingredients = cur.fetchall()
                         for ing in ingredients:
+                            # Calculate ingredient subtotal and add to total
+                            ingredient_subtotal = float(ing['hoeveelheid']) * quantity * float(ing['prijs_per_eenheid'] or 0)
+                            ingredient_total += ingredient_subtotal  # Add to running total
+                            
                             supplier_key = ing['leverancier_naam'] or 'Geen leverancier'
                             if supplier_key not in total_ingredients:
                                 total_ingredients[supplier_key] = []
@@ -1712,15 +1716,33 @@ def create_app():
 
             for supplier, ingredients in total_ingredients.items():
                 doc.add_heading(f'Leverancier: {supplier}', level=1)
-                table = doc.add_table(rows=1, cols=4)
+                table = doc.add_table(rows=1, cols=5)  # Verhoogd naar 5 kolommen
                 table.style = 'Table Grid'
                 
+                # Voeg headers toe aan eerste rij
+                header_cells = table.rows[0].cells
+                header_cells[0].text = 'Ingredient'
+                header_cells[1].text = 'Aantal'
+                header_cells[2].text = 'Eenheid'
+                header_cells[3].text = 'Prijs per eenheid'
+                header_cells[4].text = 'Totaal'  # Nieuwe kolom
+                
+                # Maak headers bold
+                for cell in header_cells:
+                    for paragraph in cell.paragraphs:
+                        for run in paragraph.runs:
+                            run.bold = True
+                
+                # Voeg ingrediënten toe met totaalprijs
                 for ingredient in ingredients:
                     row = table.add_row().cells
                     row[0].text = ingredient['naam']
                     row[1].text = f"{ingredient['hoeveelheid']:.2f}"
                     row[2].text = ingredient['eenheid']
                     row[3].text = f"€{ingredient['prijs']:.2f}"
+                    # Bereken en voeg totaalprijs toe
+                    totaal = ingredient['hoeveelheid'] * ingredient['prijs']
+                    row[4].text = f"€{totaal:.2f}"
 
                 doc.add_paragraph()
 

@@ -247,13 +247,40 @@
     }
 
     .btn-save {
-        opacity: 0.5;
-        transition: opacity 0.3s ease;
+        opacity: 0.2;
+        transition: all 0.3s ease;
+        color: var(--kitchen-steel);
     }
 
     .btn-save.active {
         opacity: 1;
         color: var(--kitchen-highlight);
+        animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+    }
+
+    /* Stijl voor de feedback message */
+    .save-feedback {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        border-radius: 4px;
+        background-color: var(--kitchen-highlight);
+        color: white;
+        z-index: 1000;
+        animation: slideIn 0.3s ease-out;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
     }
 </style>
 
@@ -323,12 +350,22 @@
                 modifiedInput.dataset.original = result.value;
                 modifiedInput.classList.remove('modified');
                 button.classList.remove('active');
-                // Show success message
-                const flashDiv = document.createElement('div');
-                flashDiv.className = 'alert alert-success';
-                flashDiv.innerHTML = "Wijziging opgeslagen!";
-                document.querySelector('.container').insertAdjacentElement('afterbegin', flashDiv);
-                setTimeout(() => flashDiv.remove(), 3000);
+
+                // Toon feedback message
+                const feedback = document.createElement('div');
+                feedback.className = 'save-feedback';
+                feedback.innerHTML = `
+                    <i class="fas fa-check-circle"></i>
+                    Wijziging opgeslagen!
+                `;
+                document.body.appendChild(feedback);
+
+                // Verwijder feedback na 3 seconden
+                setTimeout(() => {
+                    feedback.style.opacity = '0';
+                    setTimeout(() => feedback.remove(), 300);
+                }, 3000);
+
             } else {
                 throw new Error(result.error);
             }
@@ -337,13 +374,38 @@
             modifiedInput.value = modifiedInput.dataset.original;
             modifiedInput.classList.remove('modified');
             button.classList.remove('active');
-            // Show error message
-            const flashDiv = document.createElement('div');
-            flashDiv.className = 'alert alert-danger';
-            flashDiv.innerHTML = "Fout bij opslaan: " + error.message;
-            document.querySelector('.container').insertAdjacentElement('afterbegin', flashDiv);
-            setTimeout(() => flashDiv.remove(), 3000);
+
+            // Toon error feedback
+            const feedback = document.createElement('div');
+            feedback.className = 'save-feedback';
+            feedback.style.backgroundColor = '#dc3545';
+            feedback.innerHTML = `
+                <i class="fas fa-exclamation-circle"></i>
+                Fout bij opslaan: ${error.message}
+            `;
+            document.body.appendChild(feedback);
+
+            setTimeout(() => {
+                feedback.style.opacity = '0';
+                setTimeout(() => feedback.remove(), 300);
+            }, 3000);
         }
     };
+
+    // Voeg event listeners toe voor het activeren van save buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.inline-edit').forEach(input => {
+            input.addEventListener('change', function() {
+                const saveBtn = this.closest('tr').querySelector('.btn-save');
+                if (this.value !== this.dataset.original) {
+                    this.classList.add('modified');
+                    saveBtn.classList.add('active');
+                } else {
+                    this.classList.remove('modified');
+                    saveBtn.classList.remove('active');
+                }
+            });
+        });
+    });
 </script>
 {% endblock %}
