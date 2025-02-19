@@ -53,6 +53,7 @@ def create_app():
     
     # Move configuration from global scope to factory
     app.secret_key = os.getenv("SECRET_KEY")
+    app.config['ENV'] = os.getenv('FLASK_ENV', 'production') # Set the environment
     app.config['SECURITY_PASSWORD_SALT'] = os.getenv("SECURITY_PASSWORD_SALT", "your-default-salt")
     app.config['RECAPTCHA_PUBLIC_KEY'] = os.getenv('RECAPTCHA_SITE_KEY')
     app.config['RECAPTCHA_PRIVATE_KEY'] = os.getenv('RECAPTCHA_SECRET_KEY')
