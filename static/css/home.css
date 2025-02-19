@@ -40,6 +40,50 @@
     font-size: 1.2em;
 }
 
+/* Gekleurde iconen voor features */
+.accordion-button i.fa-utensils {
+    color: #FF6B6B;  /* Warm rood voor recepten */
+}
+
+.accordion-button i.fa-calculator {
+    color: #4ECDC4;  /* Turquoise voor kostprijs */
+}
+
+.accordion-button i.fa-file-alt {
+    color: #45B7D1;  /* Lichtblauw voor menukaarten */
+}
+
+.accordion-button i.fa-book-reader {
+    color: #96CEB4;  /* Sage groen voor kookboek */
+}
+
+.accordion-button i.fa-shopping-basket {
+    color: #FFEEAD;  /* Zacht geel voor bestellijst */
+}
+
+.accordion-button i.fa-clipboard-check {
+    color: #88D8B0;  /* Mint groen voor HACCP */
+}
+
+.accordion-button i.fa-users-cog {
+    color: #FFD93D;  /* Geel voor gebruikers */
+}
+
+.accordion-button i.fa-rocket {
+    color: #FF9F1C;  /* Oranje voor quickstart */
+}
+
+/* Hover effect voor iconen */
+.accordion-button:hover i {
+    transform: scale(1.2);
+    transition: transform 0.2s ease;
+}
+
+/* Behoud icon kleur wanneer accordion open is */
+.accordion-button:not(.collapsed) i {
+    color: inherit;  /* Terug naar standaard kleur wanneer geopend */
+}
+
 @media (max-width: 768px) {
     .accordion {
         width: 100%;
