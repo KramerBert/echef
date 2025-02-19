@@ -115,6 +115,15 @@ def create_app():
         error = InternalServerError()
         return render_template('errors/500.html', error=error), 500
 
+    # Add middleware to redirect HTTP to HTTPS
+    @app.before_request
+    def before_request():
+        if app.config['ENV'] == 'production':
+            if request.url.startswith('http://'):
+                url = request.url.replace('http://', 'https://', 1)
+                code = 301
+                return redirect(url, code=code)
+
     # Database configuration from .env
     DB_NAME = os.getenv("DB_NAME")
     DB_USER = os.getenv("DB_USER")
