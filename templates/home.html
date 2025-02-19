@@ -5,227 +5,79 @@
     <div class="card-body">
         <h1 class="card-title">Welkom bij E-chef</h1>
         <img src="{{ url_for('static', filename='images/logo.png') }}" alt="E-chef Logo" class="img-fluid mb-4" style="max-width: 200px;">
-        <h2 class="card-title">Ai driven Menu Engineering</h2>
+        <h2 class="card-title">Menu Engineering</h2>
+        
         <div class="accordion" id="featureAccordion">
+            <!-- Kernfunctionaliteiten -->
+            {% for feature in [
+                ('Recepten', 'utensils', 'Beheer Je Recepten Slimmer', 'Houd al je recepten overzichtelijk op één centrale plek met uitgebreide <strong>ingrediëntenlijsten</strong> en stap-voor-stap <strong>bereidingswijzen</strong>. 🍳'),
+                ('Kostprijs', 'calculator', 'Slimme Kostprijsberekening', 'Laat e-Chef automatisch de <strong>kostprijs per gerecht</strong> berekenen. 💰'),
+                ('Menukaarten', 'file-alt', 'Menukaarten Exporteren', '🍽️ Exporteer in 1 muisklik professioneel opgemaakte menukaarten en print ze uit voor je gasten of de drukker. 📄'),
+                ('Kookboek', 'book-reader', 'Jouw Professionele Kookboek', '📖 Creëer je eigen professionele kookboek met al je recepten en technieken. 👨‍🍳'),
+                ('Bestellijst', 'shopping-basket', 'Gemakkelijk Bestellen', '🛒 Selecteer je gerechten, geef de aantallen op en print met 1 muisklik je bestellijst per leverancier. 📝'),
+                ('HACCP', 'clipboard-check', 'Extra: HACCP', '🧾 Maak je eigen HACCP Checklist aan en track de status van de controlepunten. ✅')
+            ] %}
+            <div class="accordion-item bg-dark text-white">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ feature[0] }}">
+                        <i class="fas fa-{{ feature[1] }}"></i> {{ feature[0] }}
+                    </button>
+                </h2>
+                <div id="collapse{{ feature[0] }}" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
+                    <div class="accordion-body">
+                        <h2>{{ feature[2] }}</h2>
+                        <p>{{ feature[3] | safe }}</p>
+                        {% if feature[0] == 'Quickstart' %}
+                        <a href="{{ url_for('quickstart') }}" class="btn btn-info mt-2">
+                            <i class="fas fa-arrow-right"></i> Naar de Quickstart Guide
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
 
- <!-- Voor wie is e-Chef -->
- <div class="accordion-item bg-dark text-white">
-    <h2 class="accordion-header">
-        <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseVoorWie">
-            <i class="fas fa-book-open"></i> Voor wie is e-Chef</button>
-    </h2>
-    <div id="collapseVoorWie" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
-        <div class="accordion-body">
+            <!-- Voor wie is e-Chef -->
+            <div class="accordion-item bg-dark text-white">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseVoorWie">
+                        <i class="fas fa-users-cog"></i> Voor wie is e-Chef
+                    </button>
+                </h2>
+                <div id="collapseVoorWie" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
+                    <div class="accordion-body">
+                        <h2>e-Chef: Gemaakt door kookprofessionals, voor kookprofessionals en gepassioneerde hobbykoks.</h2>
+                        <p>Verplaats je van werkplek? Geen zorgen—je neemt eenvoudig je complete e-Chef <strong>portfolio</strong>, <strong>recepten</strong> en <strong>menukaarten</strong> overal mee naartoe. ✨👨‍🍳👩‍🍳</p>
+                    </div>
+                </div>
+            </div>
 
-            <h2>e-Chef: Gemaakt door kookprofessionals, voor kookprofessionals en gepassioneerde hobbykoks.</h2>
-            <p>
-                Verplaats je van werkplek? Geen zorgen—je neemt eenvoudig je complete e-Chef
-                <strong>portfolio</strong>, <strong>recepten</strong> en <strong>menukaarten</strong> overal mee naartoe. ✨👨‍🍳👩‍🍳
-            </p>
-
-
+            <!-- Quickstart -->
+            <div class="accordion-item bg-dark text-white">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseQuickstart">
+                        <i class="fas fa-rocket"></i> Quickstart Guide
+                    </button>
+                </h2>
+                <div id="collapseQuickstart" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
+                    <div class="accordion-body">
+                        <p>Snel aan de slag met e-Chef? Bekijk onze quickstart guide!</p>
+                        <a href="{{ url_for('quickstart') }}" class="btn btn-info mt-2">
+                            <i class="fas fa-arrow-right"></i> Naar de Quickstart Guide
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
-            <!-- Recepten Beherenn -->
-            
-            
-            
-            <div class="accordion-item bg-dark text-white">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRecepten">
-                        <i class="fas fa-book"></i> Recepten Beheren
-                    </button>
-                </h2>
-               
-                <div id="collapseRecepten" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
-                    <div class="accordion-body">
-                        <h2>🍴 Beheer Je Recepten Slimmer</h2>
-                        <p>
-                            Houd al je recepten overzichtelijk op één centrale plek met uitgebreide 
-                            <strong>ingrediëntenlijsten</strong> en stap-voor-stap <strong>bereidingswijzen</strong>.
-                        </p>
-                    
-                    
-                    </div>
-                </div>
-            </div>
-
-            <!-- Kostprijsberekeningen -->
-            <div class="accordion-item bg-dark text-white">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseKostprijs">
-                        <i class="fas fa-calculator"></i> Kostprijsberekeningen
-                    </button>
-                </h2>
-              
-                <div id="collapseKostprijs" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
-                    <div class="accordion-body">
-                        <h2>📊 Slimme Kostprijsberekening</h2>
-                        <p>
-                            Laat e-Chef automatisch de <strong>kostprijs per gerecht</strong> berekenen.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Menukaarten printen -->
-            <div class="accordion-item bg-dark text-white">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMenukaarten">
-                    <i class="fas fa-print"></i> Menukaarten printen
-                    </button>
-                </h2>
-                <div id="collapseMenukaarten" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
-                    <div class="accordion-body">
-                        <h1>Menukaarten Exporteren</h1>
-                        <p>🍽️ Exporteer in 1 muisklik professioneel opgemaakte menukaarten en print ze uit voor je gasten of de drukker.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Kookboek Samenstellen -->
-            <div class="accordion-item bg-dark text-white">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseKookboek">
-                        <i class="fas fa-book-open"></i> Kookboek Samenstellen
-                    </button>
-                </h2>
-                <div id="collapseKookboek" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
-                    <div class="accordion-body">
-                        <h1>Jouw Professionele Kookboek</h1>
-                        <p>📖 Creëer je eigen professionele kookboek met al je recepten en technieken.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bestellijst exporteren -->
-            <div class="accordion-item bg-dark text-white">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBestellijst">
-                        <i class="fas fa-book-open"></i> Bestellijst Exporteren</button>
-                </h2>
-                <div id="collapseBestellijst" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
-                    <div class="accordion-body">
-                        <h1>Gemakkelijk Bestellen</h1>
-                        <p>🛒 Selecteer je gerechten, geef de aantallen op en print met 1 muisklik je bestellijst per leverancier.</p>
-                     </div>
-                </div>
-            </div>
-           
-
-                <!-- HACCP -->
-                <div class="accordion-item bg-dark text-white">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseHACCP">
-                            <i class="fas fa-book-open"></i> HACCP module</button>
-                    </h2>
-                    <div id="collapseHACCP" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
-                        <div class="accordion-body">
-                            <h1>Extra: HACCP</h1>
-                            <p>🧾 Maak je eigen HACCP Checklist aan en track de status van de controlepunten. </p>
-                        </div>
-                    </div>
-                </div>
-
-<!-- Quickstart Guide -->
-<div class="accordion-item bg-dark text-white">
-    <h2 class="accordion-header">
-        <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseQuickstart">
-            <i class="fas fa-bolt"></i> Quickstart Guide
-        </button>
-    </h2>
-    <div id="collapseQuickstart" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
-        <div class="accordion-body">
-            <p>Snel aan de slag met e-Chef? Bekijk onze quickstart guide!</p>
-            <a href="{{ url_for('quickstart') }}" class="btn btn-info mt-2">
-                <i class="fas fa-arrow-right"></i> Naar de Quickstart Guide
-            </a>
-        </div>
-    </div>
-</div>
-
-        </div>
-
-        <style>
-            .accordion {
-                width: 90%;
-                margin: 1rem auto;
-            }
-            .accordion-item {
-                border: none;
-                margin-bottom: 0.5rem;  /* Verkleind van 1rem naar 0.5rem */
-                background-color: transparent;
-            }
-            .accordion-button {
-                padding: 1rem;  /* Verkleind van 1.5rem naar 1rem */
-                transition: all 0.3s ease;
-                border-radius: 8px !important;
-                text-align: center;
-                justify-content: center;
-            }
-            .accordion-button:not(.collapsed) {
-                color: var(--kitchen-highlight) !important;
-                background-color: var(--kitchen-blue) !important;
-                border-radius: 8px 8px 0 0 !important;
-            }
-            .accordion-button::after {
-                filter: invert(1);
-                margin-left: 10px;
-            }
-            .accordion-body {
-                padding: 1.5rem;  /* Verkleind van 2rem naar 1.5rem */
-                background-color: var(--kitchen-blue);
-                border-radius: 0 0 8px 8px;
-                text-align: center;
-            }
-            .accordion-button i {
-                margin-right: 10px;
-                font-size: 1.2em;
-            }
-            @media (max-width: 768px) {
-                .accordion {
-                    width: 100%;
-                    margin: 1rem 0;
-                }
-                
-                .card-body {
-                    padding: 1rem 0.5rem;
-                }
-                
-                .accordion-button {
-                    padding: 0.75rem;
-                    font-size: 0.9rem;
-                }
-                
-                .accordion-body {
-                    padding: 1rem;
-                    font-size: 0.9rem;
-                }
-                
-                .btn {
-                    width: 100%;
-                    margin: 0.25rem 0;
-                }
-                
-                img.img-fluid {
-                    max-width: 150px;
-                }
-                
-                h1.card-title {
-                    font-size: 1.5rem;
-                }
-                
-                h2.card-title {
-                    font-size: 1.25rem;
-                }
-            }
-        </style>
 
         <div class="mt-4">
-            <a href="{{ url_for('auth.register') }}" class="btn btn-info" aria-label="Register"><i class="fas fa-user-plus"></i> Registreren</a>
-            <a href="{{ url_for('auth.login') }}" class="btn btn-info" aria-label="Login"><i class="fas fa-sign-in-alt"></i> Inloggen</a>
-            <p> Registreer vandaag nog, het is gratis in 2025! 🎉 <a href="{{ url_for('auth.register') }}"></a> </p>
+            <a href="{{ url_for('auth.register') }}" class="btn btn-info" aria-label="Register">
+                <i class="fas fa-user-plus"></i> Registreren
+            </a>
+            <a href="{{ url_for('auth.login') }}" class="btn btn-info" aria-label="Login">
+                <i class="fas fa-sign-in-alt"></i> Inloggen
+            </a>
+            <p>Registreer vandaag nog, het is gratis in 2025! 🎉</p>
         </div>
     </div>
 </div>

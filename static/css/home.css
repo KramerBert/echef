@@ -1,0 +1,79 @@
+.accordion {
+    width: 90%;
+    margin: 1rem auto;
+}
+
+.accordion-item {
+    border: none;
+    margin-bottom: 0.5rem;
+    background-color: transparent;
+}
+
+.accordion-button {
+    padding: 1rem;
+    transition: all 0.3s ease;
+    border-radius: 8px !important;
+    text-align: center;
+    justify-content: center;
+}
+
+.accordion-button:not(.collapsed) {
+    color: var(--kitchen-highlight) !important;
+    background-color: var(--kitchen-blue) !important;
+    border-radius: 8px 8px 0 0 !important;
+}
+
+.accordion-button::after {
+    filter: invert(1);
+    margin-left: 10px;
+}
+
+.accordion-body {
+    padding: 1.5rem;
+    background-color: var(--kitchen-blue);
+    border-radius: 0 0 8px 8px;
+    text-align: center;
+}
+
+.accordion-button i {
+    margin-right: 10px;
+    font-size: 1.2em;
+}
+
+@media (max-width: 768px) {
+    .accordion {
+        width: 100%;
+        margin: 1rem 0;
+    }
+    
+    .card-body {
+        padding: 1rem 0.5rem;
+    }
+    
+    .accordion-button {
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    .accordion-body {
+        padding: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .btn {
+        width: 100%;
+        margin: 0.25rem 0;
+    }
+    
+    img.img-fluid {
+        max-width: 150px;
+    }
+    
+    h1.card-title {
+        font-size: 1.5rem;
+    }
+    
+    h2.card-title {
+        font-size: 1.25rem;
+    }
+}

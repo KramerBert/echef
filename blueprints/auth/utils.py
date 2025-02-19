@@ -69,18 +69,30 @@ def send_reset_email(email, token):
     scheme = 'https' if os.getenv('FLASK_ENV') == 'production' else 'http'
     reset_url = url_for('auth.reset_password', token=token, _external=True, _scheme=scheme)
     
-    body = f"""
-    Er is een wachtwoord reset aangevraagd voor je e-Chef account.
-    Klik op de onderstaande link om je wachtwoord te resetten:
-    
-    {reset_url}
-    
-    Deze link verloopt over {current_app.config['RESET_TOKEN_EXPIRE_MINUTES']} minuten.
-    Als je geen reset hebt aangevraagd, kun je deze email negeren.
+    body_html = f"""
+    <html>
+    <body style="text-align: center; font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <img src="{current_app.config.get('LOGO_URL', 'https://your-default-logo-url.com/logo.png')}" 
+             alt="e-Chef Alert!" 
+             style="max-width: 200px; margin-bottom: 20px;">
+        
+        <h2>Wachtwoord Reset</h2>
+        
+        <p>Er is een wachtwoord reset aangevraagd voor je e-Chef account.</p>
+        
+        <p>Klik op de onderstaande link om je wachtwoord te resetten:</p>
+        
+        <p><a href="{reset_url}">{reset_url}</a></p>
+        
+        <p>Deze link verloopt over {current_app.config['RESET_TOKEN_EXPIRE_MINUTES']} minuten.</p>
+        
+        <p>Als je geen reset hebt aangevraagd, kun je deze email negeren.</p>
+    </body>
+    </html>
     """
     
-    msg.attach(MIMEText(body, 'plain'))
-    
+    # Change the email type to HTML instead of plain text
+    msg.attach(MIMEText(body_html, 'html'))
     try:
         server = smtplib.SMTP(current_app.config['MAIL_SERVER'], current_app.config['MAIL_PORT'])
         server.starttls()
