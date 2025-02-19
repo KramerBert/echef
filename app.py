@@ -42,6 +42,7 @@ from forms import LeverancierForm, EenheidForm, CategorieForm, DishCategoryForm
 from blueprints.haccp_api import bp as haccp_api_bp
 import re  # Add this import
 import html  # Add this import
+import time 
 from decimal import Decimal  # Add this import at the top
 
 load_dotenv()  # Load the values from .env
@@ -1043,7 +1044,7 @@ def create_app():
                 if allergenen:
                     allergenen_paragraph = doc.add_paragraph()
                     allergenen_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    allergenen_text = "Allergenen: " + ", ".join([a['naam'] for a in allergenen])
+                    allergenen_text = "Allergenen: " + ", ".join([f"{a['icon_class']} {a['naam']}" for a in allergenen])
                     allergenen_paragraph.add_run(allergenen_text).italic = True
 
                 # Voeg diëten toe aan het document
@@ -1059,7 +1060,7 @@ def create_app():
                 if dieten:
                     dieten_paragraph = doc.add_paragraph()
                     dieten_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    dieten_text = "Geschikt voor: " + ", ".join([d['naam'] for d in dieten])
+                    dieten_text = "Geschikt voor: " + ", ".join([f"{d['icon_class']} {d['naam']}" for d in dieten])
                     dieten_paragraph.add_run(dieten_text).italic = True
 
                 # Voeg witruimte toe tussen gerechten
@@ -1191,7 +1192,7 @@ def create_app():
                 if allergenen:
                     allergenen_paragraph = doc.add_paragraph()
                     allergenen_paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                    allergenen_text = "Allergenen: " + ", ".join([a['naam'] for a in allergenen])
+                    allergenen_text = "Allergenen: " + ", ".join([f"{a['icon_class']} {a['naam']}" for a in allergenen])
                     allergenen_paragraph.add_run(allergenen_text).italic = True
 
                 # Voeg diëten toe aan het document
@@ -1207,7 +1208,7 @@ def create_app():
                 if dieten:
                     dieten_paragraph = doc.add_paragraph()
                     dieten_paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                    dieten_text = "Geschikt voor: " + ", ".join([d['naam'] for d in dieten])
+                    dieten_text = "Geschikt voor: " + ", ".join([f"{d['icon_class']} {d['naam']}" for d in dieten])
                     dieten_paragraph.add_run(dieten_text).italic = True
 
                 doc.add_paragraph("\n").alignment = WD_ALIGN_PARAGRAPH.LEFT
