@@ -9,6 +9,16 @@
     </a>
 </div>
 
+<div class="dish-search">
+    <input type="text" id="dishSearch" placeholder="Zoek gerecht...">
+    <select id="categoryFilter">
+        <option value="">Alle categorieën</option>
+        {% for categorie in dish_categories %}
+            <option value="{{ categorie.naam }}">{{ categorie.naam }}</option>
+        {% endfor %}
+    </select>
+</div>
+
 <div class="create-dish-form">
     <form method="POST" action="{{ url_for('manage_dishes', chef_naam=chef_naam) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -54,7 +64,6 @@
     <a href="{{ url_for('all_dishes') }}" class="btn-action">
         <i class="fas fa-list"></i> Terug naar overzicht gerechten
     </a>
-
 </div>
 
 {% endblock %}

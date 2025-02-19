@@ -273,7 +273,7 @@ h2, h3, p {
                 <h3>Allergenen (Selecteer de allergenen die in dit gerecht aanwezig zijn.)</h3>
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ url_for('update_dish_allergenen', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
+                <form id="allergeenForm" method="POST" action="{{ url_for('update_dish_allergenen', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="row">
                         {% for allergeen in alle_allergenen %}
@@ -285,7 +285,7 @@ h2, h3, p {
                                        id="allergeen{{ allergeen.allergeen_id }}"
                                        {% if allergeen.allergeen_id in gerecht_allergenen %} checked {% endif %}>
                                 <label class="form-check-label allergen-label" for="allergeen{{ allergeen.allergeen_id }}">
-                                    {{ allergeen.naam }}
+                                    <span class="allergen-icon">{{ allergeen.icon_class }}</span> {{ allergeen.naam }}
                                 </label>
                             </div>
                         </div>
@@ -298,34 +298,82 @@ h2, h3, p {
     </div>
 
     <div class="edit-section">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h3>Diëten (Selecteer de diëten die geschikt zijn voor dit gerecht.)</h3>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="{{ url_for('update_dish_dieten', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>Diëten en Allergieën</h3>
+        </div>
+        <div class="card-body">
+            <div class="dieet-selector">
+                <h4>Selecteer Diëten</h4>
+                <form id="dietForm" method="POST" action="{{ url_for('update_dish_dieten', chef_naam=chef_naam, dish_id=gerecht.dish_id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="row">
+                    <div class="dieet-tags">
                         {% for dieet in alle_dieten %}
-                        <div class="col-md-3 mb-2">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" 
-                                       name="dieten[]" 
-                                       value="{{ dieet.dieet_id }}"
-                                       id="dieet{{ dieet.dieet_id }}"
-                                       {% if dieet.dieet_id in gerecht_dieten %} checked {% endif %}>
-                                <label class="form-check-label diet-label" for="dieet{{ dieet.dieet_id }}">
-                                    <span class="dieet-icon">{{ dieet.icon_class }}</span> {{ dieet.naam }}
-                                </label>
-                            </div>
+                        <div class="dieet-tag {% if dieet.dieet_id in gerecht_dieten %}active{% endif %}"
+                             data-dieet-id="{{ dieet.dieet_id }}">
+                            <span class="dieet-icon">{{ dieet.icon_class }}</span>
+                            <span class="dieet-naam">{{ dieet.naam }}</span>
+                            <input type="checkbox" name="dieten[]" 
+                                   value="{{ dieet.dieet_id }}" 
+                                   {% if dieet.dieet_id in gerecht_dieten %}checked{% endif %}
+                                   style="display: none;">
                         </div>
                         {% endfor %}
                     </div>
-                    <button type="submit" class="btn btn-primary mt-3">Diëten Opslaan</button>
+                    <button type="button" class="btn btn-primary mt-3" onclick="updateDieten()">
+                        Diëten Opslaan
+                    </button>
                 </form>
             </div>
         </div>
     </div>
+</div>
+
+    <div class="edit-section">
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>Overzicht Diëten en Allergenen</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h4>Gekoppelde Diëten</h4>
+                    {% if gerecht_dieten %}
+                        <div class="diet-overview">
+                            {% for dieet in alle_dieten %}
+                                {% if dieet.dieet_id in gerecht_dieten %}
+                                    <div class="diet-badge">
+                                        <span class="diet-icon">{{ dieet.icon_class }}</span>
+                                        <span class="diet-name">{{ dieet.naam }}</span>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Geen diëten gekoppeld aan dit gerecht</p>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <h4>Gekoppelde Allergenen</h4>
+                    {% if gerecht_allergenen %}
+                        <div class="allergen-overview">
+                            {% for allergeen in alle_allergenen %}
+                                {% if allergeen.allergeen_id in gerecht_allergenen %}
+                                    <div class="allergen-badge">
+                                        <span class="allergen-icon">{{ allergeen.icon_class }}</span>
+                                        <span class="allergen-name">{{ allergeen.naam }}</span>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Geen allergenen gekoppeld aan dit gerecht</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
     <div class="edit-section">
         <a href="{{ url_for('all_dishes') }}" class="btn btn-secondary">Terug naar Gerechtenoverzicht</a>
@@ -376,6 +424,133 @@ document.querySelectorAll('.editor').forEach(editor => {
             console.error(error);
         });
 });
+
+// Vereenvoudigde update functies zonder event handlers op checkboxes
+function updateDieten() {
+    const form = document.getElementById('dietForm');
+    const formData = new FormData(form);
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': formData.get('csrf_token')
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert('Diëten succesvol opgeslagen!');
+            location.reload();
+        } else {
+            throw new Error(data.error || 'Unknown error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Er is een fout opgetreden bij het opslaan van de diëten.');
+    });
+}
+
+function updateAllergenen() {
+    const form = document.getElementById('allergeenForm');
+    const formData = new FormData(form);
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': formData.get('csrf_token')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Allergenen succesvol opgeslagen!');
+        } else {
+            alert('Er is een fout opgetreden bij het opslaan van de allergenen.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Er is een fout opgetreden bij het opslaan van de allergenen.');
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const allergeenForm = document.getElementById('allergeenForm');
+    const dietForm = document.getElementById('dietForm');
+
+    allergeenForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': formData.get('csrf_token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Allergenen succesvol opgeslagen!');
+                location.reload();
+            } else {
+                throw new Error(data.error || 'Unknown error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Er is een fout opgetreden bij het opslaan van de allergenen.');
+        });
+    });
+
+    dietForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+
+        // Debug log
+        console.log('Sending diets:', formData.getAll('dieten[]'));
+
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': formData.get('csrf_token')
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                alert('Diëten succesvol opgeslagen!');
+                // Ververs de pagina om de nieuwe status te tonen
+                window.location.reload();
+            } else {
+                throw new Error(data.error || 'Unknown error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Er is een fout opgetreden bij het opslaan van de diëten.');
+        });
+    });
+});
+
+// Voorkom dubbele clicks
+document.querySelectorAll('#dietForm input[type="checkbox"], #allergeenForm input[type="checkbox"]').forEach(checkbox => {
+    checkbox.addEventListener('click', function(event) {
+        event.stopPropagation();
+    });
+});
 </script>
+<script src="{{ url_for('static', filename='js/edit_dish.js') }}"></script>
 
 {% endblock %}

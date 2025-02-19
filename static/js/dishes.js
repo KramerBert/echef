@@ -1,31 +1,35 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('dishSearch');
     const categoryFilter = document.getElementById('categoryFilter');
-    const table = document.querySelector('.dish-table');
+    
+    // Check of we op de juiste pagina zijn
+    if (!categoryFilter) {
+        console.log('Search elements not found, probably not on dishes page');
+        return;
+    }
 
+    const table = document.querySelector('.dish-table');
     if (!table) {
-        console.warn("Table with class 'dish-table' not found on this page. Skipping script.");
+        console.log('Dish table not found, probably not on dishes page');
         return;
     }
 
     const rows = Array.from(table.getElementsByTagName('tr'));
 
     function filterTable() {
-        const searchTerm = searchInput.value.toLowerCase();
         const category = categoryFilter.value.toLowerCase();
 
         rows.forEach((row, index) => {
             if (index === 0) return; // Skip header row
-            const name = row.cells[0].textContent.toLowerCase();
-            const rowCategory = row.cells[1].textContent.toLowerCase();
+            const cells = row.cells;
+            if (!cells || cells.length < 2) return; // Skip invalid rows
             
-            const matchesSearch = name.includes(searchTerm);
+            const rowCategory = cells[1].textContent.toLowerCase();
+            
             const matchesCategory = category === '' || rowCategory === category;
 
-            row.classList.toggle('hidden', !(matchesSearch && matchesCategory));
+            row.style.display = matchesCategory ? '' : 'none';
         });
     }
 
-    searchInput.addEventListener('input', filterTable);
     categoryFilter.addEventListener('change', filterTable);
 });

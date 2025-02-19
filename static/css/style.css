@@ -1405,3 +1405,103 @@ textarea.form-control {
 .create-dish-form select::-ms-expand {
     display: none;
 }
+
+/* Dieet selector styling */
+.dieet-selector {
+    padding: 1rem;
+}
+
+.dieet-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.dieet-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    border-radius: 2rem;
+    background-color: var(--kitchen-dark);
+    border: 2px solid var(--kitchen-steel);
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    margin: 0.25rem;
+    user-select: none;
+}
+
+.dieet-tag:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    border-color: var(--kitchen-highlight);
+}
+
+.dieet-tag.active {
+    background-color: var(--kitchen-highlight);
+    border-color: var(--kitchen-highlight);
+    color: white;
+    transform: scale(1.02);
+}
+
+.dieet-tag.active:hover {
+    background-color: var(--kitchen-highlight);
+    opacity: 0.9;
+}
+
+.dieet-tag .dieet-icon {
+    margin-right: 0.75rem;
+    font-size: 1.2em;
+}
+
+.dieet-tag .dieet-naam {
+    font-size: 0.95em;
+    font-weight: 500;
+}
+
+/* Voeg focus styles toe voor toegankelijkheid */
+.dieet-tag:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--kitchen-highlight);
+}
+
+.diet-overview,
+.allergen-overview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.diet-badge,
+.allergen-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background-color: var(--kitchen-dark);
+    border-radius: 2rem;
+    color: var(--text-light);
+}
+
+.diet-badge {
+    border: 2px solid var(--kitchen-highlight);
+    background-color: var(--kitchen-highlight);
+}
+
+.allergen-badge {
+    border: 2px solid var(--kitchen-warning);
+    background-color: var(--kitchen-warning);
+}
+
+.diet-icon,
+.allergen-icon {
+    margin-right: 0.5rem;
+    font-size: 1.1em;
+}
+
+.diet-name,
+.allergen-name {
+    font-size: 0.9em;
+    font-weight: 500;
+}

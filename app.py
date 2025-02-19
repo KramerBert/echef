@@ -667,6 +667,7 @@ def create_app():
             alle_allergenen=alle_allergenen,
             gerecht_allergenen=gerecht_allergenen,
             alle_dieten=alle_dieten,
+            gerecht_dieten=gerecht_dieten,  # Zorg dat deze correct wordt doorgegeven
             dish_categories=dish_categories, # Deze regel was al aanwezig, maar ik herhaal hem voor de zekerheid
             form=form  # Add form to template context
         )
@@ -776,21 +777,17 @@ def create_app():
     @login_required
     def update_dish_allergenen(chef_naam, dish_id):
         if session['chef_naam'] != chef_naam:
-            flash("Geen toegang. Log opnieuw in.", "danger")
-            return redirect(url_for('auth.login'))
+            return jsonify({'success': False, 'error': 'Geen toegang'}), 403
         form = FlaskForm()  # Add CSRF validation
         if not form.validate_on_submit():
-            flash("Ongeldige CSRF-token.", "danger")
-            return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
+            return jsonify({'success': False, 'error': 'Ongeldige CSRF-token'}), 400
 
         if 'chef_id' not in session or session['chef_naam'] != chef_naam:
-            flash("Geen toegang. Log opnieuw in.", "danger")
-            return redirect(url_for('login'))
+            return jsonify({'success': False, 'error': 'Geen toegang'}), 403
 
         conn = get_db_connection()
         if conn is None:
-            flash("Database connection error.", "danger")
-            return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
+            return jsonify({'success': False, 'error': 'Database connection error'}), 500
         cur = conn.cursor()
 
         try:
@@ -806,59 +803,73 @@ def create_app():
                 """, (dish_id, allergeen_id))
             
             conn.commit()
-            flash("Allergenen bijgewerkt!", "success")
+            return jsonify({'success': True, 'message': 'Allergenen bijgewerkt!'})
         except Exception as e:
             conn.rollback()
-            flash(f"Fout bij bijwerken allergenen: {str(e)}", "danger")
+            app.logger.error(f"Fout bij bijwerken allergenen: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             cur.close()
             conn.close()
-
-        return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
 
     @app.route('/dashboard/<chef_naam>/dish/<int:dish_id>/dieten', methods=['POST'])
     @login_required
     def update_dish_dieten(chef_naam, dish_id):
         if session['chef_naam'] != chef_naam:
-            flash("Geen toegang. Log opnieuw in.", "danger")
-            return redirect(url_for('auth.login'))
-        form = FlaskForm()  # Add CSRF validation
-        if not form.validate_on_submit():
-            flash("Ongeldige CSRF-token. Probeer het opnieuw.", "danger")
-            return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
+            return jsonify({'success': False, 'error': 'Geen toegang'}), 403
 
-        if 'chef_id' not in session or session['chef_naam'] != chef_naam:
-            flash("Geen toegang. Log opnieuw in.", "danger")
-            return redirect(url_for('login'))
+        form = FlaskForm()
+        if not form.validate_on_submit():
+            return jsonify({'success': False, 'error': 'Ongeldige CSRF-token'}), 400
 
         conn = get_db_connection()
         if conn is None:
-            flash("Database connection error.", "danger")
-            return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
-        cur = conn.cursor()
+            return jsonify({'success': False, 'error': 'Database connection error'}), 500
 
-        try:
-            # Verwijder bestaande diëten voor dit gerecht
-            cur.execute("DELETE FROM dish_dieten WHERE dish_id = %s", (dish_id,))
-            
-            # Voeg nieuwe diëten toe
-            nieuwe_dieten = request.form.getlist('dieten[]')
-            for dieet_id in nieuwe_dieten:
-                cur.execute("""
-                    INSERT INTO dish_dieten (dish_id, dieet_id)
-                    VALUES (%s, %s)
-                """, (dish_id, dieet_id))
-            
-            conn.commit()
-            flash("Diëten bijgewerkt!", "success")
-        except Exception as e:
-            conn.rollback()
-            flash(f"Fout bij bijwerken diëten: {str(e)}", "danger")
-        finally:
-            cur.close()
-            conn.close()
+        cur = conn.cursor(buffered=True)  # Gebruik buffered cursor
+        max_retries = 3
+        retry_count = 0
 
-        return redirect(url_for('edit_dish', chef_naam=chef_naam, dish_id=dish_id))
+        while retry_count < max_retries:
+            try:
+                # Begin transaction
+                cur.execute("SET TRANSACTION ISOLATION LEVEL READ COMMITTED")
+                cur.fetchall()  # Lees resultaat van SET TRANSACTION
+                
+                # Lock the records in a consistent order to prevent deadlocks
+                cur.execute("SELECT dish_id FROM dishes WHERE dish_id = %s FOR UPDATE", (dish_id,))
+                cur.fetchall()  # Lees resultaat van SELECT FOR UPDATE
+                
+                # Delete existing diets
+                cur.execute("DELETE FROM dish_dieten WHERE dish_id = %s", (dish_id,))
+                
+                # Add new diets
+                dieten = request.form.getlist('dieten[]')
+                if dieten:
+                    # Use a single INSERT statement with multiple values
+                    values = [(dish_id, int(dieet_id)) for dieet_id in dieten]
+                    cur.executemany(
+                        "INSERT INTO dish_dieten (dish_id, dieet_id) VALUES (%s, %s)",
+                        values
+                    )
+                
+                conn.commit()
+                app.logger.debug("Diets updated successfully")
+                return jsonify({'success': True})
+
+            except Exception as e:
+                conn.rollback()
+                if "Deadlock" in str(e) and retry_count < max_retries - 1:
+                    retry_count += 1
+                    app.logger.warning(f"Deadlock encountered, retrying ({retry_count}/{max_retries})")
+                    time.sleep(0.1 * retry_count)  # Exponential backoff
+                    continue
+                
+                app.logger.error(f"Error updating diets: {str(e)}")
+                return jsonify({'success': False, 'error': str(e)}), 500
+            finally:
+                cur.close()
+                conn.close()
 
     # -----------------------------------------------------------
     #  Alle Gerechten Beheren
