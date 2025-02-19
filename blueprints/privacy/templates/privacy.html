@@ -2,8 +2,161 @@
 {% block title %}Privacy Policy{% endblock %}
 {% block content %}
 <div class="container mt-5">
-    <h1>Privacy Policy</h1>
-    <p>This is a basic privacy policy page. You should replace this with your actual privacy policy.</p>
-    <p>Read our <a href="{{ url_for('terms.terms_index') }}">Terms and Conditions</a>.</p>
+    <head>
+      <meta charset="utf-8">
+      <title>Privacyverklaring e-Chef</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 20px;
+          line-height: 1.6;
+        }
+        h1, h2 {
+          margin-top: 1em;
+          margin-bottom: 0.5em;
+        }
+        h1 {
+          font-size: 1.5em;
+          text-transform: uppercase;
+          border-bottom: 1px solid #333;
+          padding-bottom: 0.3em;
+        }
+        h2 {
+          font-size: 1.2em;
+          color: #fff;
+        }
+        ul, ol {
+          margin: 0 0 1em 2em;
+          padding: 0;
+        }
+        p {
+          margin: 0 0 1em 0;
+        }
+        .section {
+          margin-bottom: 2em;
+        }
+      </style>
+    </head>
+    <body>
+    
+      <h1>Privacyverklaring voor e-Chef</h1>
+      <p><em>Laatste wijziging: februari 2025</em></p>
+      <p><em>Deze Privacyverklaring maakt onderdeel uit van de Algemene Voorwaarden.</em></p>
+    
+      <div class="section">
+        <h2>1. Inleiding</h2>
+        <p>Bij <strong>e-Chef</strong> (hierna: “het Platform”), dat wordt aangeboden en beheerd door de 
+        <strong>Ontwikkelaars</strong>, nemen we jouw privacy serieus. Deze Privacyverklaring maakt onderdeel uit van de 
+        Algemene Voorwaarden en heeft als doel uit te leggen welke persoonsgegevens we verwerken, met welk 
+        doel, en hoe we deze beschermen.</p>
+      </div>
+    
+      <div class="section">
+        <h2>2. Welke persoonsgegevens verwerken we?</h2>
+        <ol>
+          <li>
+            <strong>Accountgegevens</strong>: Wanneer je een account aanmaakt, verzamelen we je naam, e-mailadres en 
+            (gehasht) wachtwoord.
+          </li>
+          <li>
+            <strong>Gebruiksgegevens</strong>: We verzamelen informatie over hoe je het Platform gebruikt, zoals je 
+            IP-adres, browserinformatie en tijdstippen van gebruik. Dit helpt ons om de dienstverlening te verbeteren 
+            en eventuele technische problemen te diagnosticeren.
+          </li>
+        </ol>
+      </div>
+    
+      <div class="section">
+        <h2>3. Waarvoor gebruiken we jouw gegevens?</h2>
+        <ol>
+          <li><strong>Dienstverlening</strong>: We hebben deze gegevens nodig om je toegang te geven tot het Platform en 
+          je account te beheren.</li>
+          <li><strong>Ondersteuning</strong>: Als je contact met ons opneemt (bijvoorbeeld via 
+          <a href="mailto:info@e-chef.nl">info@e-chef.nl</a>), gebruiken we jouw gegevens om je te ondersteunen.</li>
+          <li><strong>Communicatie &amp; Updates</strong>: We kunnen je updates sturen over e-Chef of (in de toekomst) over 
+          nieuwe of premiumfunctionaliteiten, voor zover je hiervoor toestemming hebt gegeven.</li>
+          <li><strong>Analyses &amp; Verbeteringen</strong>: We analyseren het gebruik van ons Platform om nieuwe functies 
+          te ontwikkelen en bestaande diensten te verbeteren.</li>
+        </ol>
+      </div>
+    
+      <div class="section">
+        <h2>4. Op basis van welke grondslag verwerken we jouw gegevens?</h2>
+        <p>Wij verwerken jouw persoonsgegevens vooral om de overeenkomst (zie onze 
+        Algemene Voorwaarden) met jou te kunnen uitvoeren. Daarnaast kunnen we – indien wettelijk vereist – 
+        om je toestemming vragen voor bepaalde verwerkingen, zoals het versturen van promotionele berichten.</p>
+      </div>
+    
+      <div class="section">
+        <h2>5. Hoe beschermen we jouw gegevens?</h2>
+        <ol>
+          <li>
+            <strong>Technische en organisatorische maatregelen</strong>: Wij nemen passende maatregelen om jouw gegevens 
+            te beschermen tegen ongeautoriseerde toegang, verlies of diefstal. Zo worden wachtwoorden bijvoorbeeld met een 
+            secure hash-methode opgeslagen.
+          </li>
+          <li>
+            <strong>Geen absolute garantie</strong>: Hoewel wij ernaar streven je gegevens zo goed mogelijk te beveiligen, 
+            kunnen de Ontwikkelaars geen absolute beveiliging of foutloze werking van het Platform garanderen, in lijn 
+            met onze Aansprakelijkheids- en Disclaimerbepalingen in de 
+            Algemene Voorwaarden.
+          </li>
+        </ol>
+      </div>
+    
+      <div class="section">
+        <h2>6. Bewaartermijnen</h2>
+        <p>Wij bewaren jouw persoonsgegevens niet langer dan nodig is voor het doel waarvoor ze zijn verzameld, of zolang 
+        de wet ons daartoe verplicht. Als je jouw account verwijdert, verwijderen wij (voor zover technisch en wettelijk 
+        mogelijk) jouw persoonsgegevens uit onze actieve systemen.</p>
+      </div>
+    
+      <div class="section">
+        <h2>7. Jouw rechten</h2>
+        <ol>
+          <li><strong>Inzage, correctie, verwijdering</strong>: Je hebt het recht om te weten welke gegevens we over jou 
+          verwerken, deze te (laten) corrigeren of te verwijderen.</li>
+          <li><strong>Bezwaar maken of beperken</strong>: Je kunt bezwaar maken tegen bepaalde vormen van verwerking of 
+          ons vragen de verwerking te beperken.</li>
+          <li><strong>Dataportabiliteit</strong>: Waar van toepassing, heb je het recht om jouw gegevens in een 
+          gestructureerd, gangbaar en machineleesbaar formaat te ontvangen.</li>
+          <li><strong>Uitoefening van rechten</strong>: Neem hiervoor contact met ons op via 
+          <a href="mailto:info@e-chef.nl">info@e-chef.nl</a>. We zullen je verzoek binnen de wettelijke termijn 
+          behandelen.</li>
+        </ol>
+      </div>
+    
+      <div class="section">
+        <h2>8. Delen van gegevens met derden</h2>
+        <p>Wij verstrekken jouw gegevens alleen aan derde partijen als dat noodzakelijk is voor het functioneren van het 
+        Platform (bijvoorbeeld hostingproviders) of als wij daartoe wettelijk verplicht zijn. Met partijen die namens ons 
+        gegevens verwerken, sluiten we een verwerkersovereenkomst af om eenzelfde niveau van beveiliging en 
+        vertrouwelijkheid te waarborgen.</p>
+      </div>
+    
+      <div class="section">
+        <h2>9. Contact</h2>
+        <p>Voor vragen, opmerkingen of klachten over deze Privacyverklaring of de verwerking van jouw persoonsgegevens kun 
+        je contact met ons opnemen via 
+        <a href="mailto:info@e-chef.nl">info@e-chef.nl</a>.
+        </p>
+      </div>
+    
+      <div class="section">
+        <h2>10. Wijzigingen in deze Privacyverklaring</h2>
+        <p>Deze Privacyverklaring kan van tijd tot tijd worden gewijzigd of aangevuld. Wij maken zulke aanpassingen kenbaar 
+        via het Platform of per e-mail. Door gebruik te blijven maken van e-Chef na een wijziging, ga je akkoord met de 
+        bijgewerkte Privacyverklaring.</p>
+      </div>
+    
+      <p><strong>Door gebruik te maken van e-Chef, bevestig je deze Privacyverklaring te hebben gelezen en ga je akkoord met 
+      de verwerking van jouw persoonsgegevens zoals hierin beschreven.</strong></p>
+      <p>(Voor aanvullende bepalingen over definities, contactgegevens van de Ontwikkelaars, aansprakelijkheid en overmacht, 
+      verwijzen wij naar de Algemene Voorwaarden</p>
+    
+    </body>
+    </html>
+    
 </div>
 {% endblock %}
