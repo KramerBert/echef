@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container mt-5">
     <div class="">
-      <h1>Dashboard van {{ chef_naam }}</h1>
+      <h1>Dashboard van {{ session.get('chef_display_naam', chef_naam.replace('_', ' ')) }}</h1>
 
         <hr class="mb-4">
         <h3>Menu Engineering</h3>
@@ -13,22 +13,25 @@
             <div class="dashboard-grid" role="group" aria-label="Primary dashboard actions">
                 
                 <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Manage ingredients">
-                    <i class="fas fa-carrot"></i> Ingrediënten beheren
+                    <i class="fas fa-carrot icon-ingredients"></i> Ingrediënten beheren
                 </a>
                
                 <a href="{{ url_for('all_dishes') }}" class="dashboard-btn" aria-label="Manage dishes">
-                    <i class="fa-solid fa-utensils"></i> Gerechten beheren
+                    <i class="fa-solid fa-utensils icon-dishes"></i> Gerechten beheren
                 </a>
                 <a href="{{ url_for('print_menu') }}" class="dashboard-btn" aria-label="Print menu">
-                    <i class="fas fa-print"></i> Menukaart Printen
+                    <i class="fas fa-print icon-menu"></i> Menukaart Printen
                 </a>
               <a href="{{ url_for('manage_orderlist') }}" class="dashboard-btn" aria-label="Order list">
-                    <i class="fas fa-clipboard-list"></i> Bestellijst samenstellen
+                    <i class="fas fa-clipboard-list icon-orders"></i> Bestellijst samenstellen
+                </a>
+                <a href="{{ url_for('haccp_dashboard', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="HACCP Dashboard">
+                    <i class="fas fa-clipboard-check icon-haccp"></i> HACCP automatiseren
                 </a>
                 <form method="POST" action="{{ url_for('export_cookbook') }}" class="dashboard-btn-wrapper" aria-label="Export cookbook form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="dashboard-btn" aria-label="Export to cookbook">
-                        <i class="fas fa-file-export"></i> Exporteer je kookboek
+                        <i class="fas fa-file-export icon-export"></i> Exporteer je kookboek
                     </button>
                 </form>
             </div>
@@ -42,22 +45,23 @@
         <div class="">
             <div class="dashboard-grid" role="group" aria-label="Primary dashboard actions">
                 
-                <a href="{{ url_for('haccp_dashboard', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="HACCP Dashboard">
-                    <i class="fas fa-clipboard-check"></i> HACCP automatiseren
-                </a>
                 <a href="{{ url_for('profile.profile', chef_naam=chef_naam) }}" class="dashboard-btn">
-                    <i class="fas fa-user-cog"></i> Profiel Instellingen
+                    <i class="fas fa-user-cog icon-settings"></i> Profiel Instellingen
                 </a>
                 <a href="{{ url_for('beheer', chef_naam=chef_naam) }}" class="dashboard-btn">
-                    <i class="fas fa-cog"></i> Dropdowns beheren
+                    <i class="fas fa-cog icon-settings"></i> Dropdowns beheren
                 </a>
                 <a href="{{ url_for('manage_suppliers', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Manage suppliers">
-                    <i class="fas fa-truck"></i> Leveranciers 
+                    <i class="fas fa-truck icon-suppliers"></i> Leveranciers 
                 </a>
 
                 <a href="{{ url_for('instructions.index') }}" class="dashboard-btn" aria-label="Instructions">
-                    <i class="fas fa-book"></i> e-Chef Werkinstructie
+                    <i class="fas fa-book icon-docs"></i> e-Chef Werkinstructie
                 </a>
+
+
+
+                
             </div>
         </div>
     </div>
@@ -109,6 +113,89 @@
         }
         .dashboard-card {
             padding: 15px;
+        }
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin: 1rem 0;
+    }
+
+    .dashboard-btn, .dashboard-btn-wrapper .dashboard-btn {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start; /* Changed from center to flex-start */
+        gap: 1rem;
+        padding: 1.2rem;
+        background-color: var(--kitchen-dark);
+        color: var(--text-light);
+        text-decoration: none;
+        border: 1px solid var(--kitchen-steel);
+        border-radius: 4px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        width: 100%;
+        font-size: 1.1em; /* Added for better visibility */
+    }
+
+    .dashboard-btn i {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px; /* Fixed width for consistency */
+        height: 40px; /* Fixed height for consistency */
+        font-size: 1.4rem;
+        color: var(--kitchen-highlight);
+        background-color: var(--kitchen-black);
+        border: 1px solid var(--kitchen-steel);
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
+
+    /* Icon color classes */
+    .dashboard-btn i.icon-ingredients { color: #2ECC71; }     /* Groen voor ingrediënten */
+    .dashboard-btn i.icon-dishes { color: #E74C3C; }         /* Rood voor gerechten */
+    .dashboard-btn i.icon-menu { color: #3498DB; }           /* Blauw voor menu */
+    .dashboard-btn i.icon-orders { color: #F1C40F; }         /* Geel voor bestellingen */
+    .dashboard-btn i.icon-export { color: #9B59B6; }         /* Paars voor exports */
+    .dashboard-btn i.icon-haccp { color: #E67E22; }          /* Oranje voor HACCP */
+    .dashboard-btn i.icon-settings { color: #95A5A6; }       /* Grijs voor instellingen */
+    .dashboard-btn i.icon-suppliers { color: #1ABC9C; }      /* Turquoise voor leveranciers */
+    .dashboard-btn i.icon-docs { color: #34495E; }           /* Donkerblauw voor documentatie */
+
+    /* Behoud de hover effect voor alle icoontjes */
+    .dashboard-btn:hover i {
+        color: var(--text-light);
+        background-color: transparent;
+        border-color: var(--text-light);
+    }
+
+    .dashboard-btn:hover, .dashboard-btn-wrapper .dashboard-btn:hover {
+        background-color: var(--kitchen-highlight);
+        color: var(--text-light);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        text-decoration: none;
+    }
+
+    .dashboard-btn-wrapper {
+        width: 100%;
+    }
+
+    .dashboard-btn-wrapper .dashboard-btn {
+        width: 100%;
+        border: none;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .dashboard-btn, .dashboard-btn-wrapper .dashboard-btn {
+            padding: 0.8rem;
         }
     }
 </style>
