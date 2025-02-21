@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>HACCP Hygiënecontrole</h1>
+    
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Medewerker</label>
+                        <input type="text" class="form-control" name="medewerker" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Datum/tijd controle</label>
+                        <input type="datetime-local" class="form-control" name="datum_tijd" required>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Controlepunten</label>
+                    <div class="list-group">
+                        {% for punt in controlepunten %}
+                        <div class="list-group-item bg-dark">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1">{{ punt.omschrijving }}</h5>
+                                    <small class="text-muted">{{ punt.toelichting }}</small>
+                                </div>
+                                <div class="btn-group" role="group">
+                                    <input type="radio" class="btn-check" name="status_{{ punt.id }}" 
+                                           id="ok_{{ punt.id }}" value="ok" required>
+                                    <label class="btn btn-outline-success" for="ok_{{ punt.id }}">OK</label>
+
+                                    <input type="radio" class="btn-check" name="status_{{ punt.id }}" 
+                                           id="nok_{{ punt.id }}" value="nok">
+                                    <label class="btn btn-outline-danger" for="nok_{{ punt.id }}">Niet OK</label>
+                                </div>
+                            </div>
+                            <div class="mt-2" id="actie_{{ punt.id }}" style="display: none;">
+                                <label class="form-label">Ondernomen actie</label>
+                                <textarea class="form-control" name="actie_{{ punt.id }}" rows="2"></textarea>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Algemene opmerkingen</label>
+                    <textarea class="form-control" name="opmerkingen" rows="3"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Controle Opslaan</button>
+    </form>
+</div>
+
+<script>
+document.querySelectorAll('.btn-check').forEach(input => {
+    input.addEventListener('change', function() {
+        const puntId = this.id.split('_')[1];
+        const actieVeld = document.getElementById(`actie_${puntId}`);
+        actieVeld.style.display = this.value === 'nok' ? 'block' : 'none';
+    });
+});
+</script>
+
+<style>
+    .card {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-blue));
+        border: 1px solid var(--kitchen-steel);
+    }
+
+    .form-control {
+        background-color: var(--kitchen-black);
+        border: 1px solid var(--kitchen-steel);
+        color: var(--text-light);
+    }
+
+    .form-label {
+        color: var(--text-light);
+    }
+
+    .list-group-item {
+        border: 1px solid var(--kitchen-steel);
+        margin-bottom: 0.5rem;
+    }
+
+    .btn-outline-success, .btn-outline-danger {
+        color: var(--text-light);
+        border-color: var(--kitchen-steel);
+    }
+
+    .btn-outline-success:hover {
+        background-color: var(--success);
+        border-color: var(--success);
+    }
+
+    .btn-outline-danger:hover {
+        background-color: var(--danger);
+        border-color: var(--danger);
+    }
+
+    .btn-check:checked + .btn-outline-success {
+        background-color: var(--success);
+        border-color: var(--success);
+    }
+
+    .btn-check:checked + .btn-outline-danger {
+        background-color: var(--danger);
+        border-color: var(--danger);
+    }
+</style>
+{% endblock %}

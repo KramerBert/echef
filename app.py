@@ -89,6 +89,8 @@ def create_app():
     app.register_blueprint(haccp_api_bp)
     from blueprints.errors import bp as errors_bp
     app.register_blueprint(errors_bp)
+    from blueprints.haccp.routes import bp as haccp_bp
+    app.register_blueprint(haccp_bp, url_prefix='/haccp')
     
     # Register template filters and helper functions inside create_app
     def nl2br(value):

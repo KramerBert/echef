@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Schoonmaak Planning Bewerken</h1>
+    
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Locatie/Gebied *</label>
+                        <input type="text" class="form-control" name="locatie" 
+                               value="{{ planning.locatie }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Frequentie *</label>
+                        <select class="form-control" name="frequentie" required>
+                            <option value="dagelijks" {% if planning.frequentie == 'dagelijks' %}selected{% endif %}>
+                                Dagelijks
+                            </option>
+                            <option value="wekelijks" {% if planning.frequentie == 'wekelijks' %}selected{% endif %}>
+                                Wekelijks
+                            </option>
+                            <option value="maandelijks" {% if planning.frequentie == 'maandelijks' %}selected{% endif %}>
+                                Maandelijks
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Schoonmaakmiddel *</label>
+                    <input type="text" class="form-control" name="middel" 
+                           value="{{ planning.middel }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Werkinstructie</label>
+                    <textarea class="form-control" name="instructie" rows="3">{{ planning.instructie }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Wijzigingen Opslaan</button>
+        <a href="{{ url_for('haccp.schoonmaak_dashboard', chef_naam=chef_naam) }}" 
+           class="btn btn-secondary">Annuleren</a>
+    </form>
+</div>
+
+<style>
+    .card {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-blue));
+        border: 1px solid var(--kitchen-steel);
+    }
+
+    .form-control {
+        background-color: var(--kitchen-black);
+        border: 1px solid var(--kitchen-steel);
+        color: var(--text-light);
+    }
+
+    .form-label {
+        color: var(--text-light);
+        margin-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}

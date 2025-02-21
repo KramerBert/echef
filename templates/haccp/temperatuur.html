@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>HACCP Temperatuurcontrole</h1>
+    
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Locatie/Apparaat *</label>
+                        <input type="text" class="form-control" name="locatie" 
+                               list="locaties" required>
+                        <datalist id="locaties">
+                            <option value="Koelcel 1">
+                            <option value="Koelcel 2">
+                            <option value="Vriezer">
+                            <option value="Warmhoudkast">
+                            <option value="Spoelkeuken">
+                        </datalist>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Datum/tijd meting *</label>
+                        <input type="datetime-local" class="form-control" 
+                               name="datum_tijd" required>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Gemeten temperatuur (°C) *</label>
+                        <input type="number" class="form-control" name="temperatuur" 
+                               step="0.1" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Streefwaarde (°C) *</label>
+                        <input type="number" class="form-control" name="streefwaarde" 
+                               step="0.1" required>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Opmerkingen</label>
+                    <textarea class="form-control" name="opmerking" rows="2"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Ondernomen actie (bij afwijking)</label>
+                    <textarea class="form-control" name="actie" rows="2"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Meting Opslaan</button>
+        <a href="{{ url_for('haccp.dashboard', chef_naam=chef_naam) }}" 
+           class="btn btn-secondary">Annuleren</a>
+    </form>
+
+    {% if recente_metingen %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3>Recente Metingen</h3>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Datum/Tijd</th>
+                            <th>Locatie</th>
+                            <th>Temperatuur</th>
+                            <th>Streefwaarde</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for meting in recente_metingen %}
+                        <tr>
+                            <td>{{ meting.datum_tijd.strftime('%d-%m-%Y %H:%M') }}</td>
+                            <td>{{ meting.locatie }}</td>
+                            <td>{{ meting.temperatuur }}°C</td>
+                            <td>{{ meting.streefwaarde }}°C</td>
+                            <td>
+                                {% if meting.temperatuur <= meting.streefwaarde %}
+                                <span class="badge bg-success">OK</span>
+                                {% else %}
+                                <span class="badge bg-danger">Afwijking</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .card {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-blue));
+        border: 1px solid var(--kitchen-steel);
+    }
+
+    .form-control {
+        background-color: var(--kitchen-black);
+        border: 1px solid var(--kitchen-steel);
+        color: var(--text-light);
+    }
+
+    .form-label {
+        color: var(--text-light);
+        margin-bottom: 0.5rem;
+    }
+
+    .btn {
+        margin-right: 0.5rem;
+    }
+
+    .table {
+        color: var(--text-light);
+    }
+</style>
+{% endblock %}

@@ -13,6 +13,12 @@
                 </div>
                 <div class="card-body">
                     <div class="d-flex gap-2">
+                        <a href="{{ url_for('haccp.ontvangst', chef_naam=chef_naam) }}" class="btn btn-primary">
+                            <i class="fas fa-truck"></i> Nieuwe Ontvangstcontrole
+                        </a>
+                        <a href="{{ url_for('haccp.temperatuur', chef_naam=chef_naam) }}" class="btn btn-primary">
+                            <i class="fas fa-thermometer-half"></i> Nieuwe Temperatuurcontrole
+                        </a>
                         <a href="{{ url_for('new_haccp_checklist', chef_naam=chef_naam) }}" 
                            class="btn btn-primary">
                             <i class="fas fa-plus"></i> Nieuwe Checklist
@@ -36,14 +42,17 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h2>Checklists</h2>
-                    <a href="{{ url_for('new_haccp_checklist', chef_naam=chef_naam) }}" 
-                       class="dashboard-btn compact">
-                        <i class="fas fa-plus"></i> Nieuwe Checklist
-                    </a>
+
                 </div>
                 <div class="card-body">
+                    <div class="quick-filters">
+                        <input type="text" class="search-box" placeholder="Zoeken...">
+                        <span class="quick-filter active" data-filter="all">Alles</span>
+                        <span class="quick-filter" data-filter="today">Vandaag</span>
+                        <span class="quick-filter" data-filter="urgent">Urgent</span>
+                    </div>
                     <div class="table-responsive">
-                        <table class="table">
+                        <table class="table" id="checklistsTable">
                             <thead>
                                 <tr>
                                     <th>Naam</th>
@@ -114,8 +123,14 @@
                     <h2>Laatste Metingen</h2>
                 </div>
                 <div class="card-body">
+                    <div class="quick-filters">
+                        <input type="text" class="search-box" placeholder="Zoeken...">
+                        <span class="quick-filter active" data-filter="all">Alles</span>
+                        <span class="quick-filter" data-filter="today">Vandaag</span>
+                        <span class="quick-filter" data-filter="urgent">Urgent</span>
+                    </div>
                     <div class="table-responsive">
-                        <table class="table">
+                        <table class="table" id="metingenTable">
                             <thead>
                                 <tr>
                                     <th>Datum</th>
@@ -155,6 +170,68 @@
             </div>
         </div>
     </div>
+
+    <!-- Update statistics card -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Ontvangstcontroles Vandaag</h5>
+                <h2 class="display-4">{{ ontvangst_count }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add cleaning tasks card -->
+    <div class="col-md-12 mt-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2>Schoonmaak Taken Vandaag</h2>
+                <a href="{{ url_for('haccp.schoonmaak_dashboard', chef_naam=chef_naam) }}" 
+                   class="btn btn-primary">
+                    <i class="fas fa-broom"></i> Beheer Planning
+                </a>
+            </div>
+            <div class="card-body">
+                {% if schoonmaak_taken %}
+                <div class="quick-filters">
+                    <input type="text" class="search-box" placeholder="Zoeken...">
+                    <span class="quick-filter active" data-filter="all">Alles</span>
+                    <span class="quick-filter" data-filter="today">Vandaag</span>
+                    <span class="quick-filter" data-filter="urgent">Urgent</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table" id="schoonmaakTakenTable">
+                        <thead>
+                            <tr>
+                                <th>Locatie</th>
+                                <th>Frequentie</th>
+                                <th>Middel</th>
+                                <th>Instructie</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for taak in schoonmaak_taken %}
+                            <tr>
+                                <td>{{ taak.locatie }}</td>
+                                <td>{{ taak.frequentie }}</td>
+                                <td>{{ taak.middel }}</td>
+                                <td>{{ taak.instructie }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center">Geen schoonmaak taken gepland voor vandaag.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% include 'haccp/hygiene/controls.html' %}
+    {% include 'haccp/ongedierte/controls.html' %}
+    {% include 'haccp/productie/controls.html' %}
+    {% include 'haccp/allergenen/controls.html' %}
 </div>
 
 <!-- Meting Detail Modal -->
@@ -303,8 +380,109 @@
             margin: 0.25rem 0;
         }
     }
+
+    /* Voeg toe aan bestaande styles */
+    .loading {
+        position: relative;
+        opacity: 0.7;
+    }
+
+    .loading::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5) url('/static/img/loading-spinner.gif') center no-repeat;
+        z-index: 1;
+    }
+
+    .priority-high {
+        border-left: 4px solid var(--bs-danger);
+    }
+
+    .priority-medium {
+        border-left: 4px solid var(--bs-warning);
+    }
+
+    .priority-low {
+        border-left: 4px solid var(--bs-success);
+    }
+
+    .search-box {
+        background: var(--kitchen-dark);
+        border: 1px solid var(--kitchen-steel);
+        color: var(--text-light);
+        padding: 0.5rem;
+        margin-bottom: 1rem;
+        width: 100%;
+    }
+
+    .quick-filters {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .quick-filter {
+        background: var(--kitchen-dark);
+        border: 1px solid var(--kitchen-steel);
+        color: var(--text-light);
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .quick-filter.active {
+        background: var(--kitchen-highlight);
+        border-color: var(--kitchen-highlight);
+    }
+
+    /* Responsive verbeteringen */
+    @media (max-width: 768px) {
+        .card {
+            margin: 0.5rem 0;
+        }
+        
+        .quick-filters {
+            justify-content: center;
+        }
+        
+        .table-responsive {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .table thead th {
+            position: sticky;
+            top: 0;
+            background: var(--kitchen-dark);
+            z-index: 1;
+        }
+    }
+
+    /* Toast notificaties */
+    .toast-container {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        z-index: 1050;
+    }
+
+    .toast {
+        background: var(--kitchen-dark);
+        color: var(--text-light);
+        border: 1px solid var(--kitchen-steel);
+    }
 </style>
 
+<!-- Voeg toe aan het begin van de container -->
+<div class="toast-container"></div>
+
+{% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const metingModal = document.getElementById('metingModal');
@@ -322,6 +500,22 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('modalCorrigerendeActie').textContent = button.getAttribute('data-meting-corrigerende-actie');
         document.getElementById('modalActieInput').value = button.getAttribute('data-meting-actie');
         document.getElementById('modalMetingId').value = button.getAttribute('data-meting-id');
+    });
+
+    loadHygieneControls();
+    loadPestControls();
+    loadProductionControls();
+    loadAllergenControls();
+
+    // Setup search boxes
+    document.querySelectorAll('.search-box').forEach(searchBox => {
+        const tableId = searchBox.closest('.card').querySelector('table').id;
+        setupSearch(tableId, searchBox);
+    });
+    
+    // Setup filters
+    document.querySelectorAll('.table').forEach(table => {
+        setupFilters(table.id);
     });
 });
 
@@ -386,5 +580,332 @@ function verwijderChecklist(checklistId, checklistNaam) {
         });
     }
 }
+
+function loadHygieneControls() {
+    fetch('/api/haccp/hygiene/list')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const tbody = document.getElementById('hygieneControlsList');
+                tbody.innerHTML = '';
+                
+                data.controls.forEach(control => {
+                    const row = `
+                        <tr>
+                            <td>${new Date(control.datum_tijd).toLocaleString()}</td>
+                            <td>${control.medewerker}</td>
+                            <td><i class="fas fa-${control.werkkleding_ok ? 'check text-success' : 'times text-danger'}"></i></td>
+                            <td><i class="fas fa-${control.handen_ok ? 'check text-success' : 'times text-danger'}"></i></td>
+                            <td><i class="fas fa-${control.sieraden_ok ? 'check text-success' : 'times text-danger'}"></i></td>
+                            <td><i class="fas fa-${control.ziekmelding_ok ? 'check text-success' : 'times text-danger'}"></i></td>
+                            <td>${control.opmerking || '-'}</td>
+                            <td>
+                                <button class="btn btn-danger btn-sm" onclick="deleteHygieneControl(${control.controle_id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            }
+        });
+}
+
+function saveHygieneControl() {
+    const form = document.getElementById('hygieneControlForm');
+    const formData = new FormData(form);
+    
+    // Convert checkbox values to 'true'/'false' strings
+    ['werkkleding_ok', 'handen_ok', 'sieraden_ok', 'ziekmelding_ok'].forEach(field => {
+        formData.set(field, form.elements[field].checked ? 'true' : 'false');
+    });
+
+    fetch('/api/haccp/hygiene/add', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            form.reset();
+            $('#newHygieneControlModal').modal('hide');
+            loadHygieneControls();
+            showToast('Success', 'Hygiëne controle toegevoegd');
+        } else {
+            showToast('Error', data.error);
+        }
+    });
+}
+
+function deleteHygieneControl(controleId) {
+    if (confirm('Weet je zeker dat je deze controle wilt verwijderen?')) {
+        fetch(`/api/haccp/hygiene/${controleId}/delete`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                loadHygieneControls();
+                showToast('Success', 'Hygiëne controle verwijderd');
+            } else {
+                showToast('Error', data.error);
+            }
+        });
+    }
+}
+
+function loadPestControls() {
+    fetch('/api/haccp/ongedierte/list')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const tbody = document.getElementById('pestControlList');
+                tbody.innerHTML = '';
+                
+                data.controls.forEach(control => {
+                    const severity = '⚠️'.repeat(control.ernst);
+                    const row = `
+                        <tr>
+                            <td>${new Date(control.datum_tijd).toLocaleString()}</td>
+                            <td>${control.locatie}</td>
+                            <td>${control.type_plaag}</td>
+                            <td>${severity}</td>
+                            <td>
+                                <span class="badge ${control.opgelost ? 'bg-success' : 'bg-warning'}">
+                                    ${control.opgelost ? 'Opgelost' : 'In behandeling'}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-info btn-sm" onclick="showPestDetails(${control.melding_id})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            }
+        });
+}
+
+function savePestControl() {
+    const form = document.getElementById('pestControlForm');
+    const formData = new FormData(form);
+    formData.set('opgelost', form.elements['opgelost'].checked ? 'true' : 'false');
+
+    fetch('/api/haccp/ongedierte/add', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            form.reset();
+            $('#newPestControlModal').modal('hide');
+            loadPestControls();
+            showToast('Success', 'Ongediertemelding toegevoegd');
+        } else {
+            showToast('Error', data.error);
+        }
+    });
+}
+
+function loadProductionControls() {
+    fetch('/api/haccp/productie/list')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const tbody = document.getElementById('productionControlsList');
+                tbody.innerHTML = '';
+                
+                data.controls.forEach(control => {
+                    const row = `
+                        <tr>
+                            <td>${new Date(control.datum_tijd).toLocaleString()}</td>
+                            <td>${control.product}</td>
+                            <td>${control.batch_code}</td>
+                            <td>${control.kerntemperatuur}°C</td>
+                            <td><i class="fas fa-${control.producttemp_ok ? 'check text-success' : 'times text-danger'}"></i></td>
+                            <td><i class="fas fa-${control.tijd_temp_ok ? 'check text-success' : 'times text-danger'}"></i></td>
+                            <td>${control.opmerking || '-'}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            }
+        });
+}
+
+function saveProductionControl() {
+    const form = document.getElementById('productionControlForm');
+    const formData = new FormData(form);
+    
+    // Convert checkbox values to 'true'/'false' strings
+    ['producttemp_ok', 'tijd_temp_ok'].forEach(field => {
+        formData.set(field, form.elements[field].checked ? 'true' : 'false');
+    });
+
+    fetch('/api/haccp/productie/add', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            form.reset();
+            $('#newProductionModal').modal('hide');
+            loadProductionControls();
+            showToast('Success', 'Productie controle toegevoegd');
+        } else {
+            showToast('Error', data.error);
+        }
+    });
+}
+
+function loadAllergenControls() {
+    fetch('/api/haccp/allergenen/list')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const tbody = document.getElementById('allergenControlsList');
+                tbody.innerHTML = '';
+                
+                data.controls.forEach(control => {
+                    const row = `
+                        <tr>
+                            <td>${new Date(control.datum_controle).toLocaleString()}</td>
+                            <td>${control.product_naam}</td>
+                            <td>${control.allergeen_naam}</td>
+                            <td>
+                                <i class="fas fa-${control.aanwezig ? 'check text-danger' : 'times text-success'}"></i>
+                                ${control.aanwezig ? 'Ja' : 'Nee'}
+                            </td>
+                            <td>
+                                <i class="fas fa-${control.kruisbesmetting ? 'exclamation-triangle text-warning' : 'times text-success'}"></i>
+                                ${control.kruisbesmetting ? 'Mogelijk' : 'Nee'}
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            }
+        });
+}
+
+function saveAllergenControl() {
+    const form = document.getElementById('allergenControlForm');
+    const formData = new FormData(form);
+    
+    // Convert checkbox values to 'true'/'false' strings
+    ['aanwezig', 'kruisbesmetting'].forEach(field => {
+        formData.set(field, form.elements[field].checked ? 'true' : 'false');
+    });
+
+    fetch('/api/haccp/allergenen/add', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            form.reset();
+            $('#newAllergenModal').modal('hide');
+            loadAllergenControls();
+            showToast('Success', 'Allergenen controle toegevoegd');
+        } else {
+            showToast('Error', data.error);
+        }
+    });
+}
+
+// Verbeterde notificaties
+function showToast(title, message, type = 'success') {
+    const toast = `
+        <div class="toast" role="alert">
+            <div class="toast-header">
+                <strong class="me-auto">${title}</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body ${type}">
+                ${message}
+            </div>
+        </div>
+    `;
+    
+    $('.toast-container').append(toast);
+    const toastElement = $('.toast').last();
+    const bsToast = new bootstrap.Toast(toastElement);
+    bsToast.show();
+    
+    setTimeout(() => {
+        toastElement.remove();
+    }, 5000);
+}
+
+// Laad status beheer
+function setLoading(elementId, loading = true) {
+    const element = document.getElementById(elementId);
+    if (loading) {
+        element.classList.add('loading');
+    } else {
+        element.classList.remove('loading');
+    }
+}
+
+// Zoeken en filteren
+function setupSearch(tableId, searchBox) {
+    const table = document.getElementById(tableId);
+    const rows = table.getElementsByTagName('tr');
+    
+    searchBox.addEventListener('keyup', function() {
+        const searchTerm = this.value.toLowerCase();
+        
+        for (let row of rows) {
+            if (row.getElementsByTagName('th').length > 0) continue; // Skip header
+            
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(searchTerm) ? '' : 'none';
+        }
+    });
+}
+
+// Filter handlers
+function setupFilters(tableId) {
+    const filters = document.querySelectorAll('.quick-filter');
+    filters.forEach(filter => {
+        filter.addEventListener('click', function() {
+            filters.forEach(f => f.classList.remove('active'));
+            this.classList.add('active');
+            
+            const filterType = this.dataset.filter;
+            applyFilter(tableId, filterType);
+        });
+    });
+}
+
+function applyFilter(tableId, filterType) {
+    const table = document.getElementById(tableId);
+    const rows = table.getElementsByTagName('tr');
+    
+    for (let row of rows) {
+        if (row.getElementsByTagName('th').length > 0) continue;
+        
+        switch(filterType) {
+            case 'today':
+                const date = new Date(row.cells[0].textContent);
+                const today = new Date();
+                row.style.display = date.toDateString() === today.toDateString() ? '' : 'none';
+                break;
+            case 'urgent':
+                const hasWarning = row.querySelector('.badge-warning, .badge-danger');
+                row.style.display = hasWarning ? '' : 'none';
+                break;
+            default:
+                row.style.display = '';
+        }
+    }
+}
 </script>
+{% endblock %}
 {% endblock %}

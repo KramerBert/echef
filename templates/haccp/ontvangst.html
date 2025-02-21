@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>HACCP Ontvangstcontrole</h1>
+    
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Leverancier</label>
+                        <select class="form-control" name="leverancier_id" required>
+                            <option value="">Kies leverancier...</option>
+                            {% for l in leveranciers %}
+                            <option value="{{ l.leverancier_id }}">{{ l.naam }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Datum/tijd ontvangst</label>
+                        <input type="datetime-local" class="form-control" name="datum_tijd" required>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Product</label>
+                    <input type="text" class="form-control" name="product" required>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Temperatuur (°C)</label>
+                        <input type="number" class="form-control" name="temperatuur" step="0.1" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Verpakking OK?</label>
+                        <select class="form-control" name="verpakking_ok" required>
+                            <option value="true">Ja</option>
+                            <option value="false">Nee</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Houdbaarheid OK?</label>
+                        <select class="form-control" name="houdbaarheid_ok" required>
+                            <option value="true">Ja</option>
+                            <option value="false">Nee</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Visuele controle OK?</label>
+                        <select class="form-control" name="visueel_ok" required>
+                            <option value="true">Ja</option>
+                            <option value="false">Nee</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Opmerkingen</label>
+                    <textarea class="form-control" name="opmerking" rows="2"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Ondernomen actie (indien nodig)</label>
+                    <textarea class="form-control" name="actie" rows="2"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Controle Opslaan</button>
+        <a href="{{ url_for('haccp.dashboard', chef_naam=chef_naam) }}" class="btn btn-secondary">Annuleren</a>
+    </form>
+</div>
+
+<style>
+    .card {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-blue));
+        border: 1px solid var(--kitchen-steel);
+    }
+
+    .form-control {
+        background-color: var(--kitchen-black);
+        border: 1px solid var(--kitchen-steel);
+        color: var(--text-light);
+    }
+
+    .form-label {
+        color: var(--text-light);
+        margin-bottom: 0.5rem;
+    }
+
+    .btn {
+        margin-right: 0.5rem;
+    }
+</style>
+{% endblock %}

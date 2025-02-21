@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>HACCP Dashboard</h1>
+
+    <div class="row mb-4">
+        <!-- Quick Actions -->
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Snelkoppelingen</h2>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('haccp.new_checklist', chef_naam=chef_naam) }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Nieuwe Checklist
+                        </a>
+                        <a href="{{ url_for('haccp.reports', chef_naam=chef_naam) }}" class="btn btn-success">
+                            <i class="fas fa-chart-line"></i> Rapportages
+                        </a>
+                        <a href="{{ url_for('haccp.reports', chef_naam=chef_naam, export=true) }}" class="btn btn-info">
+                            <i class="fas fa-file-export"></i> Exporteer Rapport
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Statistics Cards -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Ontvangstcontroles Vandaag</h5>
+                    <h2 class="display-4">{{ ontvangst_count }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Temperatuurmetingen Vandaag</h5>
+                    <h2 class="display-4">{{ temp_count }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Hygiënecontroles Vandaag</h5>
+                    <h2 class="display-4">{{ hygiene_count }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h2>Recente Activiteit</h2>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Datum/Tijd</th>
+                            <th>Type</th>
+                            <th>Beschrijving</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for activity in recent_activity %}
+                        <tr>
+                            <td>{{ activity.datum_tijd.strftime('%d-%m-%Y %H:%M') }}</td>
+                            <td>
+                                {% if activity.type == 'ontvangst' %}
+                                    <span class="badge bg-primary">Ontvangst</span>
+                                {% elif activity.type == 'temperatuur' %}
+                                    <span class="badge bg-info">Temperatuur</span>
+                                {% elif activity.type == 'hygiene' %}
+                                    <span class="badge bg-success">Hygiëne</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ activity.description }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-blue));
+        border: 1px solid var(--kitchen-steel);
+        margin-bottom: 1rem;
+    }
+
+    .display-4 {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: var(--text-light);
+    }
+
+    .table {
+        color: var(--text-light);
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            padding: 0.5rem;
+        }
+
+        .d-flex.gap-2 {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+            margin: 0.25rem 0;
+        }
+
+        .display-4 {
+            font-size: 2rem;
+        }
+    }
+</style>
+{% endblock %}

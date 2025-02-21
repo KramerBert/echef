@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>HACCP Checklist Invullen</h1>
+    <h2>{{ checklist.naam }} ({{ checklist.frequentie }})</h2>
+    
+    <form method="POST">
+        <div class="card mb-4">
+            <div class="card-body">
+                {% for punt in checkpunten %}
+                <div class="mb-4 p-3 border rounded">
+                    <h3>{{ punt.omschrijving }}</h3>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label">Gemeten waarde</label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   name="waarde_{{ punt.punt_id }}" 
+                                   step="0.1" 
+                                   required>
+                            <small class="text-muted">Grenswaarde: {{ punt.grenswaarde }}</small>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Opmerking</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="opmerking_{{ punt.punt_id }}">
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <label class="form-label">Ondernomen actie (indien nodig)</label>
+                        <textarea class="form-control" 
+                                name="actie_{{ punt.punt_id }}" 
+                                rows="2"></textarea>
+                        <small class="text-muted">Voorgestelde actie: {{ punt.corrigerende_actie }}</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Metingen Opslaan</button>
+    </form>
+</div>
+
+<style>
+    .card {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-blue));
+        border: 1px solid var(--kitchen-steel);
+        margin-bottom: 1.5rem;
+    }
+
+    .border.rounded {
+        background-color: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--kitchen-steel) !important;
+    }
+
+    .form-label {
+        color: var(--text-light);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+        background-color: var(--kitchen-black);
+        border: 1px solid var(--kitchen-steel);
+        color: var(--text-light);
+    }
+
+    .text-muted {
+        color: var(--kitchen-steel) !important;
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            padding: 0.5rem;
+        }
+
+        .card {
+            border-radius: 0;
+            margin: 0.5rem -0.5rem;
+        }
+
+        .mb-4.p-3 {
+            padding: 0.75rem !important;
+        }
+
+        h3 {
+            font-size: 1.2rem;
+        }
+
+        .row {
+            margin: 0;
+        }
+
+        .col-md-4,
+        .col-md-8 {
+            padding: 0.5rem;
+        }
+
+        .btn {
+            width: 100%;
+            margin: 0.25rem 0;
+        }
+    }
+</style>
+{% endblock %}

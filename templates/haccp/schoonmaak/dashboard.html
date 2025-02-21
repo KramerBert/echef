@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>HACCP Schoonmaak Dashboard</h1>
+
+    <div class="d-flex justify-content-end mb-4">
+        <a href="{{ url_for('haccp.new_schoonmaak_planning', chef_naam=chef_naam) }}" 
+           class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nieuwe Planning
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>Schoonmaak Planning</h2>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Locatie</th>
+                            <th>Frequentie</th>
+                            <th>Middel</th>
+                            <th>Instructie</th>
+                            <th>Acties</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in planning %}
+                        <tr>
+                            <td>{{ item.locatie }}</td>
+                            <td>{{ item.frequentie }}</td>
+                            <td>{{ item.middel }}</td>
+                            <td>{{ item.instructie }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-primary"
+                                            onclick="editPlanning('{{ item.planning_id }}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" 
+                                            class="btn btn-sm btn-danger"
+                                            onclick="deletePlanning('{{ item.planning_id }}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-blue));
+        border: 1px solid var(--kitchen-steel);
+    }
+
+    .table {
+        color: var(--text-light);
+    }
+
+    .btn-group {
+        display: flex;
+        gap: 0.5rem;
+    }
+</style>
+
+<script>
+function editPlanning(planningId) {
+    window.location.href = `${window.location.pathname}/planning/${planningId}/edit`;
+}
+
+function deletePlanning(planningId) {
+    if (confirm('Weet je zeker dat je deze planning wilt verwijderen?')) {
+        fetch(`${window.location.pathname}/planning/${planningId}/delete`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Fout bij verwijderen planning: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Er is een fout opgetreden bij het verwijderen van de planning.');
+        });
+    }
+}
+</script>
+{% endblock %}
