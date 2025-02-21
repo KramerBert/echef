@@ -2,6 +2,7 @@
 
 {% block content %}
 <div class="container mt-4">
+    <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
     <h1>HACCP Dashboard</h1>
 
     <!-- Snelkoppelingen -->
@@ -9,27 +10,24 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header">
-                    <h2>Snelkoppelingen</h2>
+                    <h2></h2>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex gap-2">
-                        <a href="{{ url_for('haccp.ontvangst', chef_naam=chef_naam) }}" class="btn btn-primary">
-                            <i class="fas fa-truck"></i> Nieuwe Ontvangstcontrole
+                    <div class="dashboard-grid">
+                        <a href="{{ url_for('haccp.ontvangst', chef_naam=chef_naam) }}" class="dashboard-btn">
+                            <i class="fas fa-truck icon-suppliers"></i> Nieuwe Ontvangstcontrole
                         </a>
-                        <a href="{{ url_for('haccp.temperatuur', chef_naam=chef_naam) }}" class="btn btn-primary">
-                            <i class="fas fa-thermometer-half"></i> Nieuwe Temperatuurcontrole
+                        <a href="{{ url_for('haccp.temperatuur', chef_naam=chef_naam) }}" class="dashboard-btn">
+                            <i class="fas fa-thermometer-half icon-dishes"></i> Nieuwe Temperatuurcontrole
                         </a>
-                        <a href="{{ url_for('new_haccp_checklist', chef_naam=chef_naam) }}" 
-                           class="btn btn-primary">
-                            <i class="fas fa-plus"></i> Nieuwe Checklist
+                        <a href="{{ url_for('new_haccp_checklist', chef_naam=chef_naam) }}" class="dashboard-btn">
+                            <i class="fas fa-plus icon-ingredients"></i> Nieuwe Eigen Checklist
                         </a>
-                        <a href="{{ url_for('haccp_reports', chef_naam=chef_naam) }}" 
-                           class="btn btn-success">
-                            <i class="fas fa-chart-line"></i> Rapportages
+                        <a href="{{ url_for('haccp_reports', chef_naam=chef_naam) }}" class="dashboard-btn">
+                            <i class="fas fa-chart-line icon-haccp"></i> Rapportages Eigen Checklists
                         </a>
-                        <a href="{{ url_for('haccp_reports', chef_naam=chef_naam, export=true) }}" 
-                           class="btn btn-info">
-                            <i class="fas fa-file-export"></i> Exporteer Rapport
+                        <a href="{{ url_for('haccp_reports', chef_naam=chef_naam, export=true) }}" class="dashboard-btn">
+                            <i class="fas fa-file-export icon-export"></i> Exporteer Rapport
                         </a>
                     </div>
                 </div>
@@ -38,10 +36,11 @@
     </div>
     
     <div class="row">
-        <div class="col-md-6">
-            <div class="card">
+        <div class="col-12">
+            <!-- Checklists Card -->
+            <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h2>Checklists</h2>
+                    <h2>Eigen Checklists</h2>
 
                 </div>
                 <div class="card-body">
@@ -115,12 +114,11 @@
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="col-md-6">
-            <div class="card">
+
+            <!-- Laatste Metingen Card -->
+            <div class="card mb-4">
                 <div class="card-header">
-                    <h2>Laatste Metingen</h2>
+                    <h2>Overzicht Metingen Eigen Checklists</h2>
                 </div>
                 <div class="card-body">
                     <div class="quick-filters">
@@ -279,7 +277,7 @@
 </div>
 
 <style>
-    /* HACCP Dashboard Styling */
+    /* Base Styles */
     .card {
         background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-blue));
         border: 1px solid var(--kitchen-steel);
@@ -296,6 +294,45 @@
         align-items: center;
     }
 
+    /* Typography */
+    h1, h2, h3, h4, h5, h6 {
+        color: #ffffff;
+        margin-bottom: 1rem;
+    }
+
+    h1 { font-size: 2.5rem; }
+    h2 { font-size: 2rem; }
+    h3 { font-size: 1.75rem; }
+    h4 { font-size: 1.5rem; }
+    h5 { font-size: 1.25rem; }
+    h6 { font-size: 1rem; }
+
+    /* Dashboard Grid */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin: 1rem 0;
+    }
+
+    /* Dashboard Buttons */
+    .dashboard-btn {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 1rem;
+        padding: 1.2rem;
+        background-color: var(--kitchen-dark);
+        color: var(--text-light);
+        text-decoration: none;
+        border: 1px solid var(--kitchen-steel);
+        border-radius: 4px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        width: 100%;
+        font-size: 1.1em;
+    }
+
     .dashboard-btn.compact {
         min-height: auto;
         padding: 0.5rem 1rem;
@@ -303,8 +340,41 @@
         background: linear-gradient(145deg, var(--kitchen-highlight), var(--kitchen-blue));
     }
 
-    .dashboard-btn.compact:hover {
-        transform: translateY(-1px);
+    .dashboard-btn i {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        font-size: 1.4rem;
+        background-color: var(--kitchen-black);
+        border: 1px solid var(--kitchen-steel);
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
+
+    .dashboard-btn:hover {
+        background-color: var(--kitchen-highlight);
+        color: var(--text-light);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        text-decoration: none;
+    }
+
+    .dashboard-btn:hover i {
+        color: var(--text-light);
+        background-color: transparent;
+        border-color: var(--text-light);
+    }
+
+    /* Tables and Data Display */
+    .table-responsive {
+        margin: 0 -0.5rem;
+    }
+
+    .table th,
+    .table td {
+        padding: 0.75rem;
     }
 
     .badge {
@@ -313,103 +383,7 @@
         font-weight: normal;
     }
 
-    .meting-row {
-        transition: all 0.3s ease;
-    }
-
-    .meting-row:hover {
-        background-color: rgba(0, 0, 0, 0.2);
-    }
-
-    .btn-group {
-        display: flex;
-        gap: 0.5rem;
-    }
-
-    @media (max-width: 768px) {
-        .container {
-            padding: 0.5rem;
-        }
-
-        .card {
-            border-radius: 0;
-            margin: 0.5rem -0.5rem;
-        }
-
-        .card-header {
-            padding: 0.75rem;
-            flex-direction: column;
-            gap: 0.5rem;
-            text-align: center;
-        }
-
-        .card-header h2 {
-            font-size: 1.2rem;
-        }
-
-        .dashboard-btn.compact {
-            width: 100%;
-        }
-
-        .btn-group {
-            flex-direction: column;
-            width: 100%;
-        }
-
-        .btn-group .btn {
-            width: 100%;
-            margin: 0.25rem 0;
-        }
-
-        .table-responsive {
-            margin: 0 -0.5rem;
-        }
-
-        .table th,
-        .table td {
-            padding: 0.5rem;
-            font-size: 0.9rem;
-        }
-
-        .d-flex.gap-2 {
-            flex-direction: column;
-        }
-
-        .d-flex.gap-2 .btn {
-            width: 100%;
-            margin: 0.25rem 0;
-        }
-    }
-
-    /* Voeg toe aan bestaande styles */
-    .loading {
-        position: relative;
-        opacity: 0.7;
-    }
-
-    .loading::after {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5) url('/static/img/loading-spinner.gif') center no-repeat;
-        z-index: 1;
-    }
-
-    .priority-high {
-        border-left: 4px solid var(--bs-danger);
-    }
-
-    .priority-medium {
-        border-left: 4px solid var(--bs-warning);
-    }
-
-    .priority-low {
-        border-left: 4px solid var(--bs-success);
-    }
-
+    /* Search and Filters */
     .search-box {
         background: var(--kitchen-dark);
         border: 1px solid var(--kitchen-steel);
@@ -441,30 +415,44 @@
         border-color: var(--kitchen-highlight);
     }
 
-    /* Responsive verbeteringen */
-    @media (max-width: 768px) {
-        .card {
-            margin: 0.5rem 0;
-        }
-        
-        .quick-filters {
-            justify-content: center;
-        }
-        
-        .table-responsive {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        
-        .table thead th {
-            position: sticky;
-            top: 0;
-            background: var(--kitchen-dark);
-            z-index: 1;
-        }
+    /* Status Indicators */
+    .priority-high {
+        border-left: 4px solid var(--bs-danger);
     }
 
-    /* Toast notificaties */
+    .priority-medium {
+        border-left: 4px solid var(--bs-warning);
+    }
+
+    .priority-low {
+        border-left: 4px solid var(--bs-success);
+    }
+
+    /* Loading States */
+    .loading {
+        position: relative;
+        opacity: 0.7;
+    }
+
+    .loading::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5) url('/static/img/loading-spinner.gif') center no-repeat;
+        z-index: 1;
+    }
+
+    /* Icon Colors */
+    .icon-suppliers { color: #1ABC9C; }
+    .icon-dishes { color: #E74C3C; }
+    .icon-ingredients { color: #2ECC71; }
+    .icon-haccp { color: #E67E22; }
+    .icon-export { color: #9B59B6; }
+
+    /* Toast Notifications */
     .toast-container {
         position: fixed;
         top: 1rem;
@@ -477,6 +465,63 @@
         color: var(--text-light);
         border: 1px solid var(--kitchen-steel);
     }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .container {
+            padding: 0.5rem;
+        }
+
+        .card {
+            border-radius: 0;
+            margin: 0.5rem -0.5rem;
+        }
+
+        .card-header {
+            padding: 0.75rem;
+            flex-direction: column;
+            gap: 0.5rem;
+            text-align: center;
+        }
+
+        .card-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-btn {
+            padding: 0.8rem;
+        }
+
+        .btn-group {
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .btn-group .btn {
+            width: 100%;
+            margin: 0.25rem 0;
+        }
+
+        .quick-filters {
+            justify-content: center;
+        }
+
+        .table-responsive {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .table thead th {
+            position: sticky;
+            top: 0;
+            background: var(--kitchen-dark);
+            z-index: 1;
+        }
+    }
 </style>
 
 <!-- Voeg toe aan het begin van de container -->
@@ -484,6 +529,32 @@
 
 {% block extra_scripts %}
 <script>
+// Add this at the start of your script section, before any other code
+const fetchConfig = {
+    headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': document.getElementById('csrf_token').value,
+        'Content-Type': 'application/json'
+    },
+    credentials: 'same-origin'
+};
+
+// Add a helper function for common fetch operations
+function fetchWithConfig(url, method = 'POST', formData = null) {
+    const config = {
+        ...fetchConfig,
+        method: method
+    };
+    
+    if (formData) {
+        // Remove Content-Type from headers when sending FormData
+        delete config.headers['Content-Type'];
+        config.body = formData;
+    }
+    
+    return fetch(url, config);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const metingModal = document.getElementById('metingModal');
     metingModal.addEventListener('show.bs.modal', function (event) {
@@ -519,45 +590,140 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+function refreshPageAfterDelay(message, delay = 1000) {
+    showToast('Succes', message);
+    setTimeout(() => {
+        window.location.reload();
+    }, delay);
+}
+
+function saveHygieneControl() {
+    const form = document.getElementById('hygieneControlForm');
+    const formData = new FormData(form);
+    
+    ['werkkleding_ok', 'handen_ok', 'sieraden_ok', 'ziekmelding_ok'].forEach(field => {
+        formData.set(field, form.elements[field].checked ? 'true' : 'false');
+    });
+
+    fetchWithConfig('/api/haccp/hygiene/add', 'POST', formData)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                form.reset();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('newHygieneControlModal'));
+                if (modal) modal.hide();
+                refreshPageAfterDelay('Hygiëne controle toegevoegd');
+            } else {
+                showToast('Fout', data.error || 'Er is een fout opgetreden', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Fout', 'Er is een fout opgetreden bij het opslaan', 'error');
+        });
+}
+
+function savePestControl() {
+    const form = document.getElementById('pestControlForm');
+    const formData = new FormData(form);
+    
+    fetchWithConfig('/api/haccp/ongedierte/add', 'POST', formData)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                form.reset();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('newPestControlModal'));
+                if (modal) modal.hide();
+                refreshPageAfterDelay('Ongediertemelding toegevoegd');
+            } else {
+                showToast('Fout', data.error || 'Er is een fout opgetreden', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Fout', 'Er is een fout opgetreden bij het opslaan', 'error');
+        });
+}
+
+function saveProductionControl() {
+    const form = document.getElementById('productionControlForm');
+    const formData = new FormData(form);
+    
+    ['producttemp_ok', 'tijd_temp_ok'].forEach(field => {
+        formData.set(field, form.elements[field].checked ? 'true' : 'false');
+    });
+
+    fetchWithConfig('/api/haccp/productie/add', 'POST', formData)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                form.reset();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('newProductionModal'));
+                if (modal) modal.hide();
+                refreshPageAfterDelay('Productie controle toegevoegd');
+            } else {
+                showToast('Fout', data.error || 'Er is een fout opgetreden', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Fout', 'Er is een fout opgetreden bij het opslaan', 'error');
+        });
+}
+
+function saveAllergenControl() {
+    const form = document.getElementById('allergenControlForm');
+    const formData = new FormData(form);
+    
+    ['aanwezig', 'kruisbesmetting'].forEach(field => {
+        formData.set(field, form.elements[field].checked ? 'true' : 'false');
+    });
+
+    fetchWithConfig('/api/haccp/allergenen/add', 'POST', formData)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                form.reset();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('newAllergenModal'));
+                if (modal) modal.hide();
+                refreshPageAfterDelay('Allergenen controle toegevoegd');
+            } else {
+                showToast('Fout', data.error || 'Er is een fout opgetreden', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Fout', 'Er is een fout opgetreden bij het opslaan', 'error');
+        });
+}
+
 function updateMeting() {
     const formData = new FormData(document.getElementById('editMetingForm'));
     const metingId = document.getElementById('modalMetingId').value;
-    const chef_naam = '{{ chef_naam }}';
-
-    // Debug logging
-    console.log('Sending update request:', {
-        url: `/dashboard/${chef_naam}/haccp/meting/${metingId}/update`,
-        waarde: formData.get('waarde'),
-        actie: formData.get('actie_ondernomen')
-    });
+    const csrf_token = document.getElementById('csrf_token').value;
 
     fetch(`/api/haccp/meting/${metingId}/update`, {
         method: 'POST',
         headers: {
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': csrf_token,
         },
-        body: formData
+        body: formData,
+        credentials: 'same-origin'
     })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(data => {
-                throw new Error(data.error || `HTTP error! status: ${response.status}`);
-            });
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Toon succesmelding
-            alert(data.message || 'Meting succesvol bijgewerkt');
-            location.reload();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('metingModal'));
+            if (modal) modal.hide();
+            refreshPageAfterDelay('Meting succesvol bijgewerkt');
         } else {
-            alert(data.error || 'Er is een fout opgetreden bij het bijwerken van de meting.');
+            showToast('Fout', data.error || 'Er is een fout opgetreden bij het bijwerken van de meting.', 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Er is een fout opgetreden bij het bijwerken van de meting: ' + error.message);
+        showToast('Fout', 'Er is een fout opgetreden bij het bijwerken van de meting: ' + error.message, 'error');
     });
 }
 
@@ -610,32 +776,6 @@ function loadHygieneControls() {
                 });
             }
         });
-}
-
-function saveHygieneControl() {
-    const form = document.getElementById('hygieneControlForm');
-    const formData = new FormData(form);
-    
-    // Convert checkbox values to 'true'/'false' strings
-    ['werkkleding_ok', 'handen_ok', 'sieraden_ok', 'ziekmelding_ok'].forEach(field => {
-        formData.set(field, form.elements[field].checked ? 'true' : 'false');
-    });
-
-    fetch('/api/haccp/hygiene/add', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            form.reset();
-            $('#newHygieneControlModal').modal('hide');
-            loadHygieneControls();
-            showToast('Success', 'Hygiëne controle toegevoegd');
-        } else {
-            showToast('Error', data.error);
-        }
-    });
 }
 
 function deleteHygieneControl(controleId) {
@@ -692,23 +832,23 @@ function loadPestControls() {
 function savePestControl() {
     const form = document.getElementById('pestControlForm');
     const formData = new FormData(form);
-    formData.set('opgelost', form.elements['opgelost'].checked ? 'true' : 'false');
-
-    fetch('/api/haccp/ongedierte/add', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            form.reset();
-            $('#newPestControlModal').modal('hide');
-            loadPestControls();
-            showToast('Success', 'Ongediertemelding toegevoegd');
-        } else {
-            showToast('Error', data.error);
-        }
-    });
+    
+    fetchWithConfig('/api/haccp/ongedierte/add', 'POST', formData)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                form.reset();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('newPestControlModal'));
+                if (modal) modal.hide();
+                refreshPageAfterDelay('Ongediertemelding toegevoegd');
+            } else {
+                showToast('Fout', data.error || 'Er is een fout opgetreden', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Fout', 'Er is een fout opgetreden bij het opslaan', 'error');
+        });
 }
 
 function loadProductionControls() {
@@ -741,26 +881,26 @@ function saveProductionControl() {
     const form = document.getElementById('productionControlForm');
     const formData = new FormData(form);
     
-    // Convert checkbox values to 'true'/'false' strings
     ['producttemp_ok', 'tijd_temp_ok'].forEach(field => {
         formData.set(field, form.elements[field].checked ? 'true' : 'false');
     });
 
-    fetch('/api/haccp/productie/add', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            form.reset();
-            $('#newProductionModal').modal('hide');
-            loadProductionControls();
-            showToast('Success', 'Productie controle toegevoegd');
-        } else {
-            showToast('Error', data.error);
-        }
-    });
+    fetchWithConfig('/api/haccp/productie/add', 'POST', formData)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                form.reset();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('newProductionModal'));
+                if (modal) modal.hide();
+                refreshPageAfterDelay('Productie controle toegevoegd');
+            } else {
+                showToast('Fout', data.error || 'Er is een fout opgetreden', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Fout', 'Er is een fout opgetreden bij het opslaan', 'error');
+        });
 }
 
 function loadAllergenControls() {
@@ -797,50 +937,54 @@ function saveAllergenControl() {
     const form = document.getElementById('allergenControlForm');
     const formData = new FormData(form);
     
-    // Convert checkbox values to 'true'/'false' strings
     ['aanwezig', 'kruisbesmetting'].forEach(field => {
         formData.set(field, form.elements[field].checked ? 'true' : 'false');
     });
 
-    fetch('/api/haccp/allergenen/add', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            form.reset();
-            $('#newAllergenModal').modal('hide');
-            loadAllergenControls();
-            showToast('Success', 'Allergenen controle toegevoegd');
-        } else {
-            showToast('Error', data.error);
-        }
-    });
+    fetchWithConfig('/api/haccp/allergenen/add', 'POST', formData)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                form.reset();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('newAllergenModal'));
+                if (modal) modal.hide();
+                refreshPageAfterDelay('Allergenen controle toegevoegd');
+            } else {
+                showToast('Fout', data.error || 'Er is een fout opgetreden', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Fout', 'Er is een fout opgetreden bij het opslaan', 'error');
+        });
 }
 
 // Verbeterde notificaties
 function showToast(title, message, type = 'success') {
-    const toast = `
-        <div class="toast" role="alert">
-            <div class="toast-header">
-                <strong class="me-auto">${title}</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-            </div>
-            <div class="toast-body ${type}">
-                ${message}
-            </div>
+    const toastContainer = document.querySelector('.toast-container');
+    const toastEl = document.createElement('div');
+    toastEl.className = `toast ${type}`;
+    toastEl.setAttribute('role', 'alert');
+    toastEl.innerHTML = `
+        <div class="toast-header">
+            <strong class="me-auto">${title}</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">
+            ${message}
         </div>
     `;
     
-    $('.toast-container').append(toast);
-    const toastElement = $('.toast').last();
-    const bsToast = new bootstrap.Toast(toastElement);
-    bsToast.show();
+    toastContainer.appendChild(toastEl);
+    const toast = new bootstrap.Toast(toastEl, {
+        autohide: true,
+        delay: 5000
+    });
+    toast.show();
     
-    setTimeout(() => {
-        toastElement.remove();
-    }, 5000);
+    toastEl.addEventListener('hidden.bs.toast', () => {
+        toastEl.remove();
+    });
 }
 
 // Laad status beheer
