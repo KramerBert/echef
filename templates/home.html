@@ -1,26 +1,118 @@
 {% extends "base.html" %}
 {% block title %}Home - E-chef{% endblock %}
 {% block content %}
-<div class="card text-center text-white bg-dark py-4" aria-label="Welcome card">
+<style>
+    /* Icon colors */
+    .icon-utensils { color: #FF6B6B; }    /* Rood voor recepten */
+    .icon-calculator { color: #4ECDC4; }   /* Turquoise voor kostprijs */
+    .icon-file-alt { color: #45B7D1; }     /* Blauw voor menukaarten */
+    .icon-book-reader { color: #96CEB4; }  /* Groen voor kookboek */
+    .icon-shopping-basket { color: #FFEEAD; } /* Geel voor bestellijst */
+    .icon-clipboard-check { color: #88D8B0; } /* Mintgroen voor HACCP */
+    .icon-users-cog { color: #FFD93D; }    /* Goud voor "Voor wie" */
+    .icon-rocket { color: #FF8B94; }       /* Roze voor quickstart */
+
+    /* Centreer content */
+    .accordion-button {
+        justify-content: center;
+        padding: 1rem 2rem;
+    }
+
+    .accordion-button i {
+        margin-right: 10px;
+        font-size: 1.2em;
+    }
+
+    .accordion-body {
+        text-align: center;
+    }
+
+    .accordion-button::after {
+        position: absolute;
+        right: 1rem;
+    }
+
+    /* Card styling */
+    .welcome-card {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    /* Hover effects */
+    .accordion-button:hover .fas {
+        transform: scale(1.2);
+        transition: transform 0.3s ease;
+    }
+
+    /* Text styling */
+    .card-title {
+        margin-bottom: 1.5rem;
+    }
+
+    /* Button styling */
+    .btn {
+        margin: 0.5rem;
+        min-width: 150px;
+    }
+
+    /* Logo styling */
+    .logo-img {
+        max-width: 200px;
+        margin: 2rem auto;
+    }
+
+    /* Scroll indicator styling */
+    .scroll-indicator {
+        text-align: center;
+        margin: 2rem auto;
+        animation: bounce 2s infinite;
+    }
+
+    .scroll-indicator i {
+        color: var(--kitchen-highlight);
+        font-size: 2rem;
+    }
+
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+            transform: translateY(0);
+        }
+        40% {
+            transform: translateY(-20px);
+        }
+        60% {
+            transform: translateY(-10px);
+        }
+    }
+</style>
+
+<div class="card text-center text-white bg-dark py-4 welcome-card" aria-label="Welcome card">
     <div class="card-body">
         <h1 class="card-title">Welkom bij E-chef</h1>
-        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="E-chef Logo" class="img-fluid mb-4" style="max-width: 200px;">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="E-chef Logo" class="img-fluid mb-4 logo-img">
         <h2 class="card-title">Menu Engineering</h2>
+        <h5 class="card-title">Voor Kookprofessionals</h5>
+        
+        <!-- Add scroll indicator -->
+        <div class="scroll-indicator">
+            <i class="fas fa-chevron-down"></i>
+        </div>
         
         <div class="accordion" id="featureAccordion">
             <!-- Kernfunctionaliteiten -->
-            {% for feature in [
-                ('Recepten', 'utensils', 'Beheer Je Recepten Slimmer', 'Houd al je recepten overzichtelijk op één centrale plek met uitgebreide <strong>ingrediëntenlijsten</strong> en stap-voor-stap <strong>bereidingswijzen</strong>. 🍳'),
-                ('Kostprijs', 'calculator', 'Slimme Kostprijsberekening', 'Laat e-Chef automatisch de <strong>kostprijs per gerecht</strong> berekenen. 💰'),
-                ('Menukaarten', 'file-alt', 'Menukaarten Exporteren', '🍽️ Exporteer in 1 muisklik professioneel opgemaakte menukaarten en print ze uit voor je gasten of de drukker. 📄'),
-                ('Kookboek', 'book-reader', 'Jouw Professionele Kookboek', '📖 Creëer je eigen professionele kookboek met al je recepten en technieken. 👨‍🍳'),
-                ('Bestellijst', 'shopping-basket', 'Gemakkelijk Bestellen', '🛒 Selecteer je gerechten, geef de aantallen op en print met 1 muisklik je bestellijst per leverancier. 📝'),
-                ('HACCP', 'clipboard-check', 'Extra: HACCP', '🧾 Maak je eigen HACCP Checklist aan en track de status van de controlepunten. ✅')
-            ] %}
+            <div class="container text-center" style="max-width: 800px; margin: 0 auto;">
+                {% for feature in [
+                    ('Recepten', 'utensils', 'Beheer Je Recepten Slimmer', 'Houd al je recepten overzichtelijk op één centrale plek met uitgebreide <strong>ingrediëntenlijsten</strong> en stap-voor-stap <strong>bereidingswijzen</strong>. 🍳'),
+                    ('Kostprijs', 'calculator', 'Slimme Kostprijsberekening', 'Laat e-Chef automatisch de <strong>kostprijs per gerecht</strong> berekenen. 💰'),
+                    ('Menukaarten', 'file-alt', 'Menukaarten Exporteren', '🍽️ Exporteer in 1 muisklik professioneel opgemaakte menukaarten en print ze uit voor je gasten of de drukker. 📄'),
+                    ('Kookboek', 'book-reader', 'Jouw Professionele Kookboek', '📖 Creëer je eigen professionele kookboek met al je recepten en technieken. 👨‍🍳'),
+                    ('Bestellijst', 'shopping-basket', 'Gemakkelijk Bestellen', '🛒 Selecteer je gerechten, geef de aantallen op en print met 1 muisklik je bestellijst per leverancier. 📝'),
+                    ('HACCP', 'clipboard-check', 'Extra: HACCP', '🧾 Maak je eigen HACCP Checklists aan en track de status van de controlepunten. ✅')
+                ] %}
             <div class="accordion-item bg-dark text-white">
                 <h2 class="accordion-header">
                     <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ feature[0] }}">
-                        <i class="fas fa-{{ feature[1] }}"></i> {{ feature[0] }}
+                        <i class="fas fa-{{ feature[1] }} icon-{{ feature[1] }} me-2"></i> {{ feature[0] }}
                     </button>
                 </h2>
                 <div id="collapse{{ feature[0] }}" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
@@ -41,13 +133,14 @@
             <div class="accordion-item bg-dark text-white">
                 <h2 class="accordion-header">
                     <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseVoorWie">
-                        <i class="fas fa-users-cog"></i> Voor wie is e-Chef
+                        <i class="fas fa-users-cog icon-users-cog me-2"></i> Voor wie is e-Chef
                     </button>
                 </h2>
                 <div id="collapseVoorWie" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
                     <div class="accordion-body">
-                        <h2>e-Chef: Gemaakt door kookprofessionals, voor kookprofessionals en gepassioneerde hobbykoks.</h2>
-                        <p>Verplaats je van werkplek? Geen zorgen—je neemt eenvoudig je complete e-Chef <strong>portfolio</strong>, <strong>recepten</strong> en <strong>menukaarten</strong> overal mee naartoe. ✨👨‍🍳👩‍🍳</p>
+                        <h2>Gemaakt door kookprofessionals, voor kookprofessionals.</h2>
+                         <h5>En gepassioneerde hobbykoks.</h5> 
+                        <p>Verplaats je van werkplek? Geen zorgen. Je complete e-Chef portfolio is van jou.✨👨‍🍳👩‍🍳</p>
                     </div>
                 </div>
             </div>
@@ -56,7 +149,7 @@
             <div class="accordion-item bg-dark text-white">
                 <h2 class="accordion-header">
                     <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseQuickstart">
-                        <i class="fas fa-rocket"></i> Quickstart Guide
+                        <i class="fas fa-rocket icon-rocket me-2"></i> Quickstart Guide
                     </button>
                 </h2>
                 <div id="collapseQuickstart" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
