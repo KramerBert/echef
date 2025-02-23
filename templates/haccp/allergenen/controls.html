@@ -11,10 +11,13 @@
                 <thead>
                     <tr>
                         <th>Datum/Tijd</th>
-                        <th>Product</th>
-                        <th>Allergeen</th>
-                        <th>Aanwezig</th>
-                        <th>Kruisbesmetting</th>
+                        <th>Locatie</th>
+                        <th>Procedure Gevolgd</th>
+                        <th>Werkplek Schoon</th>
+                        <th>Gereedschap Schoon</th>
+                        <th>Gescheiden Bereid</th>
+                        <th>Opmerking</th>
+                        <th>Acties</th>
                     </tr>
                 </thead>
                 <tbody id="allergenControlsList">
@@ -36,38 +39,83 @@
             <div class="modal-body">
                 <form id="allergenControlForm">
                     <div class="mb-3">
-                        <label class="form-label">Product *</label>
-                        <select class="form-control" name="product_id" required>
-                            <option value="">Selecteer product...</option>
-                            {% for product in products %}
-                            <option value="{{ product.product_id }}">{{ product.naam }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Allergeen *</label>
-                        <select class="form-control" name="allergeen_id" required>
-                            <option value="">Selecteer allergeen...</option>
-                            {% for allergeen in allergenen %}
-                            <option value="{{ allergeen.allergeen_id }}">{{ allergeen.naam }}</option>
-                            {% endfor %}
-                        </select>
+                        <label class="form-label">Locatie *</label>
+                        <input type="text" class="form-control" name="locatie" required>
                     </div>
                     <div class="mb-3">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="aanwezig">
-                            <label class="form-check-label">Allergeen aanwezig</label>
+                            <input class="form-check-input" type="checkbox" name="procedure_gevolgd">
+                            <label class="form-check-label">Procedure gevolgd</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="kruisbesmetting">
-                            <label class="form-check-label">Risico op kruisbesmetting</label>
+                            <input class="form-check-input" type="checkbox" name="werkplek_schoon">
+                            <label class="form-check-label">Werkplek schoon</label>
                         </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="gereedschap_schoon">
+                            <label class="form-check-label">Gereedschap schoon</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="gescheiden_bereid">
+                            <label class="form-check-label">Gescheiden bereid</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Opmerking</label>
+                        <textarea class="form-control" name="opmerking" rows="3"></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuleren</button>
                 <button type="button" class="btn btn-primary" onclick="saveAllergenControl()">Opslaan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editAllergenModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h5 class="modal-title">Allergenen Controle Bewerken</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editAllergenControlForm">
+                    <input type="hidden" name="controle_id" id="edit_controle_id">
+                    <div class="mb-3">
+                        <label class="form-label">Locatie *</label>
+                        <input type="text" class="form-control" name="locatie" id="edit_locatie" required>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="procedure_gevolgd" id="edit_procedure_gevolgd">
+                            <label class="form-check-label">Procedure gevolgd</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="werkplek_schoon" id="edit_werkplek_schoon">
+                            <label class="form-check-label">Werkplek schoon</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="gereedschap_schoon" id="edit_gereedschap_schoon">
+                            <label class="form-check-label">Gereedschap schoon</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="gescheiden_bereid" id="edit_gescheiden_bereid">
+                            <label class="form-check-label">Gescheiden bereid</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Opmerking</label>
+                        <textarea class="form-control" name="opmerking" id="edit_opmerking" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="btn btn-primary" onclick="updateAllergenControl()">Opslaan</button>
             </div>
         </div>
     </div>

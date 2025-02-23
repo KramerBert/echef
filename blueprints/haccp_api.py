@@ -421,22 +421,26 @@ def add_allergen_control():
 
     try:
         data = request.form
-        product_id = data.get('product_id')
-        allergeen_id = data.get('allergeen_id')
-        aanwezig = data.get('aanwezig') == 'true'
-        kruisbesmetting = data.get('kruisbesmetting') == 'true'
+        locatie = data.get('locatie')
+        procedure_gevolgd = data.get('procedure_gevolgd') == 'true'
+        werkplek_schoon = data.get('werkplek_schoon') == 'true'
+        gereedschap_schoon = data.get('gereedschap_schoon') == 'true'
+        gescheiden_bereid = data.get('gescheiden_bereid') == 'true'
+        opmerking = data.get('opmerking', '')
 
-        if not all([product_id, allergeen_id]):
-            return jsonify({'success': False, 'error': 'Niet alle verplichte velden zijn ingevuld'}), 400
+        if not locatie:
+            return jsonify({'success': False, 'error': 'Locatie is verplicht'}), 400
 
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
             cursor.execute("""
                 INSERT INTO haccp_allergenen_controle 
-                (chef_id, product_id, allergeen_id, aanwezig, kruisbesmetting, datum_controle)
-                VALUES (%s, %s, %s, %s, %s, NOW())
-            """, (session['chef_id'], product_id, allergeen_id, aanwezig, kruisbesmetting))
+                (chef_id, locatie, procedure_gevolgd, werkplek_schoon, 
+                gereedschap_schoon, gescheiden_bereid, datum_controle, opmerking)
+                VALUES (%s, %s, %s, %s, %s, %s, NOW(), %s)
+            """, (session['chef_id'], locatie, procedure_gevolgd, werkplek_schoon,
+                  gereedschap_schoon, gescheiden_bereid, opmerking))
             
             conn.commit()
             return jsonify({
@@ -460,12 +464,9 @@ def list_allergen_controls():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
-            SELECT ac.*, p.naam as product_naam, a.naam as allergeen_naam 
-            FROM haccp_allergenen_controle ac
-            JOIN products p ON ac.product_id = p.product_id
-            JOIN allergenen a ON ac.allergeen_id = a.allergeen_id
-            WHERE ac.chef_id = %s 
-            ORDER BY ac.datum_controle DESC
+            SELECT * FROM haccp_allergenen_controle 
+            WHERE chef_id = %s 
+            ORDER BY datum_controle DESC
         """, (session['chef_id'],))
         
         controls = cursor.fetchall()
@@ -479,4 +480,69 @@ def list_allergen_controls():
 
     except Exception as e:
         logger.error(f'Error listing allergen controls: {str(e)}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@bp.route('/allergenen/<int:controle_id>/update', methods=['POST'])
+def update_allergen_control(controle_id):
+    if 'chef_id' not in session:
+        return jsonify({'success': False, 'error': 'Geen toegang'}), 403
+
+    try:
+        data = request.form
+        locatie = data.get('locatie')
+        procedure_gevolgd = data.get('procedure_gevolgd') == 'true'
+        werkplek_schoon = data.get('werkplek_schoon') == 'true'
+        gereedschap_schoon = data.get('gereedschap_schoon') == 'true'
+        gescheiden_bereid = data.get('gescheiden_bereid') == 'true'
+        opmerking = data.get('opmerking', '')
+
+        if not locatie:
+            return jsonify({'success': False, 'error': 'Locatie is verplicht'}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                UPDATE haccp_allergenen_controle 
+                SET locatie = %s, procedure_gevolgd = %s, werkplek_schoon = %s,
+                    gereedschap_schoon = %s, gescheiden_bereid = %s, opmerking = %s
+                WHERE controle_id = %s AND chef_id = %s
+            """, (locatie, procedure_gevolgd, werkplek_schoon, gereedschap_schoon, 
+                  gescheiden_bereid, opmerking, controle_id, session['chef_id']))
+            
+            conn.commit()
+            return jsonify({'success': True})
+        finally:
+            cursor.close()
+            conn.close()
+
+    except Exception as e:
+        logger.error(f'Error updating allergen control: {str(e)}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@bp.route('/allergenen/<int:controle_id>/delete', methods=['POST'])
+def delete_allergen_control(controle_id):
+    if 'chef_id' not in session:
+        return jsonify({'success': False, 'error': 'Geen toegang'}), 403
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                DELETE FROM haccp_allergenen_controle 
+                WHERE controle_id = %s AND chef_id = %s
+            """, (controle_id, session['chef_id']))
+            
+            if cursor.rowcount == 0:
+                return jsonify({'success': False, 'error': 'Controle niet gevonden'}), 404
+
+            conn.commit()
+            return jsonify({'success': True})
+        finally:
+            cursor.close()
+            conn.close()
+
+    except Exception as e:
+        logger.error(f'Error deleting allergen control: {str(e)}')
         return jsonify({'success': False, 'error': str(e)}), 500
