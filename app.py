@@ -44,6 +44,7 @@ import re  # Add this import
 import html  # Add this import
 import time 
 from decimal import Decimal  # Add this import at the top
+from routes.inventory import bp as inventory_bp
 
 load_dotenv()  # Load the values from .env
 
@@ -91,6 +92,7 @@ def create_app():
     app.register_blueprint(errors_bp)
     from blueprints.haccp.routes import bp as haccp_bp
     app.register_blueprint(haccp_bp, url_prefix='/haccp')
+    app.register_blueprint(inventory_bp)
     
     # Register template filters and helper functions inside create_app
     def nl2br(value):

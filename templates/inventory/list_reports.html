@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Voorraadrapporten{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Voorraadrapporten</h2>
+    
+    <div class="mb-4">
+        <a href="{{ url_for('inventory.create_report', chef_naam=chef_naam) }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nieuw Rapport
+        </a>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Naam</th>
+                <th>Datum</th>
+                <th>Aangemaakt op</th>
+                <th>Acties</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for report in reports %}
+            <tr>
+                <td>{{ report.name }}</td>
+                <td>{{ report.report_date.strftime('%d-%m-%Y') }}</td>
+                <td>{{ report.created_at.strftime('%d-%m-%Y %H:%M') }}</td>
+                <td>
+                    <a href="{{ url_for('inventory.edit_report', chef_naam=chef_naam, report_id=report.report_id) }}" 
+                       class="btn btn-sm btn-primary">
+                        <i class="fas fa-edit"></i> Bewerken
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

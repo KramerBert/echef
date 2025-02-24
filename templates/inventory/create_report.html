@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Nieuw Voorraadrapport{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Nieuw Voorraadrapport</h2>
+    
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="mb-3">
+            <label for="name" class="form-label">Naam rapport</label>
+            <input type="text" class="form-control" id="name" name="name" required>
+        </div>
+        
+        <div class="mb-3">
+            <label for="report_date" class="form-label">Datum</label>
+            <input type="date" class="form-control" id="report_date" name="report_date" 
+                   value="{{ today }}" required>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Aanmaken</button>
+        <a href="{{ url_for('inventory.list_reports', chef_naam=chef_naam) }}" 
+           class="btn btn-secondary">Annuleren</a>
+    </form>
+</div>
+{% endblock %}

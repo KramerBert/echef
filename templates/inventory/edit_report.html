@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Voorraadrapport Bewerken{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Voorraadrapport Bewerken</h2>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">{{ report.name }}</h5>
+            <p class="card-text">Datum: {{ report.report_date.strftime('%d-%m-%Y') }}</p>
+            <p class="card-text">Totale Waarde: <span id="total-value">€{{ "%.2f"|format(total_value|default(0)|float) }}</span></p>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Ingrediënt</th>
+                    <th>Huidige Voorraad</th>
+                    <th>Eenheid</th>
+                    <th>Prijs per Eenheid</th>
+                    <th>Subtotaal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ingredient in ingredients %}
+                <tr>
+                    <td>{{ ingredient.naam }}</td>
+                    <td>
+                        <div class="input-group">
+                            <input type="number" 
+                                   class="form-control quantity-input" 
+                                   value="{{ ingredient.current_quantity }}"
+                                   data-ingredient-id="{{ ingredient.ingredient_id }}"
+                                   data-price="{{ ingredient.prijs_per_eenheid }}"
+                                   min="0"
+                                   step="0.01">
+                            <span class="input-group-text save-indicator">
+                                <i class="fas fa-save"></i>
+                            </span>
+                        </div>
+                    </td>
+                    <td>{{ ingredient.eenheid }}</td>
+                    <td>€{{ "%.2f"|format(ingredient.prijs_per_eenheid|float) }}</td>
+                    <td class="subtotal">€{{ "%.2f"|format(ingredient.subtotal|default(0)|float) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="4" class="text-end">Totaal:</th>
+                    <th id="table-total">€{{ "%.2f"|format(total_value|default(0)|float) }}</th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="mt-4">
+        <a href="{{ url_for('inventory.list_reports', chef_naam=chef_naam) }}" class="btn btn-secondary">Terug naar Overzicht</a>
+    </div>
+</div>
+
+<style>
+.save-indicator {
+    display: none;
+    width: 40px;
+    text-align: center;
+}
+
+.save-indicator i {
+    color: var(--kitchen-highlight);
+}
+
+.save-indicator i.fa-check {
+    color: var(--kitchen-success);
+}
+
+.save-indicator i.fa-exclamation-circle {
+    color: var(--kitchen-danger);
+}
+</style>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('.quantity-input');
+    let updateTimeout;
+
+    inputs.forEach(input => {
+        const saveIndicator = input.parentElement.querySelector('.save-indicator');
+        
+        input.addEventListener('change', async function() {
+            clearTimeout(updateTimeout);
+            
+            // Toon direct het save-icoontje
+            saveIndicator.style.display = 'block';
+            saveIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            const quantity = parseFloat(this.value) || 0;
+            const price = parseFloat(this.dataset.price);
+            const subtotal = quantity * price;
+            const row = this.closest('tr');
+            const subtotalCell = row.querySelector('.subtotal');
+            
+            // Update subtotal in table
+            subtotalCell.textContent = `€${subtotal.toFixed(2)}`;
+            updateTotalValue();
+
+            // Stuur update naar server met vertraging
+            updateTimeout = setTimeout(async () => {
+                try {
+                    const response = await fetch('{{ url_for("inventory.update_report_item", chef_naam=chef_naam, report_id=report.report_id) }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            ingredient_id: this.dataset.ingredientId,
+                            quantity: quantity
+                        })
+                    });
+
+                    if (response.ok) {
+                        saveIndicator.innerHTML = '<i class="fas fa-check"></i>';
+                        setTimeout(() => {
+                            saveIndicator.style.display = 'none';
+                        }, 2000);
+                    } else {
+                        saveIndicator.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    saveIndicator.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
+                }
+            }, 500);
+        });
+    });
+
+    function updateTotalValue() {
+        const subtotals = document.querySelectorAll('.subtotal');
+        const total = Array.from(subtotals).reduce((sum, element) => {
+            return sum + (parseFloat(element.textContent.replace('€', '')) || 0);
+        }, 0);
+        
+        document.getElementById('total-value').textContent = `€${total.toFixed(2)}`;
+        document.getElementById('table-total').textContent = `€${total.toFixed(2)}`;
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}
