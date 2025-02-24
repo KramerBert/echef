@@ -1,7 +1,7 @@
 {
-    "name": "e-Chef Menu Engineering",
+    "name": "e-Chef - Culinair Management Platform",
     "short_name": "e-Chef",
-    "description": "Professionele menu engineering software voor kookprofessionals",
+    "description": "Professionele keuken software voor kookprofessionals",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#1A1A1A",
