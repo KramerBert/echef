@@ -1,35 +1,29 @@
 document.addEventListener('DOMContentLoaded', function() {
+    const dishSearch = document.getElementById('dishSearch');
     const categoryFilter = document.getElementById('categoryFilter');
-    
-    // Check of we op de juiste pagina zijn
-    if (!categoryFilter) {
-        console.log('Search elements not found, probably not on dishes page');
-        return;
-    }
+    const dishTable = document.querySelector('.dish-table tbody');
 
-    const table = document.querySelector('.dish-table');
-    if (!table) {
-        console.log('Dish table not found, probably not on dishes page');
-        return;
-    }
+    function filterDishes() {
+        const searchValue = dishSearch.value.toLowerCase();
+        const categoryValue = categoryFilter.value.toLowerCase();
+        const rows = dishTable.getElementsByTagName('tr');
 
-    const rows = Array.from(table.getElementsByTagName('tr'));
-
-    function filterTable() {
-        const category = categoryFilter.value.toLowerCase();
-
-        rows.forEach((row, index) => {
-            if (index === 0) return; // Skip header row
-            const cells = row.cells;
-            if (!cells || cells.length < 2) return; // Skip invalid rows
+        for (let row of rows) {
+            const dishName = row.querySelector('.dish-name-link').textContent.toLowerCase();
+            const category = row.getElementsByTagName('td')[1].textContent.toLowerCase();
             
-            const rowCategory = cells[1].textContent.toLowerCase();
+            const matchesSearch = dishName.includes(searchValue);
+            const matchesCategory = !categoryValue || category === categoryValue;
             
-            const matchesCategory = category === '' || rowCategory === category;
-
-            row.style.display = matchesCategory ? '' : 'none';
-        });
+            row.style.display = matchesSearch && matchesCategory ? '' : 'none';
+        }
     }
 
-    categoryFilter.addEventListener('change', filterTable);
+    // Add event listeners
+    if (dishSearch) {
+        dishSearch.addEventListener('input', filterDishes);
+    }
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', filterDishes);
+    }
 });

@@ -16,9 +16,9 @@
     <h2>Menukaart</h2>
 
     <div class="search-filter no-print">
-        <input type="search" id="dishSearch" class="form-control" placeholder="Zoek gerecht...">
+        <input type="search" id="dishSearch" class="form-control mb-2" placeholder="Zoek gerecht...">
         <select id="categoryFilter" class="form-control">
-            <option value="">Alle categorieën</option>
+            <option value="">Alle gangen</option>
             {% for categorie in dish_categories %}
                 <option value="{{ categorie.naam }}">{{ categorie.naam }}</option>
             {% endfor %}

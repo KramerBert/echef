@@ -981,12 +981,15 @@ select.form-control::-ms-expand {
     padding: 15px;
     border-radius: 4px;
     margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
 }
 
 .search-filter input,
 .search-filter select {
     max-width: 300px;
     display: inline-block;
+    flex: 1;
 }
 
 /* CSV Import Section */

@@ -70,7 +70,14 @@
     </tr>
     {% for ingredient in ingredienten %}
     <tr data-ingredient-id="{{ ingredient.ingredient_id }}">
-        <td>{{ ingredient.naam }}</td>
+        <td>
+            <input type="text" 
+                   class="inline-edit form-control"
+                   name="naam"
+                   value="{{ ingredient.naam }}"
+                   data-original="{{ ingredient.naam }}"
+                   style="width: 200px;">
+        </td>
         <td>
             <select class="inline-edit form-control" name="categorie" data-original="{{ ingredient.categorie }}">
                 {% for categorie in categorieen %}
