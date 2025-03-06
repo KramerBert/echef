@@ -140,9 +140,11 @@ def create_app():
     DB_HOST = os.getenv("DB_HOST")
     DB_PORT = os.getenv("DB_PORT")
 
-    # Database configuration
-    db_url = os.getenv("JAWSDB_URL")  # Gebruik JawsDB URL
-    if db_url:  # Heroku
+    # Database configuration - MODIFIED to prioritize local database
+    db_url = os.getenv("JAWSDB_URL") 
+    use_local_db = os.getenv("USE_LOCAL_DB", "true").lower() == "true"
+    
+    if db_url and not use_local_db:  # Only use JawsDB if explicitly not using local DB
         url = urlparse(db_url)
         DB_CONFIG = {
             'host': url.hostname,
@@ -151,6 +153,7 @@ def create_app():
             'password': url.password,
             'port': url.port
         }
+        print("Using production database (JawsDB)")
     else:  # Local development
         DB_CONFIG = {
             'host': os.getenv("DB_HOST"),
@@ -159,6 +162,7 @@ def create_app():
             'password': os.getenv("DB_PASSWORD"),
             'port': os.getenv("DB_PORT")
         }
+        print("Using local database")
 
     # Reset wachtwoord configuratie
     app.config['RESET_TOKEN_EXPIRE_MINUTES'] = 30
@@ -2123,8 +2127,8 @@ def create_app():
                 row_cells[4].text = '⚠ Afwijking'
             
             row_cells[5].text = meting['actie_ondernomen'] or 'Geen actie'
-
-        # Exporteer document
+        
+        # Initialize buffer before use
         buffer = io.BytesIO()
         doc.save(buffer)
         buffer.seek(0)
@@ -2690,15 +2694,26 @@ def create_app():
         cur = conn.cursor(dictionary=True)
 
         try:
-            # Haal eerst alle bestaande leveranciers op
+            # Fetch admin-created suppliers first
+            cur.execute("""
+                SELECT * FROM leveranciers 
+                WHERE is_admin_created = TRUE 
+                ORDER BY naam
+            """)
+            admin_suppliers = cur.fetchall()
+            
+            # Fetch chef's personal suppliers
             cur.execute("""
                 SELECT * FROM leveranciers 
                 WHERE chef_id = %s 
                 ORDER BY naam
             """, (session['chef_id'],))
-            leveranciers = cur.fetchall()
+            chef_suppliers = cur.fetchall()
+            
+            # Combine both lists, with chef's suppliers first
+            leveranciers = chef_suppliers + admin_suppliers
 
-            # POST request handler
+            # POST request handler - unchanged
             if request.method == 'POST':
                 # CSRF validatie
                 if not form.validate_on_submit():
@@ -2753,6 +2768,7 @@ def create_app():
             return render_template('manage_suppliers.html',
                                 chef_naam=chef_naam,
                                 leveranciers=leveranciers,
+                                admin_suppliers=admin_suppliers,
                                 form=form)
 
         except Exception as e:
@@ -2775,8 +2791,23 @@ def create_app():
         if conn is None:
             return jsonify({'success': False, 'error': 'Database verbindingsfout'}), 500
 
-        cur = conn.cursor()
+        cur = conn.cursor(dictionary=True)
         try:
+            # First check if this is an admin-created supplier
+            cur.execute("""
+                SELECT is_admin_created FROM leveranciers 
+                WHERE leverancier_id = %s
+            """, (leverancier_id,))
+            
+            supplier = cur.fetchone()
+            if not supplier:
+                return jsonify({'success': False, 'error': 'Leverancier niet gevonden'}), 404
+            
+            # Prevent deletion if it's an admin supplier
+            if supplier.get('is_admin_created'):
+                return jsonify({'success': False, 'error': 'Admin leveranciers kunnen niet worden verwijderd'}), 403
+            
+            # Continue with existing deletion code for chef's personal suppliers
             # Controleer of de leverancier bestaat en bij deze chef hoort
             cur.execute("""
                 SELECT leverancier_id 

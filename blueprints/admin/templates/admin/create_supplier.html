@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Nieuwe Leverancier{% endblock %}
+
+{% block content %}
+<div class="admin-create-supplier">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Nieuwe Leverancier Toevoegen</h2>
+        <div>
+            <a href="{{ url_for('admin.manage_suppliers') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Terug naar Leveranciers
+            </a>
+        </div>
+    </div>
+    
+    <div class="card" style="background-color: var(--kitchen-dark);">
+        <div class="card-header" style="background-color: var(--kitchen-blue);">
+            <h3>Leverancier Gegevens</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="mb-3">
+                    <label for="naam" class="form-label">Naam leverancier *</label>
+                    <input type="text" id="naam" name="naam" class="form-control" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="contact" class="form-label">Contactpersoon</label>
+                    <input type="text" id="contact" name="contact" class="form-control">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="telefoon" class="form-label">Telefoon</label>
+                    <input type="tel" id="telefoon" name="telefoon" class="form-control">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="email" class="form-label">E-mail</label>
+                    <input type="email" id="email" name="email" class="form-control">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="banner_image" class="form-label">Reclamebanner (afbeelding)</label>
+                    <input type="file" id="banner_image" name="banner_image" class="form-control" accept="image/*">
+                    <div class="form-text text-light">Aanbevolen formaat: 400x100 pixels</div>
+                </div>
+                
+                <div class="mb-3 form-check">
+                    <input type="checkbox" id="has_standard_list" name="has_standard_list" class="form-check-input" value="1">
+                    <label for="has_standard_list" class="form-check-label">
+                        Heeft standaard ingrediëntenlijst beschikbaar
+                    </label>
+                    <div class="form-text text-light">
+                        Indien aangevinkt, kunnen chefs later standaard ingrediënten importeren van deze leverancier
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save"></i> Leverancier Aanmaken
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

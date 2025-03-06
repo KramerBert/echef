@@ -1,11 +1,13 @@
-from flask import render_template, redirect, url_for, flash, request, session, jsonify
+from flask import render_template, redirect, url_for, flash, request, session, jsonify, current_app
 from werkzeug.security import check_password_hash
+from werkzeug.utils import secure_filename
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email
 from utils.db import get_db_connection
 from . import bp
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -183,6 +185,9 @@ def delete_chef(chef_id):
             flash("Chef niet gevonden", "danger")
             return redirect(url_for('admin.dashboard'))
         
+        # NIEUW: Verwijder password_resets records
+        cur.execute("DELETE FROM password_resets WHERE chef_id = %s", (chef_id,))
+        
         # Verwijder alle gerelateerde records in de juiste volgorde
         # Eerst dish_allergenen en dish_dieten omdat deze foreign keys hebben naar dishes
         cur.execute("""
@@ -308,6 +313,204 @@ def toggle_chef_status(chef_id):
     except Exception as e:
         logger.error(f"Toggle chef status error: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+@bp.route('/suppliers')
+@admin_required
+def manage_suppliers():
+    """Admin supplier management page"""
+    conn = get_db_connection()
+    if not conn:
+        flash("Database verbinding mislukt", "danger")
+        return redirect(url_for('admin.dashboard'))
+        
+    cur = conn.cursor(dictionary=True)
+    try:
+        # Retrieve all admin-created suppliers
+        cur.execute("""
+            SELECT * FROM leveranciers 
+            WHERE is_admin_created = TRUE
+            ORDER BY naam
+        """)
+        suppliers = cur.fetchall()
+        
+        return render_template('admin/suppliers.html', suppliers=suppliers)
+    except Exception as e:
+        logger.error(f"Admin suppliers error: {str(e)}")
+        flash("Er is een fout opgetreden bij het laden van leveranciers", "danger")
+        return redirect(url_for('admin.dashboard'))
+    finally:
+        cur.close()
+        conn.close()
+
+@bp.route('/suppliers/create', methods=['GET', 'POST'])
+@admin_required
+def create_supplier():
+    """Create a new admin supplier"""
+    if request.method == 'POST':
+        # Get form data
+        naam = request.form.get('naam')
+        contact = request.form.get('contact')
+        telefoon = request.form.get('telefoon')
+        email = request.form.get('email')
+        has_standard_list = bool(request.form.get('has_standard_list'))
+        
+        # Handle banner image upload
+        banner_image = None
+        if 'banner_image' in request.files and request.files['banner_image'].filename:
+            file = request.files['banner_image']
+            filename = secure_filename(file.filename)
+            
+            # Create upload directory if it doesn't exist
+            upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'banners')
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            # Save the file
+            file_path = os.path.join(upload_dir, filename)
+            file.save(file_path)
+            banner_image = 'uploads/banners/' + filename
+        
+        conn = get_db_connection()
+        if not conn:
+            flash("Database verbinding mislukt", "danger")
+            return redirect(url_for('admin.manage_suppliers'))
+        
+        cur = conn.cursor()
+        try:
+            # Insert new supplier with is_admin_created=TRUE and chef_id=NULL (now allowed)
+            cur.execute("""
+                INSERT INTO leveranciers 
+                (naam, contact, telefoon, email, banner_image, is_admin_created, has_standard_list, chef_id)
+                VALUES (%s, %s, %s, %s, %s, TRUE, %s, NULL)
+            """, (naam, contact, telefoon, email, banner_image, has_standard_list))
+            
+            conn.commit()
+            flash("Leverancier succesvol aangemaakt!", "success")
+            return redirect(url_for('admin.manage_suppliers'))
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"Create supplier error: {str(e)}")
+            flash(f"Er is een fout opgetreden bij het aanmaken van de leverancier: {str(e)}", "danger")
+            return redirect(url_for('admin.manage_suppliers'))
+        finally:
+            cur.close()
+            conn.close()
+            
+    # GET request: render form
+    return render_template('admin/create_supplier.html')
+
+@bp.route('/suppliers/<int:supplier_id>/edit', methods=['GET', 'POST'])
+@admin_required
+def edit_supplier(supplier_id):
+    """Edit an admin supplier"""
+    conn = get_db_connection()
+    if not conn:
+        flash("Database verbinding mislukt", "danger")
+        return redirect(url_for('admin.manage_suppliers'))
+    
+    cur = conn.cursor(dictionary=True)
+    
+    try:
+        # Get supplier information
+        cur.execute("""
+            SELECT * FROM leveranciers 
+            WHERE leverancier_id = %s AND is_admin_created = TRUE
+        """, (supplier_id,))
+        supplier = cur.fetchone()
+        
+        if not supplier:
+            flash("Leverancier niet gevonden", "danger")
+            return redirect(url_for('admin.manage_suppliers'))
+        
+        if request.method == 'POST':
+            # Get form data
+            naam = request.form.get('naam')
+            contact = request.form.get('contact')
+            telefoon = request.form.get('telefoon')
+            email = request.form.get('email')
+            has_standard_list = bool(request.form.get('has_standard_list'))
+            
+            # Handle banner image upload
+            banner_image = supplier['banner_image']
+            if 'banner_image' in request.files and request.files['banner_image'].filename:
+                file = request.files['banner_image']
+                filename = secure_filename(file.filename)
+                
+                # Create upload directory if it doesn't exist
+                upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'banners')
+                os.makedirs(upload_dir, exist_ok=True)
+                
+                # Save the file
+                file_path = os.path.join(upload_dir, filename)
+                file.save(file_path)
+                banner_image = 'uploads/banners/' + filename
+            
+            # Update supplier
+            cur.execute("""
+                UPDATE leveranciers 
+                SET naam = %s, contact = %s, telefoon = %s, email = %s, 
+                    banner_image = %s, has_standard_list = %s
+                WHERE leverancier_id = %s
+            """, (naam, contact, telefoon, email, banner_image, has_standard_list, supplier_id))
+            
+            conn.commit()
+            flash("Leverancier succesvol bijgewerkt!", "success")
+            return redirect(url_for('admin.manage_suppliers'))
+            
+        return render_template('admin/edit_supplier.html', supplier=supplier)
+    
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Edit supplier error: {str(e)}")
+        flash(f"Er is een fout opgetreden bij het bewerken van de leverancier: {str(e)}", "danger")
+        return redirect(url_for('admin.manage_suppliers'))
+    finally:
+        cur.close()
+        conn.close()
+
+@bp.route('/suppliers/<int:supplier_id>/delete', methods=['POST'])
+@admin_required
+def delete_supplier(supplier_id):
+    """Delete an admin supplier"""
+    conn = get_db_connection()
+    if not conn:
+        flash("Database verbinding mislukt", "danger")
+        return redirect(url_for('admin.manage_suppliers'))
+    
+    cur = conn.cursor(dictionary=True)
+    
+    try:
+        # Check if supplier exists and is admin-created
+        cur.execute("""
+            SELECT * FROM leveranciers 
+            WHERE leverancier_id = %s AND is_admin_created = TRUE
+        """, (supplier_id,))
+        
+        supplier = cur.fetchone()
+        if not supplier:
+            flash("Leverancier niet gevonden of geen admin leverancier", "danger")
+            return redirect(url_for('admin.manage_suppliers'))
+        
+        # Delete supplier
+        cur.execute("DELETE FROM leveranciers WHERE leverancier_id = %s", (supplier_id,))
+        conn.commit()
+        
+        # Remove banner image if it exists
+        if supplier['banner_image']:
+            banner_path = os.path.join(current_app.root_path, 'static', supplier['banner_image'])
+            if os.path.exists(banner_path):
+                os.remove(banner_path)
+        
+        flash("Leverancier succesvol verwijderd!", "success")
+        return redirect(url_for('admin.manage_suppliers'))
+    
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Delete supplier error: {str(e)}")
+        flash(f"Er is een fout opgetreden bij het verwijderen van de leverancier: {str(e)}", "danger")
+        return redirect(url_for('admin.manage_suppliers'))
     finally:
         cur.close()
         conn.close()

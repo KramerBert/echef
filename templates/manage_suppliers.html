@@ -7,7 +7,7 @@
         </a>
     </div>
 
-    <h2>Leveranciers Beheren</h2>
+    <h2>Eigen Leveranciers Beheren</h2>
 
     <div class="card">
         <div class="card-body">
@@ -25,6 +25,7 @@
                     </thead>
                     <tbody>
                         {% for leverancier in leveranciers %}
+                        {% if not leverancier.is_admin_created %}
                         <tr>
                             <td data-label="Naam">{{ leverancier.naam }}</td>
                             <td data-label="Contact">{{ leverancier.contact }}</td>
@@ -43,6 +44,7 @@
                                 </div>
                             </td>
                         </tr>
+                        {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>
@@ -50,7 +52,7 @@
         </div>
     </div>
 
-    <h2>Nieuwe Leverancier toevoegen </h2>
+    <h2>Nieuwe Eigen Leverancier toevoegen </h2>
     <form method="POST" class="add-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="text" name="naam" class="form-control smaller-input" placeholder="Naam" required>
@@ -98,6 +100,36 @@
                 </div>
             </div>
         </div>
+    </div>
+    <hr style="border-top: 1px solid #ccc; margin: 2rem 0;">
+    <h3>Systeem Leveranciers</h3>
+    <p class="text-muted">Sponsoren van e-Chef</p>
+
+    <div class="supplier-gallery">
+        {% for supplier in leveranciers %}
+            {% if supplier.is_admin_created %}
+            <div class="supplier-card">
+                {% if supplier.banner_image %}
+                    <div class="supplier-banner">
+                        <img src="{{ url_for('static', filename=supplier.banner_image) }}" alt="Banner voor {{ supplier.naam }}">
+                    </div>
+                {% else %}
+                    <div class="supplier-banner supplier-banner-placeholder">
+                        <div class="supplier-name">{{ supplier.naam }}</div>
+                    </div>
+                {% endif %}
+                
+                <div class="supplier-info">
+                    {% if supplier.contact %}<p><strong>Contact:</strong> {{ supplier.contact }}</p>{% endif %}
+                    {% if supplier.telefoon %}<p><strong>Telefoon:</strong> {{ supplier.telefoon }}</p>{% endif %}
+                    {% if supplier.email %}<p><strong>E-mail:</strong> {{ supplier.email }}</p>{% endif %}
+                    {% if supplier.has_standard_list %}
+                        <p class="standard-list-badge"><i class="fas fa-list-check"></i> Ingrediëntenlijst beschikbaar</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        {% endfor %}
     </div>
 
 <style>
@@ -361,6 +393,76 @@ document.addEventListener('DOMContentLoaded', function() {
 
         .dish-actions {
             justify-content: flex-end;
+        }
+    }
+
+    .supplier-gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+    
+    .supplier-card {
+        background-color: var(--kitchen-dark);
+        border: 1px solid var(--kitchen-steel);
+        border-radius: 4px;
+        overflow: hidden;
+        transition: transform 0.3s ease;
+    }
+    
+    .supplier-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    
+    .supplier-banner {
+        height: 100px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: var(--kitchen-black);
+        overflow: hidden;
+    }
+    
+    .supplier-banner img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+    
+    .supplier-banner-placeholder {
+        background-color: var(--kitchen-blue);
+    }
+    
+    .supplier-name {
+        font-size: 1.2em;
+        font-weight: bold;
+        color: var(--text-light);
+        text-align: center;
+    }
+    
+    .supplier-info {
+        padding: 15px;
+    }
+    
+    .supplier-info p {
+        margin-bottom: 5px;
+    }
+    
+    .standard-list-badge {
+        margin-top: 10px;
+        padding: 5px 10px;
+        background-color: var(--kitchen-success);
+        color: white;
+        border-radius: 4px;
+        display: inline-block;
+    }
+    
+    /* Voor mobiele weergave */
+    @media (max-width: 768px) {
+        .supplier-gallery {
+            grid-template-columns: 1fr;
         }
     }
 </style>

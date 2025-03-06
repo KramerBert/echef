@@ -7,6 +7,9 @@ venv/
 # Database
 /Database/
 
+# Scripts
+scripts/
+
 # IDE
 .vscode/
 .idea/

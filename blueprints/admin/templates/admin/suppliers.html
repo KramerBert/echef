@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Leveranciers{% endblock %}
+
+{% block content %}
+<div class="admin-suppliers">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Beheer Leveranciers</h2>
+        <div>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Terug naar Dashboard
+            </a>
+            <a href="{{ url_for('admin.create_supplier') }}" class="btn btn-success">
+                <i class="fas fa-plus"></i> Nieuwe Leverancier
+            </a>
+        </div>
+    </div>
+    
+    <!-- Leveranciers tabel -->
+    <div class="card" style="background-color: var(--kitchen-dark);">
+        <div class="card-header">
+            <h3>Globale Leveranciers</h3>
+            <p class="text-muted">Deze leveranciers zijn zichtbaar voor alle chefs</p>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Naam</th>
+                            <th>Contactpersoon</th>
+                            <th>Telefoon</th>
+                            <th>Email</th>
+                            <th>Banner</th>
+                            <th>Ingrediëntenlijst</th>
+                            <th>Acties</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for supplier in suppliers %}
+                        <tr>
+                            <td>{{ supplier.naam }}</td>
+                            <td>{{ supplier.contact }}</td>
+                            <td>{{ supplier.telefoon }}</td>
+                            <td>{{ supplier.email }}</td>
+                            <td>
+                                {% if supplier.banner_image %}
+                                    <img src="{{ url_for('static', filename=supplier.banner_image) }}" 
+                                         alt="Banner voor {{ supplier.naam }}" 
+                                         style="max-width: 100px; max-height: 50px;">
+                                {% else %}
+                                    <span class="text-muted">Geen banner</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if supplier.has_standard_list %}
+                                    <span class="badge bg-success">Ja</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Nee</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('admin.edit_supplier', supplier_id=supplier.leverancier_id) }}" 
+                                       class="btn btn-sm btn-primary">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-danger delete-supplier" 
+                                            data-supplier-id="{{ supplier.leverancier_id }}" 
+                                            data-supplier-name="{{ supplier.naam }}" 
+                                            title="Verwijderen">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">Geen leveranciers gevonden</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leverancier verwijderen modal -->
+<div class="modal fade" id="deleteSupplierModal" tabindex="-1" aria-labelledby="deleteSupplierModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: var(--kitchen-dark); color: var(--text-light);">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteSupplierModalLabel">Leverancier Verwijderen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-danger">Waarschuwing: Deze actie kan niet ongedaan gemaakt worden!</p>
+                <p>Weet je zeker dat je de leverancier <strong id="supplierNameToDelete"></strong> wilt verwijderen?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuleren</button>
+                <form id="deleteSupplierForm" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Verwijderen bevestigen</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Leverancier verwijderen - modal setup
+    const deleteButtons = document.querySelectorAll('.delete-supplier');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const supplierId = this.getAttribute('data-supplier-id');
+            const supplierName = this.getAttribute('data-supplier-name');
+            
+            document.getElementById('supplierNameToDelete').textContent = supplierName;
+            document.getElementById('deleteSupplierForm').action = `/admin/suppliers/${supplierId}/delete`;
+            
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteSupplierModal'));
+            deleteModal.show();
+        });
+    });
+});
+</script>
+
+<style>
+.admin-suppliers .card-header {
+    background-color: var(--kitchen-blue);
+    color: var(--text-light);
+}
+
+.admin-suppliers .table {
+    color: var(--text-light);
+}
+
+.admin-suppliers .table thead th {
+    background-color: var(--kitchen-black);
+    color: var(--text-light);
+}
+</style>
+{% endblock %}
