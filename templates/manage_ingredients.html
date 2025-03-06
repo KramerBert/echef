@@ -34,7 +34,13 @@
             </select>
         </div>
         <div class="form-group">
-            <input type="number" name="prijs_per_eenheid" placeholder="Prijs per eenheid" step="0.01" required class="form-control">
+            <input type="number" 
+                   name="prijs_per_eenheid" 
+                   placeholder="Prijs per eenheid" 
+                   step="0.00001" 
+                   required 
+                   pattern="[0-9]*[.,]?[0-9]{0,5}"
+                   class="form-control">
             <select name="leverancier_id" class="form-control">
                 <option value="">Kies leverancier</option>
                 {% for leverancier in leveranciers %}
@@ -110,11 +116,11 @@
             <div class="ingredient-price-group" style="display: flex; align-items: center;">
                 <span style="margin-right: 4px;">€</span>
                 <input type="text" 
-                       pattern="[0-9]*[.,]?[0-9]{0,2}"
+                       pattern="[0-9]*[.,]?[0-9]{0,5}"
                        inputmode="decimal"
                        class="inline-edit form-control price-input"
                        name="prijs_per_eenheid"
-                       value="{{ '%.2f'|format(ingredient.prijs_per_eenheid|float) }}"
+                       value="{{ '%.5f'|format(ingredient.prijs_per_eenheid|float) }}"
                        data-original="{{ ingredient.prijs_per_eenheid }}"
                        style="width: 100px; text-align: right;">
             </div>

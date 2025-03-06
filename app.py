@@ -1429,8 +1429,11 @@ def create_app():
 
                 # For price updates, keep existing logic
                 if field == 'prijs_per_eenheid':
-                    # ...existing code...
-                    pass
+                    try:
+                        # Convert price to 5 decimal places
+                        value = '{:.5f}'.format(float(value.replace(',', '.')))
+                    except ValueError:
+                        return jsonify({'success': False, 'error': 'Ongeldige prijs'}), 400
 
                 # For other fields, including naam
                 cur.execute(f"""
@@ -1494,7 +1497,6 @@ def create_app():
         """Convert HTML content to plain text by removing HTML tags"""
         if not html_content:
             return ''
-        # Remove style tags and their content safely
         try:
             html_content = re.sub(r'<style[^>]*>[\s\S]*?</style>', '', html_content)
         except (TypeError, AttributeError):
@@ -1509,6 +1511,14 @@ def create_app():
         text = re.sub(r'<br\s*/?>', '\n', text)
         text = re.sub(r'</p>', '\n\n', text)
         return text.strip()
+
+    @app.template_filter('format_price')
+    def format_price(value):
+        """Custom filter to format prices with 5 decimal places"""
+        try:
+            return '{:.5f}'.format(float(value))
+        except (ValueError, TypeError):
+            return '0.00000'
 
     @app.route('/export_dish/<chef_naam>/<dish_id>', methods=['POST'])
     @login_required
@@ -1753,12 +1763,12 @@ def create_app():
                 for ingredient in ingredients:
                     row = table.add_row().cells
                     row[0].text = ingredient['naam']
-                    row[1].text = f"{ingredient['hoeveelheid']:.2f}"
+                    row[1].text = f"{ingredient['hoeveelheid']:.0f}"  # Gehele getallen voor hoeveelheden
                     row[2].text = ingredient['eenheid']
-                    row[3].text = f"€{ingredient['prijs']:.2f}"
+                    row[3].text = f"€{ingredient['prijs']:.5f}"       # 5 decimalen voor prijzen
                     # Bereken en voeg totaalprijs toe
                     totaal = ingredient['hoeveelheid'] * ingredient['prijs']
-                    row[4].text = f"€{totaal:.2f}"
+                    row[4].text = f"€{totaal:.5f}"                    # 5 decimalen voor totaalprijzen
 
                 doc.add_paragraph()
 
@@ -1770,18 +1780,18 @@ def create_app():
             cost_table.style = 'Table Grid'
             cost_row = cost_table.rows[0].cells
             cost_row[0].text = 'Totale Ingrediëntenkosten:'
-            cost_row[1].text = f"€{ingredient_total:.2f}"
+            cost_row[1].text = f"€{ingredient_total:.5f}"
 
             # Verwachte verkoopprijs
             price_row = cost_table.add_row().cells
             price_row[0].text = 'Verwachte Verkoopprijs:'
-            price_row[1].text = f"€{total_cost:.2f}"
+            price_row[1].text = f"€{total_cost:.5f}"
 
             # Verwachte winst
             expected_profit = total_cost - ingredient_total
             profit_row = cost_table.add_row().cells
             profit_row[0].text = 'Verwachte Winst:'
-            profit_row[1].text = f"€{expected_profit:.2f}"
+            profit_row[1].text = f"€{expected_profit:.5f}"
 
             # Exporteer document
             buffer = io.BytesIO()
@@ -2895,8 +2905,8 @@ def create_app():
                     ingredient_info = cur.fetchone()
                     
                     if ingredient_info:
-                        prijs_per_eenheid = ingredient_info['prijs_per_eenheid']
-                        prijs_totaal = float(hoeveelheid) * float(prijs_per_eenheid)
+                        prijs_per_eenheid = float(ingredient_info['prijs_per_eenheid'])
+                        prijs_totaal = round(float(hoeveelheid) * prijs_per_eenheid, 5)
 
                         try:
                             # Check if ingredient already exists
