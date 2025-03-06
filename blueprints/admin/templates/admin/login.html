@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card" style="background-color: var(--kitchen-dark); border: 1px solid var(--kitchen-steel);">
+            <div class="card-header text-center" style="background-color: var(--kitchen-black);">
+                <h2>Beheerder Login</h2>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin.login') }}">
+                    {{ form.csrf_token }}
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">{{ form.email.label }}</label>
+                        {{ form.email(class="form-control", id="email", placeholder="Voer e-mailadres in") }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">{{ form.password.label }}</label>
+                        {{ form.password(class="form-control", id="password", placeholder="Voer wachtwoord in") }}
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-action") }}
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ url_for('home') }}" class="btn btn-secondary">Terug naar homepage</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

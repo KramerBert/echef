@@ -94,6 +94,10 @@ def create_app():
     app.register_blueprint(haccp_bp, url_prefix='/haccp')
     app.register_blueprint(inventory_bp)
     
+    # Importeer en registreer de admin blueprint
+    from blueprints.admin import bp as admin_bp
+    app.register_blueprint(admin_bp)
+    
     # Register template filters and helper functions inside create_app
     def nl2br(value):
         return value.replace('\n', '<br>')
@@ -384,7 +388,7 @@ def create_app():
         Serve a CSV template for bulk adding ingredients.
         """
         csv_content = io.StringIO()
-        csv_writer = csv_content
+        csv_writer = csv.writer(csv_content)  # Maak een csv.writer object aan
         csv_writer.writerow(['naam', 'categorie', 'eenheid', 'prijs_per_eenheid'])
         csv_writer.writerow(['Voorbeeld Naam', 'Voorbeeld Categorie', 'gram (g)', '0.00'])
 
