@@ -45,7 +45,7 @@
                             <td>{{ supplier.email }}</td>
                             <td>
                                 {% if supplier.banner_image %}
-                                    <img src="{{ supplier.banner_image|file_url }}" 
+                                    <img src="{{ supplier.banner_image|file_url }}?t={{ now().timestamp()|int }}" 
                                          alt="Banner voor {{ supplier.naam }}" 
                                          style="max-width: 100px; max-height: 50px;">
                                 {% else %}

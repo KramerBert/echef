@@ -9,6 +9,8 @@ from . import bp
 import logging
 import os
 import datetime
+import boto3  # Add this import for AWS S3 operations
+from botocore.exceptions import ClientError  # Also add this for better error handling
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +37,7 @@ def login():
         return redirect(url_for('admin.dashboard'))
         
     form = AdminLoginForm()
-    if form.validate_on_submit():
+    if (form.validate_on_submit()):
         email = form.email.data
         password = form.password.data
         
@@ -548,10 +550,19 @@ def delete_supplier(supplier_id):
 @admin_required
 def delete_supplier_csv(supplier_id):
     """Delete the CSV file from a supplier"""
+    logger.info(f"Attempting to delete CSV for supplier ID: {supplier_id}")
+    
+    # Check if this is an AJAX request
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
     conn = get_db_connection()
     if not conn:
-        flash("Database verbinding mislukt", "danger")
-        return redirect(url_for('admin.manage_suppliers'))
+        logger.error("Database connection failed")
+        if is_ajax:
+            return jsonify({"success": False, "error": "Database verbinding mislukt"}), 500
+        else:
+            flash("Database verbinding mislukt", "danger")
+            return redirect(url_for('admin.manage_suppliers'))
     
     cur = conn.cursor(dictionary=True)
     
@@ -564,41 +575,134 @@ def delete_supplier_csv(supplier_id):
         supplier = cur.fetchone()
         
         if not supplier:
-            flash("Leverancier niet gevonden", "danger")
-            return redirect(url_for('admin.manage_suppliers'))
+            logger.warning(f"Supplier {supplier_id} not found")
+            if is_ajax:
+                return jsonify({"success": False, "error": "Leverancier niet gevonden"}), 404
+            else:
+                flash("Leverancier niet gevonden", "danger")
+                return redirect(url_for('admin.manage_suppliers'))
         
         if not supplier['csv_file_path']:
-            flash("Deze leverancier heeft geen CSV bestand", "warning")
-            return redirect(url_for('admin.edit_supplier', supplier_id=supplier_id))
-        
-        # Remove file from storage if it exists
-        if supplier['csv_file_path']:
-            file_deleted = current_app.storage.delete_file(supplier['csv_file_path'])
-            
-            # Update database regardless of file deletion success
-            cur.execute("""
-                UPDATE leveranciers 
-                SET csv_file_path = NULL, csv_last_updated = NULL,
-                    has_standard_list = %s
-                WHERE leverancier_id = %s
-            """, (supplier['has_standard_list'], supplier_id))
-            
-            conn.commit()
-            
-            if file_deleted:
-                flash("CSV bestand succesvol verwijderd", "success")
+            logger.warning(f"Supplier {supplier_id} has no CSV file path")
+            if is_ajax:
+                return jsonify({"success": False, "error": "Deze leverancier heeft geen CSV bestand"}), 400
             else:
-                flash("CSV verwijzing verwijderd uit database, maar er was een fout bij het verwijderen van het bestand", "warning")
+                flash("Deze leverancier heeft geen CSV bestand", "warning")
+                return redirect(url_for('admin.edit_supplier', supplier_id=supplier_id))
+        
+        # Log the CSV file path we're trying to delete
+        csv_path = supplier['csv_file_path']
+        
+        # Normalize the path to ensure consistent format
+        csv_path = csv_path.strip().replace('\\', '/')
+        if csv_path.startswith('/'):
+            csv_path = csv_path[1:]
+            
+        logger.info(f"Normalized CSV file path: {csv_path}")
+        
+        # Initialize deletion status
+        file_deleted = False
+        
+        # ALWAYS try direct S3 deletion first regardless of storage mode setting
+        # This ensures we handle S3 files correctly even if config is inconsistent
+        try:
+            s3_bucket = current_app.config.get('S3_BUCKET')
+            s3_key = current_app.config.get('S3_KEY')
+            s3_secret = current_app.config.get('S3_SECRET')
+            
+            if s3_bucket and s3_key and s3_secret:
+                logger.info(f"Attempting direct S3 deletion with bucket: {s3_bucket}")
+                
+                # Create direct S3 client
+                s3_client = boto3.client(
+                    's3',
+                    region_name='eu-west-1',
+                    aws_access_key_id=s3_key,
+                    aws_secret_access_key=s3_secret,
+                    config=boto3.session.Config(signature_version='s3v4')
+                )
+                
+                # Check if the file exists first
+                try:
+                    s3_client.head_object(Bucket=s3_bucket, Key=csv_path)
+                    logger.info(f"File exists in S3, proceeding with deletion")
+                    
+                    # Delete the file
+                    s3_client.delete_object(
+                        Bucket=s3_bucket,
+                        Key=csv_path
+                    )
+                    
+                    # Verify the deletion worked
+                    try:
+                        s3_client.head_object(Bucket=s3_bucket, Key=csv_path)
+                        logger.error("File still exists after deletion attempt!")
+                        file_deleted = False
+                    except ClientError as e:
+                        if e.response['Error']['Code'] == '404':
+                            logger.info("Verified file is deleted from S3")
+                            file_deleted = True
+                        else:
+                            logger.error(f"Error verifying deletion: {str(e)}")
+                            file_deleted = False
+                            
+                except ClientError as e:
+                    if e.response['Error']['Code'] == '404':
+                        logger.warning(f"File not found in S3: {csv_path}")
+                        # Still proceed with database update
+                        file_deleted = True
+                    else:
+                        logger.error(f"Error checking if file exists: {str(e)}")
+            else:
+                logger.warning("S3 credentials not found in config")
+        except Exception as e:
+            logger.error(f"Direct S3 deletion attempt failed: {str(e)}")
+        
+        # As a fallback, try using the storage utility
+        if not file_deleted:
+            logger.info("Trying deletion via storage utility as fallback")
+            file_deleted = current_app.storage.delete_file(csv_path)
+            logger.info(f"Storage utility deletion result: {file_deleted}")
+        
+        # Update database regardless of file deletion success
+        # This ensures the UI is consistent even if file deletion has issues
+        cur.execute("""
+            UPDATE leveranciers 
+            SET csv_file_path = NULL, csv_last_updated = NULL
+            WHERE leverancier_id = %s
+        """, (supplier_id,))
+        
+        conn.commit()
+        logger.info("Database updated successfully")
+        
+        success_message = "CSV bestand succesvol verwijderd"
+        warning_message = "CSV verwijzing verwijderd uit database, maar er was een fout bij het verwijderen van het bestand zelf. Dit wordt automatisch opgelost bij de volgende systeem opschoning."
+        
+        if is_ajax:
+            return jsonify({
+                "success": True,
+                "message": success_message if file_deleted else warning_message,
+                "file_deleted": file_deleted
+            })
+        else:
+            if file_deleted:
+                flash(success_message, "success")
+            else:
+                flash(warning_message, "warning")
         
     except Exception as e:
         conn.rollback()
-        logger.error(f"Delete supplier CSV error: {str(e)}")
-        flash(f"Er is een fout opgetreden bij het verwijderen van het CSV bestand: {str(e)}", "danger")
+        logger.error(f"Error in delete_supplier_csv: {str(e)}", exc_info=True)
+        if is_ajax:
+            return jsonify({"success": False, "error": f"Er is een fout opgetreden: {str(e)}"}), 500
+        else:
+            flash(f"Er is een fout opgetreden bij het verwijderen van het CSV bestand: {str(e)}", "danger")
     finally:
         cur.close()
         conn.close()
     
-    return redirect(url_for('admin.edit_supplier', supplier_id=supplier_id))
+    if not is_ajax:
+        return redirect(url_for('admin.edit_supplier', supplier_id=supplier_id))
 
 @bp.route('/suppliers/<int:supplier_id>/download-csv', methods=['GET'])
 @admin_required
@@ -665,6 +769,41 @@ def download_supplier_csv(supplier_id):
         logger.error(f"Download supplier CSV error: {str(e)}")
         flash(f"Er is een fout opgetreden bij het downloaden van het CSV bestand: {str(e)}", "danger")
         return redirect(url_for('admin.edit_supplier', supplier_id=supplier_id))
+    finally:
+        cur.close()
+        conn.close()
+
+@bp.route('/debug/files')
+@admin_required
+def debug_files():
+    """Debug endpoint to display file URLs"""
+    conn = get_db_connection()
+    if not conn:
+        flash("Database verbinding mislukt", "danger")
+        return redirect(url_for('admin.dashboard'))
+        
+    cur = conn.cursor(dictionary=True)
+    try:
+        # Get all suppliers with files
+        cur.execute("""
+            SELECT leverancier_id, naam, banner_image, csv_file_path 
+            FROM leveranciers 
+            WHERE banner_image IS NOT NULL OR csv_file_path IS NOT NULL
+        """)
+        suppliers = cur.fetchall()
+        
+        # Add URLs for debugging
+        for supplier in suppliers:
+            if supplier['banner_image']:
+                supplier['banner_url'] = current_app.storage.get_file_url(supplier['banner_image'])
+            if supplier['csv_file_path']:
+                supplier['csv_url'] = current_app.storage.get_file_url(supplier['csv_file_path'])
+        
+        return render_template('admin/debug_files.html', suppliers=suppliers)
+    except Exception as e:
+        logger.error(f"Debug files error: {str(e)}")
+        flash(f"Error: {str(e)}", "danger")
+        return redirect(url_for('admin.dashboard'))
     finally:
         cur.close()
         conn.close()

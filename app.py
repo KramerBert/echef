@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, redirect, url_for, render_template, session, flash, send_file, jsonify
+from flask import Flask, request, redirect, url_for, render_template, session, flash, send_file, jsonify, current_app
 from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import Error
@@ -45,6 +45,8 @@ import html  # Add this import
 import time 
 from decimal import Decimal  # Add this import at the top
 from routes.inventory import bp as inventory_bp
+import boto3  # Add this for AWS S3 operations
+from botocore.exceptions import ClientError  # Also add this for better error handling
 
 load_dotenv()  # Load the values from .env
 
@@ -175,38 +177,32 @@ def create_app():
     # Add the database connection function to the app context
     app.get_db_connection = get_db_connection
 
-    # File storage configuration
-    if app.config['ENV'] == 'production':  # Reverted from "if True:" back to production environment check
-        # In production (Heroku), use S3 storage
-        app.config['USE_S3'] = True
-        app.config['S3_BUCKET'] = os.getenv('S3_BUCKET')
-        app.config['S3_KEY'] = os.getenv('AWS_ACCESS_KEY_ID')
-        app.config['S3_SECRET'] = os.getenv('AWS_SECRET_ACCESS_KEY')
-        app.config['S3_LOCATION'] = f"https://{app.config['S3_BUCKET']}.s3.amazonaws.com"
-        
-        from utils.storage import FileStorage
-        storage = FileStorage(app)
-        app.storage = storage
-        
-        # Use custom URL builder for static files
-        @app.template_filter('file_url')
-        def file_url_filter(path):
-            if not path:
-                return None
-            return storage.get_file_url(path)
-    else:
-        # In development, use local storage
-        app.config['USE_S3'] = False
-        
-        from utils.storage import FileStorage
-        storage = FileStorage(app)
-        app.storage = storage
-        
-        @app.template_filter('file_url')
-        def file_url_filter(path):
-            if not path:
-                return None
-            return url_for('static', filename=path)
+    # File storage configuration - ALWAYS use S3 regardless of environment
+    app.config['USE_S3'] = True
+    app.config['S3_BUCKET'] = os.getenv('S3_BUCKET')
+    app.config['S3_KEY'] = os.getenv('AWS_ACCESS_KEY_ID')
+    app.config['S3_SECRET'] = os.getenv('AWS_SECRET_ACCESS_KEY')
+    app.config['S3_LOCATION'] = f"https://{app.config['S3_BUCKET']}.s3.amazonaws.com"
+    
+    from utils.storage import FileStorage
+    storage = FileStorage(app)
+    app.storage = storage
+    
+    # TEMPORARY DEBUGGING
+    print(f"==== STORAGE CONFIGURATION ====")
+    print(f"USE_S3: {app.config['USE_S3']}")
+    print(f"S3_BUCKET: {app.config['S3_BUCKET']}")
+    print(f"S3_LOCATION: {app.config['S3_LOCATION']}")
+    print(f"Has S3_KEY: {'Yes' if app.config['S3_KEY'] else 'No'}")
+    print(f"Has S3_SECRET: {'Yes' if app.config['S3_SECRET'] else 'No'}")
+    print(f"==============================")
+    
+    # Use custom URL builder for static files
+    @app.template_filter('file_url')
+    def file_url_filter(path):
+        if not path:
+            return None
+        return storage.get_file_url(path)
 
     # -----------------------------------------------------------
     #  Homepage (index)
@@ -2159,6 +2155,21 @@ def create_app():
             else:
                 row_cells[4].text = '⚠ Afwijking'
             
+        header_cells[5].text = 'Actie'
+
+        # Voeg metingen toe
+        for meting in metingen:
+            row_cells = table.add_row().cells
+            row_cells[0].text = meting['timestamp'].strftime('%d-%m-%Y %H:%M')
+            row_cells[1].text = meting['checklist_naam']
+            row_cells[2].text = meting['omschrijving']
+            row_cells[3].text = f"{meting['waarde']}"
+            
+            if float(meting['waarde']) <= float(meting['grenswaarde']):
+                row_cells[4].text = '✓ OK'
+            else:
+                row_cells[4].text = '⚠ Afwijking'
+            
             row_cells[5].text = meting['actie_ondernomen'] or 'Geen actie'
         
         # Initialize buffer before use
@@ -2906,6 +2917,214 @@ def create_app():
             conn.rollback()
             logger.error(f'Error updating supplier: {str(e)}')
             return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            cur.close()
+            conn.close()
+
+    @app.route('/dashboard/<chef_naam>/suppliers/<int:supplier_id>/import', methods=['POST'])
+    @login_required
+    def import_supplier_ingredients(chef_naam, supplier_id):
+        """Import ingredients from a supplier's standard list"""
+        chef_id = session.get('chef_id')
+        if not chef_id:
+            flash("Je bent niet ingelogd als chef", "danger")
+            return redirect(url_for('login'))
+        
+        conn = get_db_connection()
+        if not conn:
+            flash("Database verbinding mislukt", "danger")
+            return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
+        
+        cur = conn.cursor(dictionary=True)
+        
+        try:
+            # Get supplier information
+            cur.execute("""
+                SELECT * FROM leveranciers 
+                WHERE leverancier_id = %s AND is_admin_created = TRUE AND has_standard_list = TRUE AND csv_file_path IS NOT NULL
+            """, (supplier_id,))
+            supplier = cur.fetchone()
+            
+            if not supplier:
+                flash("Deze leverancier heeft geen standaard ingrediëntenlijst", "danger")
+                return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
+            
+            # Get the CSV file from storage
+            csv_path = supplier['csv_file_path']
+            
+            if current_app.config.get('USE_S3'):
+                # For S3 storage
+                try:
+                    s3_client = boto3.client(
+                        's3',
+                        region_name='eu-west-1',
+                        aws_access_key_id=current_app.config.get('S3_KEY'),
+                        aws_secret_access_key=current_app.config.get('S3_SECRET')
+                    )
+                    
+                    # Get the CSV file content
+                    response = s3_client.get_object(
+                        Bucket=current_app.config.get('S3_BUCKET'),
+                        Key=csv_path
+                    )
+                    
+                    # Read and decode the CSV content
+                    csv_content = response['Body'].read().decode('utf-8')
+                    
+                    # Parse the CSV
+                    import csv
+                    from io import StringIO
+                    
+                    csv_reader = csv.reader(StringIO(csv_content))
+                    rows = list(csv_reader)
+                    
+                    # Skip header row
+                    if len(rows) > 0:
+                        header = rows[0]
+                        data_rows = rows[1:]
+                    else:
+                        flash("De ingrediëntenlijst is leeg", "warning")
+                        return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
+                    
+                except Exception as e:
+                    logger.error(f"Error reading CSV from S3: {str(e)}")
+                    flash(f"Er is een fout opgetreden bij het ophalen van de ingrediëntenlijst: {str(e)}", "danger")
+                    return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
+            else:
+                # For local storage
+                local_csv_path = os.path.join(current_app.root_path, 'static', csv_path)
+                
+                if not os.path.exists(local_csv_path):
+                    flash("CSV bestand niet gevonden op de server", "danger")
+                    return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
+                
+                try:
+                    # Read and parse the CSV
+                    import csv
+                    
+                    with open(local_csv_path, 'r', encoding='utf-8') as file:
+                        csv_reader = csv.reader(file)
+                        rows = list(csv_reader)
+                    
+                    # Skip header row
+                    if len(rows) > 0:
+                        header = rows[0]
+                        data_rows = rows[1:]
+                    else:
+                        flash("De ingrediëntenlijst is leeg", "warning")
+                        return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
+                        
+                except Exception as e:
+                    logger.error(f"Error reading local CSV: {str(e)}")
+                    flash(f"Er is een fout opgetreden bij het lezen van de ingrediëntenlijst: {str(e)}", "danger")
+                    return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
+            
+            # Process the CSV data_rows and insert into chef's ingredients
+            # First get existing ingredients to avoid duplicates
+            cur.execute("SELECT naam FROM ingredients WHERE chef_id = %s", (chef_id,))
+            existing_ingredients = {row['naam'].lower() for row in cur.fetchall()}
+            
+            # Track import statistics
+            imported_count = 0
+            skipped_count = 0
+            
+            for row in data_rows:
+                if len(row) < 4:  # Ensure we have all required fields
+                    continue
+                    
+                naam = row[0].strip()
+                categorie = row[1].strip() if row[1] else "Overig"
+                eenheid = row[2].strip() if row[2] else "stuk"
+                
+                try:
+                    prijs = float(row[3].replace(',', '.'))
+                except:
+                    prijs = 0.0
+                    
+                # Skip if ingredient with same name already exists
+                if naam.lower() in existing_ingredients:
+                    skipped_count += 1
+                    continue
+                    
+                # Add to existing ingredients set (to avoid duplicates in the import itself)
+                existing_ingredients.add(naam.lower())
+                
+                # Get or create the category
+                cur.execute("""
+                    SELECT categorie_id FROM categorieen 
+                    WHERE chef_id = %s AND naam = %s
+                """, (chef_id, categorie))
+                category_row = cur.fetchone()
+                
+                if category_row:
+                    categorie_id = category_row['categorie_id']
+                else:
+                    # Create new category
+                    cur.execute("""
+                        INSERT INTO categorieen (naam, chef_id) 
+                        VALUES (%s, %s)
+                    """, (categorie, chef_id))
+                    categorie_id = cur.lastrowid
+                
+                # Get or create the unit
+                cur.execute("""
+                    SELECT eenheid_id FROM eenheden 
+                    WHERE chef_id = %s AND naam = %s
+                """, (chef_id, eenheid))
+                unit_row = cur.fetchone()
+                
+                if unit_row:
+                    eenheid_id = unit_row['eenheid_id']
+                else:
+                    # Create new unit
+                    cur.execute("""
+                        INSERT INTO eenheden (naam, chef_id) 
+                        VALUES (%s, %s)
+                    """, (eenheid, chef_id))
+                    eenheid_id = cur.lastrowid
+                
+                # Check if ingredients table has categorie_id column
+                try:
+                    # Insert the ingredient
+                    cur.execute("""
+                        INSERT INTO ingredients (
+                            naam, categorie_id, eenheid_id, prijs_per_eenheid, 
+                            leverancier_id, chef_id
+                        ) VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (naam, categorie_id, eenheid_id, prijs, supplier_id, chef_id))
+                    imported_count += 1
+                except Exception as e:
+                    # If categorie_id field doesn't exist, try without it
+                    if "Unknown column 'categorie_id'" in str(e):
+                        try:
+                            cur.execute("""
+                                INSERT INTO ingredients (
+                                    naam, eenheid_id, prijs_per_eenheid, 
+                                    leverancier_id, chef_id
+                                ) VALUES (%s, %s, %s, %s, %s)
+                            """, (naam, eenheid_id, prijs, supplier_id, chef_id))
+                            imported_count += 1
+                        except Exception as inner_e:
+                            logger.error(f"Inner error inserting ingredient without category: {str(inner_e)}")
+                            continue
+                    else:
+                        logger.error(f"Error inserting ingredient: {str(e)}")
+                        continue
+            
+            conn.commit()
+            
+            if imported_count > 0:
+                flash(f"Succesvol {imported_count} ingrediënten geïmporteerd van {supplier['naam']}. {skipped_count} ingrediënten overgeslagen omdat ze al bestaan.", "success")
+            else:
+                flash(f"Geen nieuwe ingrediënten geïmporteerd. {skipped_count} ingrediënten overgeslagen omdat ze al bestaan.", "info")
+                
+            return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
+            
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"Import ingredients error: {str(e)}", exc_info=True)
+            flash(f"Er is een fout opgetreden bij het importeren: {str(e)}", "danger")
+            return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
         finally:
             cur.close()
             conn.close()

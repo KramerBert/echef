@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Debug File URLs{% endblock %}
+
+{% block content %}
+<div class="admin-debug">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Debug File URLs</h2>
+        <div>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Terug naar Dashboard
+            </a>
+        </div>
+    </div>
+    
+    <div class="card" style="background-color: var(--kitchen-dark);">
+        <div class="card-header">
+            <h3>S3 Configuration</h3>
+        </div>
+        <div class="card-body">
+            <p><strong>USE_S3:</strong> {{ config.get('USE_S3', False) }}</p>
+            <p><strong>S3_BUCKET:</strong> {{ config.get('S3_BUCKET', 'Not set') }}</p>
+            <p><strong>S3_LOCATION:</strong> {{ config.get('S3_LOCATION', 'Not set') }}</p>
+        </div>
+    </div>
+    
+    <div class="card mt-4" style="background-color: var(--kitchen-dark);">
+        <div class="card-header">
+            <h3>Supplier Files</h3>
+        </div>
+        <div class="card-body">
+            {% if suppliers %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Naam</th>
+                                <th>Banner Path</th>
+                                <th>Banner Preview</th>
+                                <th>CSV Path</th>
+                                <th>CSV URL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for supplier in suppliers %}
+                                <tr>
+                                    <td>{{ supplier.leverancier_id }}</td>
+                                    <td>{{ supplier.naam }}</td>
+                                    <td>
+                                        {% if supplier.banner_image %}
+                                            {{ supplier.banner_image }}
+                                            <br>
+                                            <small>
+                                                <a href="{{ supplier.banner_url }}" target="_blank">Direct URL</a>
+                                            </small>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if supplier.banner_image %}
+                                            <img src="{{ supplier.banner_image|file_url }}" alt="Banner" style="max-height: 50px; max-width: 150px;">
+                                        {% else %}
+                                            No banner
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if supplier.csv_file_path %}
+                                            {{ supplier.csv_file_path }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if supplier.csv_file_path %}
+                                            <a href="{{ supplier.csv_url }}" target="_blank">Download CSV</a>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p>No suppliers with files found.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="card mt-4" style="background-color: var(--kitchen-dark);">
+        <div class="card-header">
+            <h3>Manual Image Test</h3>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <h4>Testing direct S3 URL:</h4>
+                {% if config.get('S3_LOCATION') and config.get('S3_BUCKET') %}
+                    <p>Example URL: {{ config.get('S3_LOCATION') }}/uploads/test.png</p>
+                    <img src="{{ config.get('S3_LOCATION') }}/uploads/test.png" alt="Test" style="max-width: 300px; border: 1px solid #ccc;">
+                {% else %}
+                    <p>S3 configuration missing</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

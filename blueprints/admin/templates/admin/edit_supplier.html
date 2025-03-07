@@ -18,7 +18,7 @@
             <h3>Leverancier Gegevens</h3>
         </div>
         <div class="card-body">
-            <form method="POST" enctype="multipart/form-data">
+            <form method="POST" enctype="multipart/form-data" id="editSupplierForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 
                 <div class="mb-3">
@@ -45,7 +45,8 @@
                     <label for="banner_image" class="form-label">Reclamebanner (afbeelding)</label>
                     {% if supplier.banner_image %}
                         <div class="mb-2">
-                            <img src="{{ supplier.banner_image|file_url }}" 
+                            <!-- Force refresh with timestamp to prevent caching -->
+                            <img src="{{ supplier.banner_image|file_url }}?t={{ now().timestamp()|int }}" 
                                  alt="Huidige banner" 
                                  style="max-width: 100%; max-height: 100px;">
                             <div class="form-text text-light">Huidige banner</div>
@@ -69,12 +70,9 @@
                                        class="btn btn-sm btn-primary me-2">
                                         <i class="fas fa-download"></i> CSV Downloaden
                                     </a>
-                                    <form method="POST" action="{{ url_for('admin.delete_supplier_csv', supplier_id=supplier.leverancier_id) }}" class="d-inline">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Weet je zeker dat je deze CSV wilt verwijderen? Chefs zullen deze lijst niet meer kunnen importeren.')">
-                                            <i class="fas fa-trash"></i> CSV verwijderen
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-sm btn-danger" id="deleteCSVBtn">
+                                        <i class="fas fa-trash"></i> CSV verwijderen
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -98,12 +96,110 @@
                 </div>
                 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Wijzigingen Opslaan
+                    <button type="submit" class="btn btn-primary" id="saveButton">
+                        <i class="fas fa-save"></i> <span>Wijzigingen Opslaan</span>
                     </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<script>
+    // Add form submit handling
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('editSupplierForm');
+        const saveButton = document.getElementById('saveButton');
+        const fileInputCSV = document.getElementById('ingredients_csv');
+        const fileInputBanner = document.getElementById('banner_image');
+        const deleteCSVBtn = document.getElementById('deleteCSVBtn');
+        
+        // Reset file input when page loads
+        fileInputCSV.value = '';
+        fileInputBanner.value = '';
+        
+        form.addEventListener('submit', function() {
+            // Show loading state
+            saveButton.disabled = true;
+            saveButton.querySelector('span').textContent = 'Bezig met opslaan...';
+            
+            // Set a timeout to re-enable the button if something goes wrong
+            setTimeout(function() {
+                if (saveButton.disabled) {
+                    saveButton.disabled = false;
+                    saveButton.querySelector('span').textContent = 'Wijzigingen Opslaan';
+                }
+            }, 10000); // 10 second timeout
+        });
+        
+        // Enable button when user changes something
+        fileInputCSV.addEventListener('change', function() {
+            saveButton.disabled = false;
+            saveButton.querySelector('span').textContent = 'Wijzigingen Opslaan';
+        });
+        
+        fileInputBanner.addEventListener('change', function() {
+            saveButton.disabled = false;
+            saveButton.querySelector('span').textContent = 'Wijzigingen Opslaan';
+        });
+        
+        // Handle CSV deletion via AJAX
+        if (deleteCSVBtn) {
+            deleteCSVBtn.addEventListener('click', function() {
+                if (confirm('Weet je zeker dat je deze CSV wilt verwijderen? Chefs zullen deze lijst niet meer kunnen importeren.')) {
+                    // Show loading state
+                    deleteCSVBtn.disabled = true;
+                    deleteCSVBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Bezig...';
+                    
+                    // Create a form data object for the CSRF token
+                    const formData = new FormData();
+                    formData.append('csrf_token', '{{ csrf_token() }}');
+                    
+                    // Send AJAX request
+                    fetch('{{ url_for("admin.delete_supplier_csv", supplier_id=supplier.leverancier_id) }}', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update the UI to show the file is deleted
+                            const csvContainer = deleteCSVBtn.closest('.alert');
+                            csvContainer.innerHTML = '<div class="text-success"><i class="fas fa-check-circle"></i> CSV bestand verwijderd</div>';
+                            setTimeout(() => {
+                                csvContainer.style.display = 'none';
+                            }, 3000);
+                            
+                            // Show success message
+                            const successMsg = document.createElement('div');
+                            successMsg.className = 'alert alert-success mt-2';
+                            successMsg.innerHTML = '<i class="fas fa-check-circle"></i> ' + data.message;
+                            csvContainer.parentNode.appendChild(successMsg);
+                            
+                            // Auto-hide the success message after 5 seconds
+                            setTimeout(() => {
+                                successMsg.style.display = 'none';
+                            }, 5000);
+                        } else {
+                            // Show error
+                            alert(data.error || 'Er is een fout opgetreden');
+                            deleteCSVBtn.disabled = false;
+                            deleteCSVBtn.innerHTML = '<i class="fas fa-trash"></i> CSV verwijderen';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Er is een fout opgetreden bij het verwijderen van het CSV bestand');
+                        deleteCSVBtn.disabled = false;
+                        deleteCSVBtn.innerHTML = '<i class="fas fa-trash"></i> CSV verwijderen';
+                    });
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}
+

@@ -7,6 +7,19 @@
         </a>
     </div>
 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="alert-container mb-4">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
     <h2>Eigen Leveranciers Beheren</h2>
 
     <div class="card">
@@ -113,18 +126,20 @@
                     <div class="supplier-banner">
                         <img src="{{ supplier.banner_image|file_url }}" alt="Banner voor {{ supplier.naam }}">
                     </div>
-                {% else %}
-                    <div class="supplier-banner supplier-banner-placeholder">
-                        <div class="supplier-name">{{ supplier.naam }}</div>
-                    </div>
                 {% endif %}
                 
                 <div class="supplier-info">
+                    <h4>{{ supplier.naam }}</h4>
                     {% if supplier.contact %}<p><strong>Contact:</strong> {{ supplier.contact }}</p>{% endif %}
                     {% if supplier.telefoon %}<p><strong>Telefoon:</strong> {{ supplier.telefoon }}</p>{% endif %}
                     {% if supplier.email %}<p><strong>E-mail:</strong> {{ supplier.email }}</p>{% endif %}
-                    {% if supplier.has_standard_list %}
+                    {% if supplier.has_standard_list and supplier.csv_file_path %}
                         <p class="standard-list-badge"><i class="fas fa-list-check"></i> Ingrediëntenlijst beschikbaar</p>
+                        <button class="btn btn-primary btn-sm import-ingredients-btn" 
+                                data-supplier-id="{{ supplier.leverancier_id }}" 
+                                data-supplier-name="{{ supplier.naam }}">
+                            <i class="fas fa-file-import"></i> Ingrediënten Importeren
+                        </button>
                     {% endif %}
                 </div>
             </div>
@@ -132,102 +147,36 @@
         {% endfor %}
     </div>
 
+    <!-- Add modal for confirmation -->
+    <div class="modal fade" id="importIngredientsModal" tabindex="-1" role="dialog" aria-labelledby="importIngredientsModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="importIngredientsModalLabel">Ingrediënten Importeren</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Je staat op het punt om ingrediënten te importeren van <strong id="importSupplierName"></strong>.</p>
+                    <p>De ingrediënten worden toegevoegd aan je lijst. Bestaande ingrediënten met dezelfde naam worden overgeslagen.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuleren</button>
+                    <form id="importIngredientsForm" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-primary">Importeren</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
 <style>
     .smaller-input {
         max-width: 50%; /* Adjust as needed */
     }
-</style>
 
-</div>
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-
-<script>
-function verwijderLeverancier(leverancierId, leverancierNaam) {
-    if (confirm(`Weet je zeker dat je leverancier "${leverancierNaam}" wilt verwijderen? Let op! De leveranciers worden ook verwijderd bij de ingredienten en de bestellijst. Deze wijziging is niet meer te herstellen.`)) {
-        fetch(`/dashboard/{{ session.get('chef_naam') }}/suppliers/${leverancierId}/delete`, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token() }}'  // Voeg CSRF token toe
-            },
-            credentials: 'same-origin'  // Belangrijk voor CSRF beveiliging
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert(data.error || 'Er is een fout opgetreden bij het verwijderen van de leverancier.');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Er is een fout opgetreden bij het verwijderen van de leverancier.');
-        });
-    }
-}
-
-function openEditModal(leverancierId, naam, contact, telefoon, email) {
-    document.getElementById('edit_leverancier_id').value = leverancierId;
-    document.getElementById('edit_naam').value = naam;
-    document.getElementById('edit_contact').value = contact;
-    document.getElementById('edit_telefoon').value = telefoon;
-    document.getElementById('edit_email').value = email;
-    $('#editSupplierModal').modal('show');
-}
-
-function submitEditForm() {
-    const leverancierId = document.getElementById('edit_leverancier_id').value;
-    const form = document.getElementById('editSupplierForm');
-
-    fetch(`/dashboard/{{ session.get('chef_naam') }}/suppliers/${leverancierId}/edit`, {
-        method: 'POST',
-        body: new FormData(form),
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': '{{ csrf_token() }}'
-        },
-        credentials: 'same-origin'
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert(data.error || 'Er is een fout opgetreden bij het bewerken van de leverancier.');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Er is een fout opgetreden bij het bewerken van de leverancier.');
-    });
-
-    $('#editSupplierModal').modal('hide');
-}
-
-// Add data labels to table cells for mobile view
-document.addEventListener('DOMContentLoaded', function() {
-    const table = document.querySelector('.suppliers-table');
-    if (!table) {
-        console.error("Table with class 'suppliers-table' not found!");
-        return;
-    }
-    const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
-    
-    table.querySelectorAll('tbody tr').forEach(row => {
-        row.querySelectorAll('td').forEach((cell, index) => {
-            if (index < headers.length - 1) { // Skip the last column (actions)
-                cell.setAttribute('data-label', headers[index]);
-            }
-        });
-    });
-});
-</script>
-
-<style>
     .card {
         background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-blue));
         border: 1px solid var(--kitchen-steel);
@@ -459,6 +408,11 @@ document.addEventListener('DOMContentLoaded', function() {
         display: inline-block;
     }
     
+    .import-ingredients-btn {
+        margin-top: 10px;
+        width: 100%;
+    }
+    
     /* Voor mobiele weergave */
     @media (max-width: 768px) {
         .supplier-gallery {
@@ -466,4 +420,106 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 </style>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script>
+function verwijderLeverancier(leverancierId, leverancierNaam) {
+    if (confirm(`Weet je zeker dat je leverancier "${leverancierNaam}" wilt verwijderen? Let op! De leveranciers worden ook verwijderd bij de ingredienten en de bestellijst. Deze wijziging is niet meer te herstellen.`)) {
+        fetch(`/dashboard/{{ session.get('chef_naam') }}/suppliers/${leverancierId}/delete`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'  // Voeg CSRF token toe
+            },
+            credentials: 'same-origin'  // Belangrijk voor CSRF beveiliging
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'Er is een fout opgetreden bij het verwijderen van de leverancier.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Er is een fout opgetreden bij het verwijderen van de leverancier.');
+        });
+    }
+}
+
+function openEditModal(leverancierId, naam, contact, telefoon, email) {
+    document.getElementById('edit_leverancier_id').value = leverancierId;
+    document.getElementById('edit_naam').value = naam;
+    document.getElementById('edit_contact').value = contact;
+    document.getElementById('edit_telefoon').value = telefoon;
+    document.getElementById('edit_email').value = email;
+    $('#editSupplierModal').modal('show');
+}
+
+function submitEditForm() {
+    const leverancierId = document.getElementById('edit_leverancier_id').value;
+    const form = document.getElementById('editSupplierForm');
+
+    fetch(`/dashboard/{{ session.get('chef_naam') }}/suppliers/${leverancierId}/edit`, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Er is een fout opgetreden bij het bewerken van de leverancier.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Er is een fout opgetreden bij het bewerken van de leverancier.');
+    });
+
+    $('#editSupplierModal').modal('hide');
+}
+
+// Add data labels to table cells for mobile view
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.querySelector('.suppliers-table');
+    if (!table) {
+        console.error("Table with class 'suppliers-table' not found!");
+        return;
+    }
+    const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
+    
+    table.querySelectorAll('tbody tr').forEach(row => {
+        row.querySelectorAll('td').forEach((cell, index) => {
+            if (index < headers.length - 1) { // Skip the last column (actions)
+                cell.setAttribute('data-label', headers[index]);
+            }
+        });
+    });
+    
+    // Handle ingredient import modal
+    const importButtons = document.querySelectorAll('.import-ingredients-btn');
+    importButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const supplierId = this.getAttribute('data-supplier-id');
+            const supplierName = this.getAttribute('data-supplier-name');
+            
+            document.getElementById('importSupplierName').textContent = supplierName;
+            document.getElementById('importIngredientsForm').action = 
+                `/dashboard/{{ session.get('chef_naam') }}/suppliers/${supplierId}/import`;
+            
+            $('#importIngredientsModal').modal('show');
+        });
+    });
+});
+</script>
 {% endblock %}

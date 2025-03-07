@@ -29,8 +29,10 @@ class FileStorage:
             self.s3_location = app.config.get('S3_LOCATION')
             self.s3_client = boto3.client(
                 's3',
+                region_name='eu-west-1',  # Add explicit region - use the region where your bucket is located
                 aws_access_key_id=app.config.get('S3_KEY'),
-                aws_secret_access_key=app.config.get('S3_SECRET')
+                aws_secret_access_key=app.config.get('S3_SECRET'),
+                config=boto3.session.Config(signature_version='s3v4')  # Use the latest signature version
             )
             logger.info(f"Initialized S3 storage with bucket: {self.s3_bucket}")
         else:
@@ -93,27 +95,77 @@ class FileStorage:
             True if successful, False otherwise
         """
         if not file_path:
+            logger.warning("Attempted to delete a file with empty path")
             return False
+            
+        # Normalize the file path by removing any leading/trailing whitespace
+        # and ensuring consistent slash direction
+        file_path = file_path.strip().replace('\\', '/')
+        
+        # Remove any leading slash which would cause issues with S3 keys
+        if file_path.startswith('/'):
+            file_path = file_path[1:]
+            
+        logger.info(f"Attempting to delete normalized file path: {file_path}")
+        logger.info(f"Storage mode: {'S3' if self.use_s3 else 'Local'}")
             
         if self.use_s3:
             try:
-                self.s3_client.delete_object(
-                    Bucket=self.s3_bucket,
-                    Key=file_path
-                )
-                return True
-            except ClientError as e:
-                logger.error(f"Error deleting from S3: {str(e)}")
+                logger.info(f"Deleting from S3 bucket '{self.s3_bucket}', key: '{file_path}'")
+                
+                # First check if the file exists with explicit error handling
+                try:
+                    response = self.s3_client.head_object(Bucket=self.s3_bucket, Key=file_path)
+                    logger.info(f"File exists in S3, proceeding with deletion. Response: {response}")
+                except ClientError as e:
+                    error_code = e.response.get('Error', {}).get('Code')
+                    if error_code == '404':
+                        logger.warning(f"File not found in S3 (404): {file_path}")
+                        return False
+                    else:
+                        logger.error(f"Error checking file existence in S3: {str(e)}")
+                        logger.error(f"Error code: {error_code}")
+                        logger.error(f"Full error response: {e.response}")
+                        return False
+                        
+                # Now delete the file with better error info
+                try:
+                    response = self.s3_client.delete_object(
+                        Bucket=self.s3_bucket,
+                        Key=file_path
+                    )
+                    logger.info(f"S3 deletion successful. Response: {response}")
+                    return True
+                except ClientError as e:
+                    error_code = e.response.get('Error', {}).get('Code')
+                    logger.error(f"Error deleting from S3: {str(e)}")
+                    logger.error(f"Error code: {error_code}")
+                    logger.error(f"Full error response: {e.response}")
+                    return False
+                    
+            except Exception as e:
+                logger.error(f"Unexpected error in S3 delete operation: {str(e)}")
+                if hasattr(e, 'response'):
+                    logger.error(f"Error response details: {e.response}")
                 return False
         else:
             # Delete from local filesystem
             full_path = os.path.join(current_app.root_path, 'static', file_path)
+            logger.info(f"Deleting from local filesystem: {full_path}")
+            
             if os.path.exists(full_path):
                 try:
                     os.remove(full_path)
+                    logger.info(f"Local file deleted successfully")
                     return True
+                except PermissionError as e:
+                    logger.error(f"Permission error deleting local file: {str(e)}")
+                    return False
+                except OSError as e:
+                    logger.error(f"OS error deleting local file: {str(e)}")
+                    return False
                 except Exception as e:
-                    logger.error(f"Error deleting local file: {str(e)}")
+                    logger.error(f"Unexpected error deleting local file: {str(e)}")
                     return False
             else:
                 logger.warning(f"File not found for deletion: {full_path}")
@@ -133,8 +185,10 @@ class FileStorage:
             return None
             
         if self.use_s3:
-            # Generate S3 URL
-            return f"{self.s3_location}/{file_path}"
+            # Generate direct S3 URL with proper format
+            # Remove any leading slashes to avoid double slashes in the URL
+            clean_path = file_path.lstrip('/')
+            return f"{self.s3_location}/{clean_path}"
         else:
             # For local files, return the static URL
             return f"/static/{file_path}"
