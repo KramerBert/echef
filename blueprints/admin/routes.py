@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash, request, session, jsonify, current_app
+from flask import render_template, redirect, url_for, flash, request, session, jsonify, current_app, send_file
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
 from flask_wtf import FlaskForm
@@ -8,6 +8,7 @@ from utils.db import get_db_connection
 from . import bp
 import logging
 import os
+import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -361,16 +362,23 @@ def create_supplier():
         banner_image = None
         if 'banner_image' in request.files and request.files['banner_image'].filename:
             file = request.files['banner_image']
-            filename = secure_filename(file.filename)
-            
-            # Create upload directory if it doesn't exist
-            upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'banners')
-            os.makedirs(upload_dir, exist_ok=True)
-            
-            # Save the file
-            file_path = os.path.join(upload_dir, filename)
-            file.save(file_path)
-            banner_image = 'uploads/banners/' + filename
+            if file:
+                # Use our storage utility instead of direct filesystem operations
+                banner_image = current_app.storage.save_file(
+                    file, 
+                    'uploads/banners'
+                )
+        
+        # Handle CSV file upload
+        csv_file_path = None
+        if 'ingredients_csv' in request.files and request.files['ingredients_csv'].filename:
+            file = request.files['ingredients_csv']
+            if file:
+                # Use our storage utility
+                csv_file_path = current_app.storage.save_file(
+                    file,
+                    'uploads/ingredient_lists'
+                )
         
         conn = get_db_connection()
         if not conn:
@@ -379,12 +387,13 @@ def create_supplier():
         
         cur = conn.cursor()
         try:
-            # Insert new supplier with is_admin_created=TRUE and chef_id=NULL (now allowed)
+            # Insert new supplier with CSV file path
             cur.execute("""
                 INSERT INTO leveranciers 
-                (naam, contact, telefoon, email, banner_image, is_admin_created, has_standard_list, chef_id)
-                VALUES (%s, %s, %s, %s, %s, TRUE, %s, NULL)
-            """, (naam, contact, telefoon, email, banner_image, has_standard_list))
+                (naam, contact, telefoon, email, banner_image, is_admin_created, has_standard_list, chef_id, csv_file_path, csv_last_updated)
+                VALUES (%s, %s, %s, %s, %s, TRUE, %s, NULL, %s, %s)
+            """, (naam, contact, telefoon, email, banner_image, has_standard_list, csv_file_path, 
+                 datetime.datetime.now() if csv_file_path else None))
             
             conn.commit()
             flash("Leverancier succesvol aangemaakt!", "success")
@@ -436,24 +445,44 @@ def edit_supplier(supplier_id):
             banner_image = supplier['banner_image']
             if 'banner_image' in request.files and request.files['banner_image'].filename:
                 file = request.files['banner_image']
-                filename = secure_filename(file.filename)
-                
-                # Create upload directory if it doesn't exist
-                upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'banners')
-                os.makedirs(upload_dir, exist_ok=True)
-                
-                # Save the file
-                file_path = os.path.join(upload_dir, filename)
-                file.save(file_path)
-                banner_image = 'uploads/banners/' + filename
+                if file:
+                    # Delete old banner if exists
+                    if banner_image:
+                        current_app.storage.delete_file(banner_image)
+                    
+                    # Upload new banner
+                    banner_image = current_app.storage.save_file(
+                        file,
+                        'uploads/banners'
+                    )
+            
+            # Handle CSV file upload
+            csv_file_path = supplier['csv_file_path']
+            csv_updated = False
+            if 'ingredients_csv' in request.files and request.files['ingredients_csv'].filename:
+                file = request.files['ingredients_csv']
+                if file:
+                    # Delete old CSV if exists
+                    if csv_file_path:
+                        current_app.storage.delete_file(csv_file_path)
+                    
+                    # Upload new CSV
+                    csv_file_path = current_app.storage.save_file(
+                        file, 
+                        'uploads/ingredient_lists'
+                    )
+                    csv_updated = True
             
             # Update supplier
             cur.execute("""
                 UPDATE leveranciers 
                 SET naam = %s, contact = %s, telefoon = %s, email = %s, 
-                    banner_image = %s, has_standard_list = %s
+                    banner_image = %s, has_standard_list = %s, csv_file_path = %s,
+                    csv_last_updated = %s
                 WHERE leverancier_id = %s
-            """, (naam, contact, telefoon, email, banner_image, has_standard_list, supplier_id))
+            """, (naam, contact, telefoon, email, banner_image, has_standard_list, 
+                  csv_file_path, datetime.datetime.now() if csv_updated else supplier['csv_last_updated'], 
+                  supplier_id))
             
             conn.commit()
             flash("Leverancier succesvol bijgewerkt!", "success")
@@ -511,6 +540,131 @@ def delete_supplier(supplier_id):
         logger.error(f"Delete supplier error: {str(e)}")
         flash(f"Er is een fout opgetreden bij het verwijderen van de leverancier: {str(e)}", "danger")
         return redirect(url_for('admin.manage_suppliers'))
+    finally:
+        cur.close()
+        conn.close()
+
+@bp.route('/suppliers/<int:supplier_id>/delete-csv', methods=['POST'])
+@admin_required
+def delete_supplier_csv(supplier_id):
+    """Delete the CSV file from a supplier"""
+    conn = get_db_connection()
+    if not conn:
+        flash("Database verbinding mislukt", "danger")
+        return redirect(url_for('admin.manage_suppliers'))
+    
+    cur = conn.cursor(dictionary=True)
+    
+    try:
+        # Get supplier information
+        cur.execute("""
+            SELECT * FROM leveranciers 
+            WHERE leverancier_id = %s AND is_admin_created = TRUE
+        """, (supplier_id,))
+        supplier = cur.fetchone()
+        
+        if not supplier:
+            flash("Leverancier niet gevonden", "danger")
+            return redirect(url_for('admin.manage_suppliers'))
+        
+        if not supplier['csv_file_path']:
+            flash("Deze leverancier heeft geen CSV bestand", "warning")
+            return redirect(url_for('admin.edit_supplier', supplier_id=supplier_id))
+        
+        # Remove file from storage if it exists
+        if supplier['csv_file_path']:
+            file_deleted = current_app.storage.delete_file(supplier['csv_file_path'])
+            
+            # Update database regardless of file deletion success
+            cur.execute("""
+                UPDATE leveranciers 
+                SET csv_file_path = NULL, csv_last_updated = NULL,
+                    has_standard_list = %s
+                WHERE leverancier_id = %s
+            """, (supplier['has_standard_list'], supplier_id))
+            
+            conn.commit()
+            
+            if file_deleted:
+                flash("CSV bestand succesvol verwijderd", "success")
+            else:
+                flash("CSV verwijzing verwijderd uit database, maar er was een fout bij het verwijderen van het bestand", "warning")
+        
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Delete supplier CSV error: {str(e)}")
+        flash(f"Er is een fout opgetreden bij het verwijderen van het CSV bestand: {str(e)}", "danger")
+    finally:
+        cur.close()
+        conn.close()
+    
+    return redirect(url_for('admin.edit_supplier', supplier_id=supplier_id))
+
+@bp.route('/suppliers/<int:supplier_id>/download-csv', methods=['GET'])
+@admin_required
+def download_supplier_csv(supplier_id):
+    """Download the CSV file from a supplier"""
+    conn = get_db_connection()
+    if not conn:
+        flash("Database verbinding mislukt", "danger")
+        return redirect(url_for('admin.manage_suppliers'))
+    
+    cur = conn.cursor(dictionary=True)
+    
+    try:
+        # Get supplier information
+        cur.execute("""
+            SELECT * FROM leveranciers 
+            WHERE leverancier_id = %s AND is_admin_created = TRUE
+        """, (supplier_id,))
+        supplier = cur.fetchone()
+        
+        if not supplier:
+            flash("Leverancier niet gevonden", "danger")
+            return redirect(url_for('admin.manage_suppliers'))
+        
+        if not supplier['csv_file_path']:
+            flash("Deze leverancier heeft geen CSV bestand", "warning")
+            return redirect(url_for('admin.edit_supplier', supplier_id=supplier_id))
+        
+        # For S3 storage in production
+        if current_app.config.get('USE_S3'):
+            try:
+                # Generate a pre-signed URL for temporary access
+                url = current_app.storage.s3_client.generate_presigned_url(
+                    'get_object',
+                    Params={
+                        'Bucket': current_app.config['S3_BUCKET'],
+                        'Key': supplier['csv_file_path']
+                    },
+                    ExpiresIn=60  # URL expires in 60 seconds
+                )
+                return redirect(url)
+            except Exception as e:
+                logger.error(f"Error generating S3 download URL: {str(e)}")
+                flash(f"Er is een fout opgetreden bij het downloaden van het CSV bestand", "danger")
+                return redirect(url_for('admin.edit_supplier', supplier_id=supplier_id))
+        else:
+            # Local file handling (existing code)
+            csv_path = os.path.join(current_app.root_path, 'static', supplier['csv_file_path'])
+            if not os.path.exists(csv_path):
+                flash("CSV bestand niet gevonden op de server", "danger")
+                return redirect(url_for('admin.edit_supplier', supplier_id=supplier_id))
+            
+            # Get filename from path
+            filename = os.path.basename(csv_path)
+            
+            return send_file(
+                csv_path,
+                mimetype='text/csv',
+                as_attachment=True,
+                download_name=filename
+            )
+        
+    except Exception as e:
+        logger.error(f"Download supplier CSV error: {str(e)}")
+        flash(f"Er is een fout opgetreden bij het downloaden van het CSV bestand: {str(e)}", "danger")
+        return redirect(url_for('admin.edit_supplier', supplier_id=supplier_id))
     finally:
         cur.close()
         conn.close()

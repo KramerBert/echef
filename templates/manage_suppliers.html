@@ -111,7 +111,7 @@
             <div class="supplier-card">
                 {% if supplier.banner_image %}
                     <div class="supplier-banner">
-                        <img src="{{ url_for('static', filename=supplier.banner_image) }}" alt="Banner voor {{ supplier.naam }}">
+                        <img src="{{ supplier.banner_image|file_url }}" alt="Banner voor {{ supplier.naam }}">
                     </div>
                 {% else %}
                     <div class="supplier-banner supplier-banner-placeholder">

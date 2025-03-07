@@ -175,6 +175,39 @@ def create_app():
     # Add the database connection function to the app context
     app.get_db_connection = get_db_connection
 
+    # File storage configuration
+    if app.config['ENV'] == 'production':  # Reverted from "if True:" back to production environment check
+        # In production (Heroku), use S3 storage
+        app.config['USE_S3'] = True
+        app.config['S3_BUCKET'] = os.getenv('S3_BUCKET')
+        app.config['S3_KEY'] = os.getenv('AWS_ACCESS_KEY_ID')
+        app.config['S3_SECRET'] = os.getenv('AWS_SECRET_ACCESS_KEY')
+        app.config['S3_LOCATION'] = f"https://{app.config['S3_BUCKET']}.s3.amazonaws.com"
+        
+        from utils.storage import FileStorage
+        storage = FileStorage(app)
+        app.storage = storage
+        
+        # Use custom URL builder for static files
+        @app.template_filter('file_url')
+        def file_url_filter(path):
+            if not path:
+                return None
+            return storage.get_file_url(path)
+    else:
+        # In development, use local storage
+        app.config['USE_S3'] = False
+        
+        from utils.storage import FileStorage
+        storage = FileStorage(app)
+        app.storage = storage
+        
+        @app.template_filter('file_url')
+        def file_url_filter(path):
+            if not path:
+                return None
+            return url_for('static', filename=path)
+
     # -----------------------------------------------------------
     #  Homepage (index)
     # -----------------------------------------------------------

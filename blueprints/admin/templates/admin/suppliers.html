@@ -45,7 +45,7 @@
                             <td>{{ supplier.email }}</td>
                             <td>
                                 {% if supplier.banner_image %}
-                                    <img src="{{ url_for('static', filename=supplier.banner_image) }}" 
+                                    <img src="{{ supplier.banner_image|file_url }}" 
                                          alt="Banner voor {{ supplier.naam }}" 
                                          style="max-width: 100px; max-height: 50px;">
                                 {% else %}
@@ -55,6 +55,12 @@
                             <td>
                                 {% if supplier.has_standard_list %}
                                     <span class="badge bg-success">Ja</span>
+                                    {% if supplier.csv_file_path %}
+                                        <a href="{{ url_for('admin.download_supplier_csv', supplier_id=supplier.leverancier_id) }}" 
+                                           class="btn btn-sm btn-outline-light ms-2" title="Download CSV">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                    {% endif %}
                                 {% else %}
                                     <span class="badge bg-secondary">Nee</span>
                                 {% endif %}

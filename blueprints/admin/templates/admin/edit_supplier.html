@@ -45,7 +45,7 @@
                     <label for="banner_image" class="form-label">Reclamebanner (afbeelding)</label>
                     {% if supplier.banner_image %}
                         <div class="mb-2">
-                            <img src="{{ url_for('static', filename=supplier.banner_image) }}" 
+                            <img src="{{ supplier.banner_image|file_url }}" 
                                  alt="Huidige banner" 
                                  style="max-width: 100%; max-height: 100px;">
                             <div class="form-text text-light">Huidige banner</div>
@@ -53,6 +53,37 @@
                     {% endif %}
                     <input type="file" id="banner_image" name="banner_image" class="form-control" accept="image/*">
                     <div class="form-text text-light">Aanbevolen formaat: 400x100 pixels. Laat leeg om de huidige banner te behouden.</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="ingredients_csv" class="form-label">Ingrediëntenlijst (CSV bestand)</label>
+                    {% if supplier.csv_file_path %}
+                        <div class="mb-2">
+                            <div class="alert alert-info">
+                                <i class="fas fa-file-csv"></i> Huidige CSV: {{ supplier.csv_file_path.split('/')[-1] }}
+                                {% if supplier.csv_last_updated %}
+                                    <br>Laatst bijgewerkt: {{ supplier.csv_last_updated.strftime('%d-%m-%Y %H:%M') }}
+                                {% endif %}
+                                <div class="mt-2">
+                                    <a href="{{ url_for('admin.download_supplier_csv', supplier_id=supplier.leverancier_id) }}" 
+                                       class="btn btn-sm btn-primary me-2">
+                                        <i class="fas fa-download"></i> CSV Downloaden
+                                    </a>
+                                    <form method="POST" action="{{ url_for('admin.delete_supplier_csv', supplier_id=supplier.leverancier_id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Weet je zeker dat je deze CSV wilt verwijderen? Chefs zullen deze lijst niet meer kunnen importeren.')">
+                                            <i class="fas fa-trash"></i> CSV verwijderen
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    <input type="file" id="ingredients_csv" name="ingredients_csv" class="form-control" accept=".csv">
+                    <div class="form-text text-light">
+                        Upload een CSV bestand met de ingrediëntenlijst die chefs kunnen importeren.
+                        <br>Formaat: naam,categorie,eenheid,prijs_per_eenheid
+                    </div>
                 </div>
                 
                 <div class="mb-3 form-check">

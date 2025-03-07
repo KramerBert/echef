@@ -47,6 +47,15 @@
                     <div class="form-text text-light">Aanbevolen formaat: 400x100 pixels</div>
                 </div>
                 
+                <div class="mb-3">
+                    <label for="ingredients_csv" class="form-label">Ingrediëntenlijst (CSV bestand)</label>
+                    <input type="file" id="ingredients_csv" name="ingredients_csv" class="form-control" accept=".csv">
+                    <div class="form-text text-light">
+                        Upload een CSV bestand met de ingrediëntenlijst die chefs kunnen importeren.
+                        <br>Formaat: naam,categorie,eenheid,prijs_per_eenheid
+                    </div>
+                </div>
+                
                 <div class="mb-3 form-check">
                     <input type="checkbox" id="has_standard_list" name="has_standard_list" class="form-check-input" value="1">
                     <label for="has_standard_list" class="form-check-label">
