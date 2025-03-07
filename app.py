@@ -100,6 +100,10 @@ def create_app():
     from blueprints.admin import bp as admin_bp
     app.register_blueprint(admin_bp)
     
+    # Import and register the ingredients_import blueprint
+    from blueprints.ingredients_import import bp as ingredients_import_bp
+    app.register_blueprint(ingredients_import_bp)
+    
     # Register template filters and helper functions inside create_app
     def nl2br(value):
         return value.replace('\n', '<br>')

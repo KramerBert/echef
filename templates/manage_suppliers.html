@@ -160,11 +160,19 @@
                 <div class="modal-body">
                     <p>Je staat op het punt om ingrediënten te importeren van <strong id="importSupplierName"></strong>.</p>
                     <p>De ingrediënten worden toegevoegd aan je lijst. Bestaande ingrediënten met dezelfde naam worden overgeslagen.</p>
+                    
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" id="update_existing_modal" name="update_existing">
+                        <label class="form-check-label" for="update_existing_modal">
+                            <strong>Bestaande ingrediënten bijwerken</strong> (prijzen en leverancier)
+                        </label>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuleren</button>
                     <form id="importIngredientsForm" method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" id="update_existing_hidden" name="update_existing" value="">
                         <button type="submit" class="btn btn-primary">Importeren</button>
                     </form>
                 </div>
@@ -515,10 +523,20 @@ document.addEventListener('DOMContentLoaded', function() {
             
             document.getElementById('importSupplierName').textContent = supplierName;
             document.getElementById('importIngredientsForm').action = 
-                `/dashboard/{{ session.get('chef_naam') }}/suppliers/${supplierId}/import`;
+                "{{ url_for('ingredients_import.import_from_supplier', supplier_id=0) }}".replace('0', supplierId);
+            
+            // Clear checkbox state
+            document.getElementById('update_existing_modal').checked = false;
             
             $('#importIngredientsModal').modal('show');
         });
+    });
+    
+    // Handle checkbox state in modal form submission
+    document.getElementById('importIngredientsForm').addEventListener('submit', function() {
+        // Copy checkbox state to hidden field to ensure it's submitted
+        document.getElementById('update_existing_hidden').value = 
+            document.getElementById('update_existing_modal').checked ? "on" : "";
     });
 });
 </script>

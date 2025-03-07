@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+    {% extends "base.html" %}
 {% block content %}
 <h2>Ingrediënten Beheren</h2>
 <p>Voeg nieuwe ingrediënten toe of bekijk bestaande ingrediënten.</p>
@@ -146,16 +146,34 @@
 
 <!-- CSV import sectie -->
 <div class="csv-import" style="margin-top: 20px;">
-    <h3>Bulk Import via CSV</h3>
-    <form method="POST" action="{{ url_for('bulk_add_ingredients', chef_naam=chef_naam) }}" enctype="multipart/form-data">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="form-group">
-            <input type="file" name="csv_file" accept=".csv" required class="form-control">
-        </div>
-        <button type="submit" class="btn-action"><i class="fas fa-file-import"></i> Importeren</button>
-        <a href="{{ url_for('download_csv_template') }}" class="btn-action">
-            <i class="fas fa-download"></i> Download Template
+    <h3>Ingrediënten Importeren</h3>
+    <p>Je kunt meerdere ingrediënten tegelijk importeren met een CSV bestand.</p>
+    
+    <div class="d-flex flex-column flex-md-row gap-3 mb-2">
+        <a href="{{ url_for('ingredients_import.download_template') }}" class="btn btn-info">
+            <i class="fas fa-download"></i> CSV Template Downloaden
         </a>
+    </div>
+    
+    <form method="POST" action="{{ url_for('ingredients_import.import_from_file') }}" enctype="multipart/form-data" class="mb-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3">
+            <label for="csv_file" class="form-label">Selecteer CSV bestand</label>
+            <input type="file" id="csv_file" name="csv_file" class="form-control" accept=".csv" required>
+            <div class="form-text">
+                De CSV moet de volgende kolommen bevatten: ingredient, categorie, eenheid, prijs_per_eenheid, leverancier.<br>
+                Alleen het veld 'ingredient' is verplicht, de rest is optioneel.
+            </div>
+        </div>
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="update_existing" name="update_existing">
+            <label class="form-check-label" for="update_existing">
+                Bestaande ingrediënten bijwerken (prijzen en leverancier)
+            </label>
+        </div>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-file-import"></i> Ingrediënten Importeren
+        </button>
     </form>
 </div>
 
