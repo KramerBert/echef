@@ -5,7 +5,7 @@ from datetime import datetime
 from utils.db import get_db_connection
 import logging
 
-bp = Blueprint('inventory', __name__)
+bp = Blueprint('inventory', __name__, url_prefix='/inventory')
 logger = logging.getLogger(__name__)
 
 def login_required(f):
@@ -16,6 +16,48 @@ def login_required(f):
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
+
+@bp.route('/', methods=['GET'])
+def index():
+    """Show inventory items for the current chef"""
+    db = get_db_connection()
+    chef_naam = session.get('chef_naam')
+    
+    if not chef_naam:
+        return redirect(url_for('auth.login'))
+    
+    items = db.execute(
+        'SELECT * FROM inventory WHERE chef_naam = ?',
+        (chef_naam,)
+    ).fetchall()
+    
+    return render_template('inventory/index.html', items=items)
+
+@bp.route('/add', methods=['GET', 'POST'])
+def add():
+    """Add a new inventory item"""
+    if request.method == 'POST':
+        name = request.form['name']
+        quantity = request.form['quantity']
+        unit = request.form['unit']
+        chef_naam = session.get('chef_naam')
+        error = None
+        
+        if not name:
+            error = 'Naam is verplicht.'
+        
+        if error is None:
+            db = get_db_connection()
+            db.execute(
+                'INSERT INTO inventory (chef_naam, name, quantity, unit) VALUES (?, ?, ?, ?)',
+                (chef_naam, name, quantity, unit)
+            )
+            db.commit()
+            return redirect(url_for('inventory.index'))
+            
+        flash(error)
+        
+    return render_template('inventory/add.html')
 
 @bp.route('/dashboard/<chef_naam>/inventory/reports')
 @login_required

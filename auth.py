@@ -3,7 +3,7 @@ from flask import (
     request, session, url_for
 )
 from werkzeug.security import check_password_hash, generate_password_hash
-from .db import get_db
+from utils.db import get_db_connection
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -12,7 +12,7 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        db = get_db()
+        db = get_db_connection()
         error = None
 
         # Vervang spaties door underscores voor de database
@@ -50,7 +50,7 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        db = get_db()  # Add this line to get database connection
+        db = get_db_connection()  # Updated function name
         
         # Converteer input naar database formaat
         username_db = username.replace(' ', '_')
