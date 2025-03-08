@@ -147,13 +147,13 @@
         {% endfor %}
     </div>
 
-    <!-- Add modal for confirmation -->
+    <!-- Update the modal for confirmation -->
     <div class="modal fade" id="importIngredientsModal" tabindex="-1" role="dialog" aria-labelledby="importIngredientsModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="importIngredientsModalLabel">Ingrediënten Importeren</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeImportModal()">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
@@ -169,7 +169,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuleren</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="closeImportModal()">Annuleren</button>
                     <form id="importIngredientsForm" method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" id="update_existing_hidden" name="update_existing" value="">
@@ -427,6 +427,77 @@
             grid-template-columns: 1fr;
         }
     }
+
+    /* Improved modal styling */
+    .modal-content {
+        background-color: #fff;
+        color: #333;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+
+    .modal-header {
+        background-color: var(--kitchen-blue);
+        color: #fff;
+        border-bottom: 1px solid var(--kitchen-steel);
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        padding: 15px 20px;
+    }
+
+    .modal-title {
+        font-size: 1.25rem;
+        font-weight: bold;
+    }
+
+    .modal-body {
+        padding: 20px;
+        font-size: 1rem;
+        line-height: 1.6;
+        color: #333;
+    }
+
+    .modal-footer {
+        border-top: 1px solid #e5e5e5;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .close {
+        color: #fff;
+        opacity: 0.8;
+        font-size: 1.5rem;
+        font-weight: 700;
+        text-shadow: 0 1px 0 #000;
+        cursor: pointer;
+    }
+
+    .close:hover,
+    .close:focus {
+        color: #fff;
+        opacity: 1;
+        text-decoration: none;
+    }
+
+    .form-check-label {
+        font-weight: normal;
+    }
+
+    /* For better contrast on checkbox */
+    .form-check-input {
+        width: 18px;
+        height: 18px;
+    }
+
+    /* For better visibility on mobile */
+    @media (max-width: 768px) {
+        .modal-dialog {
+            margin: 10px;
+            width: calc(100% - 20px);
+            max-width: none;
+        }
+    }
 </style>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -538,6 +609,29 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('update_existing_hidden').value = 
             document.getElementById('update_existing_modal').checked ? "on" : "";
     });
+
+    // Add keyboard event handler for ESC key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeImportModal();
+        }
+    });
+
+    // Ensure close button works
+    document.querySelector('#importIngredientsModal .close').addEventListener('click', closeImportModal);
+    document.querySelector('#importIngredientsModal .btn-secondary').addEventListener('click', closeImportModal);
+
+    // Also handle clicking outside the modal to close
+    $('#importIngredientsModal').on('click', function(event) {
+        if (event.target === this) {
+            closeImportModal();
+        }
+    });
 });
+
+// Add this function to close the modal
+function closeImportModal() {
+    $('#importIngredientsModal').modal('hide');
+}
 </script>
 {% endblock %}
