@@ -9,6 +9,7 @@ import logging
 import boto3
 from botocore.exceptions import ClientError
 from datetime import datetime
+from mysql.connector import Error  # Add this import for Error
 
 # Set up logging
 logger = logging.getLogger(__name__)
