@@ -1,4 +1,4 @@
-    {% extends "base.html" %}
+{% extends "base.html" %}
 {% block content %}
 <h2>Ingrediënten Beheren</h2>
 <p>Voeg nieuwe ingrediënten toe of bekijk bestaande ingrediënten.</p>
@@ -7,6 +7,10 @@
     <a href="{{ url_for('dashboard', chef_naam=chef_naam) }}" class="btn-action">
         <i class="fas fa-arrow-left"></i> Dashboard
     </a>
+    <!-- Add Bulk Delete Button -->
+    <button type="button" class="btn-action btn-danger" style="margin-left: 10px;" onclick="openBulkDeleteModal()">
+        <i class="fas fa-trash-alt"></i> Bulk Verwijderen
+    </button>
 </div>
 
 <!-- Nieuw ingrediënt formulier -->
@@ -438,5 +442,178 @@
             });
         });
     });
+
+    function openBulkDeleteModal() {
+        $('#bulkDeleteModal').modal('show');
+        // Reset form
+        document.getElementById('filter_type').value = 'leverancier';
+        updateFilterOptions();
+    }
+
+    function closeBulkDeleteModal() {
+        $('#bulkDeleteModal').modal('hide');
+    }
+
+    function updateFilterOptions() {
+        const filterType = document.getElementById('filter_type').value;
+        
+        if (filterType === 'leverancier') {
+            document.getElementById('leverancier_filter').style.display = 'block';
+            document.getElementById('filter_value_leverancier').disabled = false;
+            document.getElementById('filter_value_leverancier').name = 'filter_value';
+            document.getElementById('categorie_filter').style.display = 'none';
+            document.getElementById('filter_value_categorie').disabled = true;
+            document.getElementById('filter_value_categorie').name = '';
+            document.getElementById('alle_filter').style.display = 'none';
+            document.getElementById('filter_value_alle').disabled = true;
+            document.getElementById('filter_value_alle').name = '';
+        } else if (filterType === 'categorie') {
+            document.getElementById('leverancier_filter').style.display = 'none';
+            document.getElementById('filter_value_leverancier').disabled = true;
+            document.getElementById('filter_value_leverancier').name = '';
+            document.getElementById('categorie_filter').style.display = 'block';
+            document.getElementById('filter_value_categorie').disabled = false;
+            document.getElementById('filter_value_categorie').name = 'filter_value';
+            document.getElementById('alle_filter').style.display = 'none';
+            document.getElementById('filter_value_alle').disabled = true;
+            document.getElementById('filter_value_alle').name = '';
+        } else if (filterType === 'alle') {
+            document.getElementById('leverancier_filter').style.display = 'none';
+            document.getElementById('filter_value_leverancier').disabled = true;
+            document.getElementById('filter_value_leverancier').name = '';
+            document.getElementById('categorie_filter').style.display = 'none';
+            document.getElementById('filter_value_categorie').disabled = true;
+            document.getElementById('filter_value_categorie').name = '';
+            document.getElementById('alle_filter').style.display = 'block';
+            document.getElementById('filter_value_alle').disabled = false;
+            document.getElementById('filter_value_alle').name = 'filter_value';
+        }
+    }
+
+    function confirmBulkDelete() {
+        const filterType = document.getElementById('filter_type').value;
+        let filterValue;
+        let filterName;
+        let confirmMessage;
+        
+        if (filterType === 'leverancier') {
+            const selectElement = document.getElementById('filter_value_leverancier');
+            filterValue = selectElement.value;
+            filterName = selectElement.options[selectElement.selectedIndex].text;
+            
+            if (!filterValue) {
+                alert('Selecteer een leverancier om te verwijderen.');
+                return;
+            }
+            
+            confirmMessage = `Weet je zeker dat je alle ingrediënten van leverancier "${filterName}" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`;
+        } else if (filterType === 'categorie') {
+            const selectElement = document.getElementById('filter_value_categorie');
+            filterValue = selectElement.value;
+            filterName = filterValue;
+            
+            if (!filterValue) {
+                alert('Selecteer een categorie om te verwijderen.');
+                return;
+            }
+            
+            confirmMessage = `Weet je zeker dat je alle ingrediënten uit categorie "${filterName}" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`;
+        } else if (filterType === 'alle') {
+            filterValue = 'alle';
+            
+            // Extra strong confirmation for deleting all ingredients
+            confirmMessage = `WAARSCHUWING! Je staat op het punt om ALLE ingrediënten te verwijderen die niet in gebruik zijn in recepten!\n\nTyp "VERWIJDEREN" (in hoofdletters) om te bevestigen:`;
+            const userInput = prompt(confirmMessage);
+            
+            if (userInput !== 'VERWIJDEREN') {
+                alert('Verwijdering geannuleerd.');
+                return;
+            }
+            
+            // Second confirmation
+            if (!confirm('Dit is je laatste waarschuwing. Klik op OK om alle ongebruikte ingrediënten permanent te verwijderen.')) {
+                return;
+            }
+            
+            document.getElementById('bulkDeleteForm').submit();
+            return;
+        }
+        
+        if (confirm(confirmMessage)) {
+            document.getElementById('bulkDeleteForm').submit();
+        }
+    }
+
+    // Make sure script runs after document is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize filter options
+        updateFilterOptions();
+    });
 </script>
+
+<!-- Bulk Delete Modal -->
+<div class="modal fade" id="bulkDeleteModal" tabindex="-1" role="dialog" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bulkDeleteModalLabel">Ingrediënten Bulk Verwijderen</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeBulkDeleteModal()">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="bulkDeleteForm" method="POST" action="{{ url_for('bulk_delete_ingredients', chef_naam=chef_naam) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <div class="form-group">
+                        <label for="filter_type">Verwijderen op basis van:</label>
+                        <select class="form-control" id="filter_type" name="filter_type" onchange="updateFilterOptions()">
+                            <option value="leverancier">Leverancier</option>
+                            <option value="categorie">Categorie</option>
+                            <option value="alle">Alle Ingrediënten</option>
+                        </select>
+                    </div>
+                    
+                    <div id="leverancier_filter" class="form-group">
+                        <label for="filter_value_leverancier">Selecteer Leverancier:</label>
+                        <select class="form-control" id="filter_value_leverancier" name="filter_value">
+                            <option value="">-- Selecteer een leverancier --</option>
+                            {% for leverancier in leveranciers %}
+                                <option value="{{ leverancier.leverancier_id }}">{{ leverancier.naam }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div id="categorie_filter" class="form-group" style="display: none;">
+                        <label for="filter_value_categorie">Selecteer Categorie:</label>
+                        <select class="form-control" id="filter_value_categorie" name="filter_value" disabled>
+                            <option value="">-- Selecteer een categorie --</option>
+                            {% for categorie in unieke_categorieen %}
+                                <option value="{{ categorie }}">{{ categorie }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div id="alle_filter" class="form-group" style="display: none;">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <strong>Let op:</strong> Deze actie zal ALLE ingrediënten verwijderen die niet worden gebruikt in recepten.
+                            <input type="hidden" id="filter_value_alle" name="filter_value" value="alle" disabled>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Waarschuwing:</strong> Deze actie kan niet ongedaan worden gemaakt. 
+                        Ingrediënten die gebruikt worden in recepten worden niet verwijderd.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="closeBulkDeleteModal()">Annuleren</button>
+                <button type="button" class="btn btn-danger" onclick="confirmBulkDelete()">Verwijderen</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

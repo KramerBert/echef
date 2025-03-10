@@ -437,6 +437,176 @@ def create_app():
             download_name='ingredienten_template.csv'
         )
 
+    @app.route('/dashboard/<chef_naam>/ingredients/bulk_delete', methods=['POST'])
+    @login_required
+    def bulk_delete_ingredients(chef_naam):
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
+        
+        form = FlaskForm()
+        if not form.validate_on_submit():
+            flash("Ongeldige CSRF-token. Probeer het opnieuw.", "danger")
+            return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
+        
+        filter_type = request.form.get('filter_type')
+        filter_value = request.form.get('filter_value')
+        
+        if not filter_type or not filter_value:
+            flash("Ongeldige selectie voor bulk verwijdering.", "danger")
+            return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
+        
+        conn = get_db_connection()
+        if conn is None:
+            flash("Database connection error.", "danger")
+            return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
+        
+        cur = conn.cursor(dictionary=True)
+        
+        try:
+            # Count ingredients to be deleted
+            if filter_type == 'leverancier':
+                cur.execute("""
+                    SELECT COUNT(*) as count
+                    FROM ingredients
+                    WHERE chef_id = %s AND leverancier_id = %s
+                """, (session['chef_id'], filter_value))
+                
+                ingredient_count = cur.fetchone()['count']
+                
+                if ingredient_count == 0:
+                    flash("Geen ingrediënten gevonden voor deze leverancier.", "warning")
+                    return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
+                
+                # Check if any ingredients with this supplier are used in recipes
+                cur.execute("""
+                    SELECT COUNT(DISTINCT di.ingredient_id) as used_count
+                    FROM dish_ingredients di
+                    JOIN ingredients i ON di.ingredient_id = i.ingredient_id
+                    WHERE i.chef_id = %s AND i.leverancier_id = %s
+                """, (session['chef_id'], filter_value))
+                
+                used_count = cur.fetchone()['used_count']
+                
+                if used_count > 0:
+                    # Get supplier name for better error message
+                    cur.execute("SELECT naam FROM leveranciers WHERE leverancier_id = %s", (filter_value,))
+                    supplier = cur.fetchone()
+                    supplier_name = supplier['naam'] if supplier else "geselecteerde leverancier"
+                    
+                    flash(f"{used_count} ingrediënten van {supplier_name} worden gebruikt in recepten en kunnen niet worden verwijderd.", "warning")
+                    return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
+                
+                # Delete all ingredients associated with the supplier
+                cur.execute("""
+                    DELETE FROM ingredients 
+                    WHERE chef_id = %s AND leverancier_id = %s
+                """, (session['chef_id'], filter_value))
+                
+                deleted_count = cur.rowcount
+                conn.commit()
+                
+                # Get supplier name for confirmation message
+                cur.execute("SELECT naam FROM leveranciers WHERE leverancier_id = %s", (filter_value,))
+                supplier = cur.fetchone()
+                supplier_name = supplier['naam'] if supplier else "geselecteerde leverancier"
+                
+                flash(f"{deleted_count} ingrediënten van {supplier_name} succesvol verwijderd.", "success")
+            
+            elif filter_type == 'categorie':
+                cur.execute("""
+                    SELECT COUNT(*) as count
+                    FROM ingredients
+                    WHERE chef_id = %s AND categorie = %s
+                """, (session['chef_id'], filter_value))
+                
+                ingredient_count = cur.fetchone()['count']
+                
+                if ingredient_count == 0:
+                    flash("Geen ingrediënten gevonden voor deze categorie.", "warning")
+                    return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
+                
+                # Check if any ingredients with this category are used in recipes
+                cur.execute("""
+                    SELECT COUNT(DISTINCT di.ingredient_id) as used_count
+                    FROM dish_ingredients di
+                    JOIN ingredients i ON di.ingredient_id = i.ingredient_id
+                    WHERE i.chef_id = %s AND i.categorie = %s
+                """, (session['chef_id'], filter_value))
+                
+                used_count = cur.fetchone()['used_count']
+                
+                if used_count > 0:
+                    flash(f"{used_count} ingrediënten in categorie '{filter_value}' worden gebruikt in recepten en kunnen niet worden verwijderd.", "warning")
+                    return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
+                
+                # Delete all ingredients in the category
+                cur.execute("""
+                    DELETE FROM ingredients 
+                    WHERE chef_id = %s AND categorie = %s
+                """, (session['chef_id'], filter_value))
+                
+                deleted_count = cur.rowcount
+                conn.commit()
+                
+                flash(f"{deleted_count} ingrediënten uit categorie '{filter_value}' succesvol verwijderd.", "success")
+            
+            elif filter_type == 'alle' and filter_value == 'alle':
+                # First count all ingredients
+                cur.execute("""
+                    SELECT COUNT(*) as count
+                    FROM ingredients
+                    WHERE chef_id = %s
+                """, (session['chef_id'],))
+                
+                ingredient_count = cur.fetchone()['count']
+                
+                if ingredient_count == 0:
+                    flash("Er zijn geen ingrediënten om te verwijderen.", "warning")
+                    return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
+                
+                # Check if any ingredients are used in recipes
+                cur.execute("""
+                    SELECT COUNT(DISTINCT di.ingredient_id) as used_count
+                    FROM dish_ingredients di
+                    JOIN ingredients i ON di.ingredient_id = i.ingredient_id
+                    WHERE i.chef_id = %s
+                """, (session['chef_id'],))
+                
+                used_count = cur.fetchone()['used_count']
+                
+                if used_count == ingredient_count:
+                    flash(f"Alle {ingredient_count} ingrediënten worden gebruikt in recepten en kunnen niet worden verwijderd.", "warning")
+                    return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
+                
+                # Delete all ingredients that are not used in recipes
+                cur.execute("""
+                    DELETE FROM ingredients 
+                    WHERE chef_id = %s
+                    AND ingredient_id NOT IN (
+                        SELECT DISTINCT ingredient_id 
+                        FROM dish_ingredients
+                    )
+                """, (session['chef_id'],))
+                
+                deleted_count = cur.rowcount
+                conn.commit()
+                
+                flash(f"{deleted_count} ingrediënten succesvol verwijderd. {used_count} ingrediënten zijn behouden omdat ze gebruikt worden in recepten.", "success")
+            else:
+                flash("Ongeldige filter type voor bulk verwijdering.", "danger")
+        
+        except Exception as e:
+            conn.rollback()
+            logger.error(f'Error in bulk_delete_ingredients: {str(e)}')
+            flash(f"Fout bij verwijderen ingrediënten: {str(e)}", "danger")
+        
+        finally:
+            cur.close()
+            conn.close()
+        
+        return redirect(url_for('manage_ingredients', chef_naam=chef_naam))
+
     # -----------------------------------------------------------
     #  Gerechten Samenstellen
     # -----------------------------------------------------------

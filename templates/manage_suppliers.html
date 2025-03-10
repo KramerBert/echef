@@ -20,11 +20,16 @@
         {% endif %}
     {% endwith %}
 
-    <h2>Eigen Leveranciers Beheren</h2>
+    <h2>Leveranciers Beheren</h2>
 
     <div class="card">
         <div class="card-body">
-            <h3>Huidige Leveranciers</h3>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>Huidige Leveranciers</h3>
+                <button type="button" class="btn-action btn-add" onclick="openAddModal()">
+                    <i class="fas fa-plus"></i> Nieuwe Leverancier
+                </button>
+            </div>
             <div class="table-responsive">
                 <table class="suppliers-table">
                     <thead>
@@ -65,55 +70,6 @@
         </div>
     </div>
 
-    <h2>Nieuwe Eigen Leverancier toevoegen </h2>
-    <form method="POST" class="add-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="text" name="naam" class="form-control smaller-input" placeholder="Naam" required>
-        <input type="text" name="contact" class="form-control smaller-input" placeholder="Contactpersoon">
-        <input type="tel" name="telefoon" class="form-control smaller-input" placeholder="Telefoonnummer">
-        <input type="email" name="email" class="form-control smaller-input" placeholder="E-mail">
-        <button type="submit" class="btn-action">Leverancier Toevoegen</button>
-    </form>
-
-    <!-- Edit Modal -->
-    <div class="modal fade" id="editSupplierModal" tabindex="-1" role="dialog" aria-labelledby="editSupplierModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editSupplierModalLabel">Leverancier Bewerken</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="editSupplierForm" method="POST">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" id="edit_leverancier_id" name="leverancier_id">
-                        <div class="form-group">
-                            <label for="edit_naam">Naam</label>
-                            <input type="text" class="form-control" id="edit_naam" name="naam" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="edit_contact">Contactpersoon</label>
-                            <input type="text" class="form-control" id="edit_contact" name="contact">
-                        </div>
-                        <div class="form-group">
-                            <label for="edit_telefoon">Telefoonnummer</label>
-                            <input type="tel" class="form-control" id="edit_telefoon" name="telefoon">
-                        </div>
-                        <div class="form-group">
-                            <label for="edit_email">E-mail</label>
-                            <input type="email" class="form-control" id="edit_email" name="email">
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuleren</button>
-                    <button type="button" class="btn btn-primary" onclick="submitEditForm()">Opslaan</button>
-                </div>
-            </div>
-        </div>
-    </div>
     <hr style="border-top: 1px solid #ccc; margin: 2rem 0;">
     <h3>Systeem Leveranciers</h3>
     <p class="text-muted">Sponsoren van e-Chef</p>
@@ -175,6 +131,85 @@
                         <input type="hidden" id="update_existing_hidden" name="update_existing" value="">
                         <button type="submit" class="btn btn-primary">Importeren</button>
                     </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Supplier Modal -->
+    <div class="modal fade" id="addSupplierModal" tabindex="-1" role="dialog" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addSupplierModalLabel">Nieuwe Leverancier Toevoegen</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeAddModal()">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="addSupplierForm" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="form-group">
+                            <label for="naam">Naam</label>
+                            <input type="text" class="form-control" id="naam" name="naam" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="contact">Contactpersoon</label>
+                            <input type="text" class="form-control" id="contact" name="contact">
+                        </div>
+                        <div class="form-group">
+                            <label for="telefoon">Telefoonnummer</label>
+                            <input type="tel" class="form-control" id="telefoon" name="telefoon">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">E-mail</label>
+                            <input type="email" class="form-control" id="email" name="email">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="closeAddModal()">Annuleren</button>
+                    <button type="button" class="btn btn-primary" onclick="submitAddForm()">Leverancier Toevoegen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Edit Supplier Modal -->
+    <div class="modal fade" id="editSupplierModal" tabindex="-1" role="dialog" aria-labelledby="editSupplierModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editSupplierModalLabel">Leverancier Bewerken</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeEditModal()">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="editSupplierForm" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" id="edit_leverancier_id" name="leverancier_id">
+                        <div class="form-group">
+                            <label for="edit_naam">Naam</label>
+                            <input type="text" class="form-control" id="edit_naam" name="naam" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_contact">Contactpersoon</label>
+                            <input type="text" class="form-control" id="edit_contact" name="contact">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_telefoon">Telefoonnummer</label>
+                            <input type="tel" class="form-control" id="edit_telefoon" name="telefoon">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_email">E-mail</label>
+                            <input type="email" class="form-control" id="edit_email" name="email">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="closeEditModal()">Annuleren</button>
+                    <button type="button" class="btn btn-primary" onclick="submitEditForm()">Wijzigingen Opslaan</button>
                 </div>
             </div>
         </div>
@@ -498,6 +533,17 @@
             max-width: none;
         }
     }
+
+    /* Add button styling */
+    .btn-add {
+        background: linear-gradient(145deg, var(--kitchen-success), var(--kitchen-dark));
+        color: var(--text-light);
+    }
+
+    .btn-add:hover {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-success));
+        transform: translateY(-1px);
+    }
 </style>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -633,5 +679,83 @@ document.addEventListener('DOMContentLoaded', function() {
 function closeImportModal() {
     $('#importIngredientsModal').modal('hide');
 }
+
+// Add these functions for the new supplier modal
+function openAddModal() {
+    $('#addSupplierModal').modal('show');
+}
+
+function closeAddModal() {
+    $('#addSupplierModal').modal('hide');
+}
+
+function submitAddForm() {
+    document.getElementById('addSupplierForm').submit();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Add keyboard event handler for ESC key for the add supplier modal
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeAddModal();
+            // Don't remove existing closeImportModal() if it exists
+        }
+    });
+});
+
+// Add or update these functions for the edit supplier modal
+function openEditModal(leverancierId, naam, contact, telefoon, email) {
+    document.getElementById('edit_leverancier_id').value = leverancierId;
+    document.getElementById('edit_naam').value = naam;
+    document.getElementById('edit_contact').value = contact || '';
+    document.getElementById('edit_telefoon').value = telefoon || '';
+    document.getElementById('edit_email').value = email || '';
+    $('#editSupplierModal').modal('show');
+}
+
+function closeEditModal() {
+    $('#editSupplierModal').modal('hide');
+}
+
+function submitEditForm() {
+    const leverancierId = document.getElementById('edit_leverancier_id').value;
+    const form = document.getElementById('editSupplierForm');
+
+    fetch(`/dashboard/{{ session.get('chef_naam') }}/suppliers/${leverancierId}/edit`, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Er is een fout opgetreden bij het bewerken van de leverancier.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Er is een fout opgetreden bij het bewerken van de leverancier.');
+    });
+
+    closeEditModal();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // ...existing code...
+    
+    // Add keyboard event handler for ESC key for the edit supplier modal too
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeAddModal();
+            closeEditModal();
+            closeImportModal(); // If this already exists
+        }
+    });
+});
 </script>
 {% endblock %}
