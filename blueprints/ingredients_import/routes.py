@@ -429,7 +429,7 @@ def process_csv(csv_stream, chef_id, default_supplier=None, update_existing=Fals
                     skipped_count += 1
                     continue
             else:
-                # Add new ingredient (existing code)
+                # Add new ingredient 
                 # Extract remaining fields with fallbacks
                 categorie = get_field_value(row, ["categorie", "category"], "Overig")
                 eenheid = get_field_value(row, ["eenheid", "unit"], "stuk")
@@ -469,11 +469,12 @@ def process_csv(csv_stream, chef_id, default_supplier=None, update_existing=Fals
                 elif default_supplier:
                     leverancier_id = default_supplier['leverancier_id']
                 
-                # Get or create category (only if the column exists)
+                # Always handle category - create it if it doesn't exist
                 categorie_id = None
                 if has_categorie_id:
+                    # Get or create category ID
                     categorie_id = get_or_create_category(cur, chef_id, categorie)
-                    
+                
                 # Get or create unit (only if the column exists)
                 eenheid_id = None
                 if has_eenheid_id:
@@ -487,6 +488,10 @@ def process_csv(csv_stream, chef_id, default_supplier=None, update_existing=Fals
                 if leverancier_id is not None:
                     columns.append('leverancier_id')
                     values.append(leverancier_id)
+                
+                # Always include the categorie field
+                columns.append('categorie')
+                values.append(categorie)
                 
                 # Only include the eenheid field if it exists in the schema
                 if has_eenheid:
@@ -522,14 +527,14 @@ def process_csv(csv_stream, chef_id, default_supplier=None, update_existing=Fals
                     # Special handling for MySQL errors
                     logger.error(f"SQL error: {str(sql_error)}")
                     
-                    # If it's an unknown column error, try a minimal insert
+                    # If it's an unknown column error, try a minimal insert with just the name, price and category
                     if "Unknown column" in str(sql_error):
                         try:
-                            logger.info("Retrying with minimal fields")
+                            logger.info("Retrying with minimal fields plus category")
                             cur.execute("""
-                                INSERT INTO ingredients (naam, prijs_per_eenheid, chef_id)
-                                VALUES (%s, %s, %s)
-                            """, (naam, prijs, chef_id))
+                                INSERT INTO ingredients (naam, prijs_per_eenheid, categorie, chef_id)
+                                VALUES (%s, %s, %s, %s)
+                            """, (naam, prijs, categorie, chef_id))
                             imported_count += 1
                             logger.info(f"Successfully imported with minimal fields: {naam}")
                         except Exception as minimal_error:
@@ -542,7 +547,6 @@ def process_csv(csv_stream, chef_id, default_supplier=None, update_existing=Fals
                 except Exception as e:
                     logger.error(f"Error inserting ingredient '{naam}': {str(e)}")
                     skipped_count += 1
-            # ...existing code for handling existing ingredients...
 
         conn.commit()
         
@@ -580,6 +584,9 @@ def get_field_value(row, field_options, default=None):
 
 def get_or_create_category(cursor, chef_id, category_name):
     """Get existing category ID or create a new one"""
+    if not category_name:
+        category_name = "Overig"  # Default category if none provided
+        
     # Check if category exists
     cursor.execute("""
         SELECT categorie_id FROM categorieen 
@@ -591,11 +598,17 @@ def get_or_create_category(cursor, chef_id, category_name):
         return category['categorie_id']
     
     # Create new category
-    cursor.execute("""
-        INSERT INTO categorieen (naam, chef_id) 
-        VALUES (%s, %s)
-    """, (category_name, chef_id))
-    return cursor.lastrowid
+    try:
+        cursor.execute("""
+            INSERT INTO categorieen (naam, chef_id) 
+            VALUES (%s, %s)
+        """, (category_name, chef_id))
+        logger.info(f"Created new category: {category_name}")
+        return cursor.lastrowid
+    except Exception as e:
+        logger.error(f"Error creating category '{category_name}': {str(e)}")
+        # Return None on error, allowing the code to continue without a categorie_id
+        return None
 
 def get_or_create_unit(cursor, chef_id, unit_name):
     """Get existing unit ID or create a new one"""

@@ -209,6 +209,139 @@ h2, h3, p {
     color: var(--text-light);
 }
 
+#ingredient_search {
+    margin-bottom: 10px;
+    background-color: var(--kitchen-dark);
+    color: var(--text-light);
+    border: 1px solid var(--kitchen-steel);
+    border-radius: 4px;
+    padding: 8px 12px;
+}
+
+#ingredient_search:focus {
+    border-color: var(--kitchen-highlight);
+    box-shadow: 0 0 0 0.2rem rgba(var(--kitchen-highlight-rgb), 0.25);
+}
+
+.no-results {
+    font-style: italic;
+    color: #dc3545;
+}
+
+/* Enhanced Search Styling */
+.search-container {
+    position: relative;
+    margin-bottom: 15px;
+    width: 100%;
+}
+
+/* Larger search field on desktop */
+.form-group-search {
+    max-width: 100%; /* Override the default max-width limit */
+}
+
+#ingredient_search {
+    width: 100%;
+    padding: 12px 20px 12px 40px; /* Extra padding-left for the icon */
+    margin-bottom: 15px;
+    background-color: var(--kitchen-dark);
+    color: var(--text-light);
+    border: 1.5px solid var(--kitchen-steel);
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+}
+
+.search-container::before {
+    content: "\f002"; /* Font Awesome search icon */
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--kitchen-steel);
+    font-size: 16px;
+    pointer-events: none; /* So it doesn't interfere with clicking the input */
+    z-index: 5;
+    transition: color 0.3s ease;
+}
+
+.search-container:focus-within::before {
+    color: var(--kitchen-highlight);
+}
+
+#ingredient_search:hover {
+    border-color: var(--kitchen-highlight);
+    background-color: rgba(var(--kitchen-dark-rgb, 0, 0, 0), 0.8);
+}
+
+#ingredient_search:focus {
+    outline: none;
+    border-color: var(--kitchen-highlight);
+    box-shadow: 0 0 0 3px rgba(var(--kitchen-highlight-rgb, 0, 123, 255), 0.25);
+    background-color: rgba(var(--kitchen-dark-rgb, 0, 0, 0), 0.9);
+}
+
+/* Enhanced Dropdown Styling */
+#ingredient_id {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+#ingredient_id option {
+    background-color: var(--kitchen-dark);
+    color: var(--text-light);
+    padding: 8px 12px;
+}
+
+.no-results {
+    font-style: italic;
+    color: #dc3545;
+    padding: 10px;
+    text-align: center;
+    background-color: rgba(220, 53, 69, 0.1);
+    border-radius: 4px;
+}
+
+/* Responsive adjustments */
+@media (min-width: 992px) {
+    /* Larger search field on desktop */
+    .form-group-search {
+        width: 100%; 
+    }
+    
+    .search-container {
+        max-width: 100%;
+    }
+    
+    #ingredient_search {
+        font-size: 1.1rem;
+        height: 50px;
+    }
+    
+    .search-container::before {
+        font-size: 18px;
+        left: 18px;
+    }
+}
+
+@media (max-width: 768px) {
+    .search-container {
+        margin-bottom: 10px;
+    }
+    
+    #ingredient_search {
+        padding: 10px 15px 10px 35px;
+        font-size: 0.9rem;
+    }
+    
+    .search-container::before {
+        left: 12px;
+        font-size: 14px;
+    }
+}
+
 </style>
 
 <div class="edit-dish-form">
@@ -233,10 +366,19 @@ h2, h3, p {
                 {% endfor %}
             </select>
             
+            <div class="form-group form-group-search">
+                <label for="ingredient_search">Zoek Ingrediënt:</label>
+                <div class="search-container">
+                    <input type="text" id="ingredient_search" class="form-control" 
+                           placeholder="Begin met typen om te zoeken..." 
+                           autocomplete="off">
+                </div>
+            </div>
+            
             <select id="ingredient_id" name="ingredient_id" class="form-control" required>
                 <option value="" disabled selected>Selecteer Ingrediënt</option>
                 {% for ingr in alle_ingredienten %}
-                <option value="{{ ingr.ingredient_id }}" data-category="{{ ingr.categorie }}">
+                <option value="{{ ingr.ingredient_id }}" data-category="{{ ingr.categorie }}" data-search="{{ ingr.naam.lower() }} {{ ingr.categorie.lower() }}">
                     {{ ingr.naam }} ({{ ingr.eenheid }}) - €{{ ingr.prijs_per_eenheid }} per {{ ingr.eenheid }}
                 </option>
                 {% endfor %}
@@ -429,6 +571,86 @@ function showMessage(message, type) {
     
     setTimeout(() => alert.remove(), 3000);
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Get the search input and ingredient dropdown
+    const searchInput = document.getElementById('ingredient_search');
+    const ingredientDropdown = document.getElementById('ingredient_id');
+    const allOptions = Array.from(ingredientDropdown.options);
+    
+    // Skip the first option (the placeholder)
+    const ingredientOptions = allOptions.slice(1);
+    
+    // Add event listener for the search input
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        
+        // Show/hide options based on search term
+        let matchFound = false;
+        
+        ingredientOptions.forEach(option => {
+            const searchData = option.getAttribute('data-search');
+            const matches = searchData && searchData.includes(searchTerm);
+            
+            // Use the hidden attribute to hide/show options
+            option.hidden = !matches;
+            
+            if (matches) {
+                matchFound = true;
+            }
+        });
+        
+        // If no matches are found, display a message
+        if (!matchFound && searchTerm !== '') {
+            // Check if we already have a "no results" option
+            let noResultsOption = ingredientDropdown.querySelector('.no-results');
+            
+            if (!noResultsOption) {
+                // Create a disabled "no results" option
+                noResultsOption = document.createElement('option');
+                noResultsOption.textContent = 'Geen ingrediënten gevonden';
+                noResultsOption.disabled = true;
+                noResultsOption.className = 'no-results';
+                ingredientDropdown.appendChild(noResultsOption);
+            }
+            
+            // Show the "no results" option
+            noResultsOption.hidden = false;
+        } else {
+            // Hide the "no results" option if it exists
+            const noResultsOption = ingredientDropdown.querySelector('.no-results');
+            if (noResultsOption) {
+                noResultsOption.hidden = true;
+            }
+        }
+        
+        // If search is cleared, reset the dropdown
+        if (searchTerm === '') {
+            ingredientOptions.forEach(option => {
+                option.hidden = false;
+            });
+            
+            // Select the first option (placeholder)
+            ingredientDropdown.selectedIndex = 0;
+        }
+    });
+    
+    // When an ingredient is selected, clear the search
+    ingredientDropdown.addEventListener('change', function() {
+        searchInput.value = '';
+        
+        // Make all options visible again
+        ingredientOptions.forEach(option => {
+            option.hidden = false;
+        });
+        
+        // Hide the "no results" option if it exists
+        const noResultsOption = ingredientDropdown.querySelector('.no-results');
+        if (noResultsOption) {
+            noResultsOption.hidden = true;
+        }
+    });
+});
 </script>
 
 {% endblock %}
