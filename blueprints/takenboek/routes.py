@@ -1,10 +1,13 @@
 import re
 from flask import (
     render_template, redirect, url_for, flash, request, 
-    session, jsonify, current_app
+    session, jsonify, current_app, send_file
 )
 from . import bp
 from utils.db import get_db_connection
+import io
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 import logging
 
 # Set up logging
@@ -494,3 +497,95 @@ def delete_trigger(template_id):
         conn.close()
     
     return redirect(url_for('takenboek.admin_task_trigger'))
+
+@bp.route('/dashboard/<chef_naam>/takenboek/export', methods=['POST'])
+@login_required
+def export_tasks(chef_naam):
+    """Export tasks to Word document"""
+    if session['chef_naam'] != chef_naam:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('auth.login'))
+    
+    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('login'))
+    
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('takenboek.index', chef_naam=chef_naam))
+    
+    cur = conn.cursor(dictionary=True)
+    
+    try:
+        # Get all tasks for this chef - Fix the table name here
+        cur.execute("""
+            SELECT * FROM student_tasks
+            WHERE chef_id = %s
+            ORDER BY blok, onderdeel, techniek
+        """, (session['chef_id'],))
+        tasks = cur.fetchall()
+        
+        if not tasks:
+            flash("Er zijn geen taken om te exporteren.", "warning")
+            return redirect(url_for('takenboek.index', chef_naam=chef_naam))
+        
+        # Create Word document
+        doc = Document()
+        doc.add_heading(f'Takenboek - {chef_naam}', 0)
+        
+        # Add table with tasks
+        table = doc.add_table(rows=1, cols=5)
+        table.style = 'Table Grid'
+        
+        # Add headers
+        header_cells = table.rows[0].cells
+        header_cells[0].text = "Blok"
+        header_cells[1].text = "Onderdeel"
+        header_cells[2].text = "Techniek"
+        header_cells[3].text = "Taak"
+        header_cells[4].text = "Uitgevoerd op"
+        
+        # Make header bold
+        for cell in header_cells:
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                    run.bold = True
+        
+        # Add tasks to table
+        for task in tasks:
+            row_cells = table.add_row().cells
+            row_cells[0].text = task['blok']
+            row_cells[1].text = task['onderdeel']
+            row_cells[2].text = task['techniek']
+            row_cells[3].text = task['taak']
+            row_cells[4].text = task['uitgevoerd_op'].strftime('%d-%m-%Y') if task['uitgevoerd_op'] else '-'
+            
+            # Add comments if available
+            if task['opmerkingen']:
+                if task['opmerkingen'].strip():
+                    comment_row = table.add_row().cells
+                    comment_row[0].merge(comment_row[4])
+                    comment_row[0].text = f"Opmerkingen: {task['opmerkingen']}"
+        
+        # Create in-memory file
+        buffer = io.BytesIO()
+        doc.save(buffer)
+        buffer.seek(0)
+        
+        # Send file to user
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name='takenboek.docx',
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+        
+    except Exception as e:
+        logger.error(f'Error exporting tasks: {str(e)}')
+        flash(f"Er is een fout opgetreden bij het exporteren: {str(e)}", "danger")
+        return redirect(url_for('takenboek.index', chef_naam=chef_naam))
+    
+    finally:
+        cur.close()
+        conn.close()

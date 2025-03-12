@@ -344,16 +344,26 @@
             const searchTerm = searchInput.value.toLowerCase();
             const category = categoryFilter.value;
 
+            // Skip the header row (i=0)
             for (let i = 1; i < rows.length; i++) {
                 const row = rows[i];
                 const cells = row.getElementsByTagName('td');
-                const name = cells[0].textContent.toLowerCase();
+                
+                // Get ingredient name from input field (first column)
+                const nameInput = cells[0].querySelector('input[name="naam"]');
+                const name = nameInput ? nameInput.value.toLowerCase() : '';
+                
+                // Get category from select dropdown (second column)
                 const categoryCell = cells[1].querySelector('select');
                 const rowCategory = categoryCell ? categoryCell.value : '';
 
+                // Match by ingredient name (contains search term)
                 const matchesSearch = name.includes(searchTerm);
+                
+                // Match by category (exact match or no filter selected)
                 const matchesCategory = !category || rowCategory.toLowerCase() === category.toLowerCase();
 
+                // Show row only if both conditions are met
                 row.style.display = (matchesSearch && matchesCategory) ? '' : 'none';
             }
         }
@@ -361,11 +371,16 @@
         // Categoriefilter zonder automatische zoekveld invulling
         categoryFilter.addEventListener('change', filterTable);
 
-        // Zoeken op tekst
+        // Zoeken op tekst - use input event for immediate filtering
         searchInput.addEventListener('input', filterTable);
 
         // Pas filter direct toe bij laden van de pagina
         filterTable();
+        
+        // Add focus effect for better UX
+        searchInput.addEventListener('focus', function() {
+            this.select(); // Select all text when focusing
+        });
     });
 
     // Global save function

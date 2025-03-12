@@ -19,20 +19,28 @@
         </div>
     </div>
     {% else %}
-    <div class="mb-4">
+    <div class="mb-4 d-flex justify-content-between align-items-center">
         <a href="{{ url_for('takenboek.add_task', chef_naam=chef_naam) }}" class="btn btn-primary">
             <i class="fas fa-plus"></i> Nieuwe taak toevoegen
         </a>
+        
+        <!-- Export to Word Button -->
+        <form method="POST" action="{{ url_for('takenboek.export_tasks', chef_naam=chef_naam) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-info">
+                <i class="fas fa-file-word"></i> Exporteren naar Word
+            </button>
+        </form>
     </div>
     
     <div class="table-responsive">
         <table class="table dish-table">
             <thead>
                 <tr>
-                    <th>#</th>
+                    <th class="d-none d-md-table-cell">#</th>
                     <th>Blok</th>
                     <th>Onderdeel</th>
-                    <th>Techniek</th>
+                    <th class="d-none d-md-table-cell">Techniek</th>
                     <th>Taak</th>
                     <th>Uitgevoerd op</th>
                     <th class="col-actions">Acties</th>
@@ -41,21 +49,21 @@
             <tbody>
                 {% for task in tasks %}
                 <tr>
-                    <td>{{ loop.index }}</td>
+                    <td class="d-none d-md-table-cell">{{ loop.index }}</td>
                     <td>{{ task.blok }}</td>
                     <td>{{ task.onderdeel }}</td>
-                    <td>{{ task.techniek }}</td>
+                    <td class="d-none d-md-table-cell">{{ task.techniek }}</td>
                     <td>{{ task.taak }}</td>
                     <td>{{ task.uitgevoerd_op|default('-', true) }}</td>
                     <td>
-                        <div class="dish-actions">
-                            <a href="{{ url_for('takenboek.edit_task', chef_naam=chef_naam, task_id=task.task_id) }}" class="btn-action btn-edit">
-                                <i class="fas fa-edit"></i> Bewerken
+                        <div class="task-actions">
+                            <a href="{{ url_for('takenboek.edit_task', chef_naam=chef_naam, task_id=task.task_id) }}" class="btn-action btn-edit btn-sm">
+                                <i class="fas fa-edit"></i><span class="d-none d-md-inline"> Bewerken</span>
                             </a>
                             <form method="POST" action="{{ url_for('takenboek.delete_task', chef_naam=chef_naam, task_id=task.task_id) }}" style="display:inline;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn-action btn-delete" onclick="return confirm('Weet je zeker dat je deze taak wilt verwijderen?')">
-                                    <i class="fas fa-trash"></i> Verwijderen
+                                <button type="submit" class="btn-action btn-delete btn-sm" onclick="return confirm('Weet je zeker dat je deze taak wilt verwijderen?')">
+                                    <i class="fas fa-trash"></i><span class="d-none d-md-inline"> Verwijderen</span>
                                 </button>
                             </form>
                         </div>
@@ -67,4 +75,30 @@
     </div>
     {% endif %}
 </div>
+
+<style>
+    /* Mobile optimizations for takenboek */
+    @media (max-width: 767px) {
+        .task-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .table th, .table td {
+            padding: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .dish-table {
+            min-width: 100%;
+            width: 100%;
+        }
+    }
+</style>
 {% endblock %}

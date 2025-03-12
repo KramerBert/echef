@@ -592,8 +592,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const searchData = option.getAttribute('data-search');
             const matches = searchData && searchData.includes(searchTerm);
             
-            // Use the hidden attribute to hide/show options
-            option.hidden = !matches;
+            // Use style.display instead of hidden attribute for better browser compatibility
+            option.style.display = matches ? '' : 'none';
             
             if (matches) {
                 matchFound = true;
@@ -615,19 +615,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Show the "no results" option
-            noResultsOption.hidden = false;
+            noResultsOption.style.display = '';
         } else {
             // Hide the "no results" option if it exists
             const noResultsOption = ingredientDropdown.querySelector('.no-results');
             if (noResultsOption) {
-                noResultsOption.hidden = true;
+                noResultsOption.style.display = 'none';
             }
         }
         
         // If search is cleared, reset the dropdown
         if (searchTerm === '') {
             ingredientOptions.forEach(option => {
-                option.hidden = false;
+                option.style.display = '';
             });
             
             // Select the first option (placeholder)
@@ -641,14 +641,19 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Make all options visible again
         ingredientOptions.forEach(option => {
-            option.hidden = false;
+            option.style.display = '';
         });
         
         // Hide the "no results" option if it exists
         const noResultsOption = ingredientDropdown.querySelector('.no-results');
         if (noResultsOption) {
-            noResultsOption.hidden = true;
+            noResultsOption.style.display = 'none';
         }
+    });
+    
+    // Add focus effect for better UX
+    searchInput.addEventListener('focus', function() {
+        this.select(); // Select all text when focusing
     });
 });
 </script>

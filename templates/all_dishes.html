@@ -68,8 +68,8 @@
                     </td>
                     <td>€ {{ '%.2f'|format(gerecht.totaal_ingredient_prijs|float) if gerecht.totaal_ingredient_prijs else '0.00' }}</td>
                     <td class="no-print">
-                        <a href="{{ url_for('manage_dish_costs', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" class="btn-action">
-                            <i class="fas fa-calculator"></i>
+                        <a href="{{ url_for('manage_dish_costs', chef_naam=session.get('chef_naam'), dish_id=gerecht.dish_id) }}" class="btn-action btn-sm">
+                            <i class="fas fa-calculator"></i> Kostprijs
                         </a>
                     </td>
                     <td class="no-print">

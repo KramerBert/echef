@@ -64,6 +64,11 @@
     <a href="{{ url_for('all_dishes') }}" class="btn-action">
         <i class="fas fa-list"></i> Terug naar overzicht gerechten
     </a>
+    
+    <!-- New Costs Management Button - Shows only when a dish is created -->
+    <a href="{{ url_for('all_dishes') }}?show_costs=true" class="btn-action" style="margin-left: 10px;">
+        <i class="fas fa-calculator"></i> Naar kostprijsberekening
+    </a>
 </div>
 
 <script>
