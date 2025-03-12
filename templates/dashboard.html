@@ -35,6 +35,9 @@
                 <a href="{{ url_for('inventory.list_reports', chef_naam=chef_naam) }}" class="dashboard-btn">
                     <i class="fas fa-clipboard-list"></i> Voorraadrapporten
                 </a>
+                <a href="{{ url_for('takenboek', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Student Task Book">
+                    <i class="fas fa-tasks icon-tasks"></i> Takenboek Leerling
+                </a>
             </div>
         </div>
     </div>
@@ -165,6 +168,7 @@
     .dashboard-btn i.icon-settings { color: #95A5A6; }       /* Grijs voor instellingen */
     .dashboard-btn i.icon-suppliers { color: #1ABC9C; }      /* Turquoise voor leveranciers */
     .dashboard-btn i.icon-docs { color: #34495E; }           /* Donkerblauw voor documentatie */
+    .dashboard-btn i.icon-tasks { color: #FF5733; }          /* Oranje voor takenboek */
 
     /* Behoud de hover effect voor alle icoontjes */
     .dashboard-btn:hover i {

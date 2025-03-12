@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Taak Bewerken - E-chef{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <h1>Taak Bewerken</h1>
+            <p>Bewerk een bestaande taak in je takenboek of markeer als uitgevoerd.</p>
+            
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('edit_task', chef_naam=chef_naam, task_id=task.task_id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="form-group mb-3">
+                            <label for="blok">Blok</label>
+                            <input type="text" class="form-control" id="blok" name="blok" 
+                                   value="{{ task.blok }}" required>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="onderdeel">Onderdeel</label>
+                            <input type="text" class="form-control" id="onderdeel" name="onderdeel" 
+                                   value="{{ task.onderdeel }}" required>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="techniek">Techniek</label>
+                            <input type="text" class="form-control" id="techniek" name="techniek" 
+                                   value="{{ task.techniek }}" required>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="taak">Taak</label>
+                            <input type="text" class="form-control" id="taak" name="taak" 
+                                   value="{{ task.taak }}" required>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="uitgevoerd_op">Uitgevoerd op</label>
+                            <input type="date" class="form-control" id="uitgevoerd_op" name="uitgevoerd_op" 
+                                   value="{{ task.uitgevoerd_op }}">
+                            <small class="form-text text-muted">Laat leeg als de taak nog niet is uitgevoerd.</small>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="opmerkingen">Opmerkingen</label>
+                            <textarea class="form-control" id="opmerkingen" name="opmerkingen" 
+                                      rows="3">{{ task.opmerkingen }}</textarea>
+                        </div>
+                        
+                        <div class="form-group mt-4">
+                            <button type="submit" class="btn btn-primary">Taak Bijwerken</button>
+                            <a href="{{ url_for('takenboek', chef_naam=chef_naam) }}" class="btn btn-secondary ms-2">Annuleren</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

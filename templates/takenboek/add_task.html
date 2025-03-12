@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Nieuwe Taak Toevoegen - E-chef{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <h1>Nieuwe Taak Toevoegen</h1>
+            <p>Voeg een nieuwe taak toe aan je takenboek.</p>
+            
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('add_task', chef_naam=chef_naam) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="form-group mb-3">
+                            <label for="blok">Blok</label>
+                            <input type="text" class="form-control" id="blok" name="blok" 
+                                   placeholder="Bijv. Leerjaar 1 P1" required>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="onderdeel">Onderdeel</label>
+                            <input type="text" class="form-control" id="onderdeel" name="onderdeel" 
+                                   placeholder="Bijv. Basis vaardigheden" required>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="techniek">Techniek</label>
+                            <input type="text" class="form-control" id="techniek" name="techniek" 
+                                   placeholder="Bijv. Kooktechniek of Keukentechniek" required>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="taak">Taak</label>
+                            <input type="text" class="form-control" id="taak" name="taak" 
+                                   placeholder="Beschrijving van de taak" required>
+                        </div>
+                        
+                        <div class="form-group mt-4">
+                            <button type="submit" class="btn btn-primary">Taak Toevoegen</button>
+                            <a href="{{ url_for('takenboek', chef_naam=chef_naam) }}" class="btn btn-secondary ms-2">Annuleren</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

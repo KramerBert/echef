@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Pacifico&family=Roboto&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap');
 @import url('/static/css/buttons.css');
 
 /* Reset for better responsive behavior */
@@ -9,22 +9,38 @@
 }
 
 :root {
-    /* Hoofdkleuren */
-    --kitchen-steel: #D8E1E7;
-    --kitchen-dark: #2C3E50;
-    --kitchen-black: #1A1A1A;
-    --kitchen-blue: #34495E;
+    /* Professional Color Palette */
+    --kitchen-steel: #EEF2F7;
+    --kitchen-dark: #1E2A38;
+    --kitchen-black: #121820;
+    --kitchen-blue: #2C3E50;
     --kitchen-highlight: #3498DB;
-    --kitchen-success: #27AE60;
-    --kitchen-warning: #E67E22;
+    --kitchen-success: #2ECC71;
+    --kitchen-warning: #F39C12;
     --kitchen-danger: #E74C3C;
-    --text-light: #ffffff; /* Adjusted for better readability */
+    --text-light: #F8F9FA;
     --text-dark: #2C3E50;
     --text-muted: #95A5A6;
-    --focus-bg-color: #444;
+    --focus-bg-color: #2C3E50;
     --focus-text-color: #fff;
-    --border-color: #ccc;
-    --table-header-bg: #f8f9fa;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --table-header-bg: #2C3E50;
+    
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+    
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
+    
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-full: 9999px;
 }
 
 body {
@@ -33,10 +49,11 @@ body {
     align-items: flex-start;
     min-height: 100vh;
     margin: 0;
-    font-family: 'Roboto', Arial, sans-serif;
+    font-family: 'Poppins', Arial, sans-serif;
     background-color: var(--kitchen-black);
     color: var(--text-light);
     overflow-x: hidden;
+    line-height: 1.6;
 }
 
 .container {
@@ -44,8 +61,10 @@ body {
     width: 100%;
     max-width: 1400px;
     margin: 0 auto;
-    padding: 1rem;
+    padding: 1.5rem;
     background-color: var(--kitchen-dark);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
 }
 
 /* Content alignment fixes */
@@ -60,56 +79,107 @@ form,
     margin-right: auto;
 }
 
-.table-responsive {
-    max-width: 1200px;
-    margin-left: 0;
-    margin-right: auto;
-    overflow-x: auto;
+/* Typography Improvements */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    line-height: 1.3;
 }
 
+h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1.5rem;
+    font-weight: 700;
+}
+
+h2 {
+    font-size: 2rem;
+    color: var(--text-light);
+    border-bottom: 2px solid var(--kitchen-highlight);
+    padding-bottom: 0.5rem;
+    margin-top: 2rem;
+}
+
+h3 {
+    font-size: 1.5rem;
+    color: var(--kitchen-highlight);
+}
+
+p {
+    margin-bottom: 1.2rem;
+    color: var(--text-light);
+    max-width: 800px;
+}
+
+a {
+    color: var(--kitchen-highlight);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+a:hover {
+    color: var(--text-light);
+    text-decoration: none;
+}
+
+/* Navigation Improvements */
 nav ul {
     display: flex;
     list-style: none;
     padding: 0;
-}
-
-nav ul li {
-    margin-right: 15px;
+    gap: 1rem;
 }
 
 nav ul li a button {
-    padding: 10px 20px;
+    padding: 0.75rem 1.5rem;
     border: none;
-    background-color: #007bff;
+    background-color: var(--kitchen-blue);
     color: white;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    transition: all var(--transition-normal);
+    box-shadow: var(--shadow-sm);
     cursor: pointer;
-    transition: background-color 0.3s ease;
 }
 
 nav ul li a button:hover {
-    background-color: #0056b3;
+    background-color: var(--kitchen-highlight);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
 nav ul li a button.active {
-    background-color: #0056b3;
+    background-color: var(--kitchen-highlight);
+    box-shadow: var(--shadow-md);
 }
 
+/* Flash Message Improvements */
 .flash-message {
-    border: 1px solid #ccc;
-    padding: 5px;
-    margin-bottom: 5px;
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--kitchen-highlight);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: var(--radius-md);
+    background-color: rgba(52, 152, 219, 0.1);
+    box-shadow: var(--shadow-sm);
     animation: slideDown 0.5s ease-in-out;
 }
 
+/* Footer Improvements */
 footer {
-    margin-top: 30px;
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 0.9rem;
 }
 
+/* Animations */
 @keyframes fadeIn {
     from {
         opacity: 0;
     }
-
     to {
         opacity: 1;
     }
@@ -120,51 +190,98 @@ footer {
         transform: translateY(-20px);
         opacity: 0;
     }
-
     to {
         transform: translateY(0);
         opacity: 1;
     }
 }
 
-/* Table styling */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(52, 152, 219, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(52, 152, 219, 0);
+    }
+}
+
+/* Table Improvements */
 .dish-actions {
     display: flex;
-    gap: 5px;
+    gap: 8px;
     justify-content: flex-start;
     align-items: center;
 }
 
-/* Checkbox styling */
+/* Checkbox Improvements */
 .print-checkbox {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     margin: 0;
     cursor: pointer;
+    accent-color: var(--kitchen-highlight);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
 }
 
-/* Gerechten tabel styling */
-.dish-table {
+/* Table Styling Improvements */
+.dish-table, 
+.ingredient-table, 
+.suppliers-table,
+.menu-export-table {
     width: 100%;
-    margin-bottom: 20px;
-    background-color: var(--kitchen-dark);
-    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+    background-color: rgba(30, 42, 56, 0.8);
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
 }
 
-.dish-table th {
+.dish-table th,
+.ingredient-table th,
+.suppliers-table th,
+.menu-export-table th {
     background-color: var(--kitchen-blue);
     color: var(--text-light);
-    padding: 10px;
+    padding: 1rem;
     text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--kitchen-highlight);
 }
 
-.dish-table td {
-    padding: 8px;
+.dish-table td,
+.ingredient-table td,
+.suppliers-table td,
+.menu-export-table td {
+    padding: 1rem;
     vertical-align: middle;
-    border: 1px solid #586e75;
+    border-bottom: 1px solid rgba(88, 110, 117, 0.3);
+    transition: background-color var(--transition-fast);
 }
 
-/* Specifieke kolom breedtes */
+.dish-table tr:hover td,
+.ingredient-table tr:hover td,
+.suppliers-table tr:hover td,
+.menu-export-table tr:hover td {
+    background-color: rgba(52, 152, 219, 0.05);
+}
+
+.dish-table tr:last-child td,
+.ingredient-table tr:last-child td,
+.suppliers-table tr:last-child td,
+.menu-export-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Specific column widths */
 .col-actions {
     width: 250px;
     text-align: center;
@@ -180,29 +297,39 @@ footer {
 }
 
 .col-amount input {
-    width: 20px !important;
-    padding: 2px;
+    width: 60px;
+    padding: 0.5rem;
     text-align: center;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background-color: var(--kitchen-dark);
+    color: var(--text-light);
 }
 
-/* Edit Dish Styling */
-.edit-dish-form {
+/* Edit Forms Improvements */
+.edit-dish-form,
+.create-dish-form,
+.supplier-form {
     max-width: 1200px;
-    margin: 0 auto;
+    margin: 0 auto 2rem;
 }
 
 .edit-section {
     margin-bottom: 2rem;
     padding: 1.5rem;
-    background-color: var(--kitchen-dark); /* Verander van #073642 naar de variabele */
-    border-radius: 4px;
+    background-color: rgba(30, 42, 56, 0.8);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
 }
 
 .edit-section h3 {
-    color: var(--text-light);
-    margin-bottom: 1rem;
+    color: var(--kitchen-highlight);
+    margin-bottom: 1.5rem;
+    font-weight: 600;
 }
 
+/* Ingredient Form Improvements */
 .ingredient-form {
     display: flex;
     flex-wrap: wrap;
@@ -210,186 +337,350 @@ footer {
     align-items: center;
     margin-bottom: 1.5rem;
     width: 100%;
+    background-color: rgba(18, 24, 32, 0.4);
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
 }
 
 .ingredient-form select,
 .ingredient-form input {
     width: 100%;
     min-width: 0;
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background-color: var(--kitchen-dark);
+    color: var(--text-light);
+    transition: all var(--transition-fast);
+}
+
+.ingredient-form select:focus,
+.ingredient-form input:focus {
+    border-color: var(--kitchen-highlight);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.25);
 }
 
 .ingredient-form .btn-action {
     white-space: nowrap;
-    height: 38px;
+    height: 42px;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0 1.5rem;
+    border-radius: var(--radius-md);
+    background-color: var(--kitchen-highlight);
+    color: white;
+    font-weight: 500;
+    transition: all var(--transition-normal);
+    border: none;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
 }
 
-/* Responsive aanpassingen */
-@media (max-width: 768px) {
-    .ingredient-form {
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
-    }
-
-    .ingredient-form .btn-action {
-        margin-top: 1rem;
-        margin-bottom: 0;
-        width: 100%;
-    }
-
-    .ingredient-form input[type="number"] {
-        min-width: 0;
-    }
-
-    /* Add-ingredient-form specific styles */
-    .add-ingredient-form .form-group {
-        width: 100%;
-        margin-bottom: 10px;
-    }
-
-    .add-ingredient-form .form-control {
-        width: 100%;
-    }
+.ingredient-form .btn-action:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
-.ingredient-form select {
-    flex: 2;
+/* Button Improvements */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    transition: all var(--transition-normal);
+    border: none;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
 }
 
-.ingredient-form select#categorie_filter {
-    flex: 1;
+.btn-primary {
+    background-color: var(--kitchen-highlight);
+    color: white;
 }
 
-.ingredient-form input {
-    /* flex: 0.5; */ /* Comment out flex */
-    max-width: 80px;
+.btn-success {
+    background-color: var(--kitchen-success);
+    color: white;
 }
 
-.ingredient-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 1rem 0;
+.btn-warning {
+    background-color: var(--kitchen-warning);
+    color: white;
 }
 
-.ingredient-table th {
-    background-color: var(--kitchen-dark);
-    color: var(--text-light);
-    padding: 0.75rem;
-    text-align: left;
+.btn-danger {
+    background-color: var(--kitchen-danger);
+    color: white;
 }
 
-.ingredient-table td {
-    padding: 0.5rem;
-    vertical-align: middle;
-    border: 1px solid #586e75;
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
-.ingredient-table input[type="number"] {
-    width: 20px;
-    text-align: center;
-}
-
-.price-section {
-    background-color: var(--kitchen-dark);
-    padding: 1rem;
-    margin: 1rem 0;
-    border-radius: 4px;
-}
-
-.allergeen-icon {
-    font-size: 1.2em;
-    margin-right: 5px;
-}
-
-.allergenen-icons {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 10px;
-}
-
-.allergeen-icon {
+.btn-action {
+    background-color: var(--kitchen-blue);
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    transition: all var(--transition-normal);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2em;
-    height: 2em;
-    border-radius: 50%;
-    background-color: #dc3545;
+    gap: 0.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-action:hover {
+    background-color: var(--kitchen-highlight);
     color: white;
-    font-weight: bold;
-    font-size: 0.8em;
-    margin-right: 0.5em;
-    user-select: none;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
-.allergenen-icons {
+.btn-edit { 
+    background-color: var(--kitchen-blue); 
+}
+
+.btn-export { 
+    background-color: var(--kitchen-success); 
+}
+
+.btn-delete { 
+    background-color: var(--kitchen-danger); 
+}
+
+/* Card Improvements */
+.card {
+    background-color: rgba(30, 42, 56, 0.8);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-normal);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Form Control Improvements */
+.form-control {
+    display: block;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background-color: var(--kitchen-dark);
+    color: var(--text-light);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    background-color: rgba(18, 24, 32, 0.9);
+    border-color: var(--kitchen-highlight);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.25);
+}
+
+.form-control::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+/* Form Group Improvements */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+/* Search Filter Improvements */
+.search-filter {
+    background-color: rgba(30, 42, 56, 0.8);
+    padding: 1.5rem;
+    border-radius: var (--radius-lg);
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5em;
-    margin-top: 0.5em;
-}
-
-.allergeen-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1em;
-    margin-top: 1em;
-    padding: 1em;
-    background-color: #f8f9fa;
-    border-radius: 0.5em;
-}
-
-.allergeen-legend-item {
-    display: flex;
+    gap: 1rem;
     align-items: center;
-    font-size: 0.9em;
 }
 
-/* Dieet iconen styling */
+.search-filter input,
+.search-filter select {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background-color: var(--kitchen-dark);
+    color: var(--text-light);
+    transition: all var(--transition-fast);
+    flex: 1;
+    min-width: 0;
+}
+
+.search-filter input:focus,
+.search-filter select:focus {
+    border-color: var(--kitchen-highlight);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.25);
+}
+
+/* Allergen & Diet Icons Improvements */
+.allergeen-icon,
 .dieet-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2em;
-    height: 2em;
+    width: 2.5em;
+    height: 2.5em;
     border-radius: 50%;
-    background-color: #28a745;
-    /* Groen in plaats van rood voor diëten */
-    color: white;
     font-weight: bold;
     font-size: 0.8em;
-    margin-right: 0.5em;
     user-select: none;
+    transition: all var(--transition-normal);
+    box-shadow: var(--shadow-sm);
 }
 
+.allergeen-icon {
+    background-color: var(--kitchen-danger);
+    color: white;
+}
+
+.dieet-icon {
+    background-color: var(--kitchen-success);
+    color: white;
+}
+
+.allergeen-icon:hover,
+.dieet-icon:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-md);
+}
+
+.allergenen-icons,
 .dieten-icons {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5em;
+    gap: 0.75em;
     margin-top: 0.5em;
 }
 
+.allergeen-legend,
 .dieet-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 1em;
-    margin-top: 1em;
-    padding: 1em;
-    background-color: #f8f9fa;
-    border-radius: 0.5em;
+    gap: 1.5em;
+    margin-top: 1.5em;
+    padding: 1.5em;
+    background-color: rgba(18, 24, 32, 0.4);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
 }
 
+.allergeen-legend-item,
 .dieet-legend-item {
     display: flex;
     align-items: center;
     font-size: 0.9em;
+    background-color: rgba(30, 42, 56, 0.8);
+    padding: 0.75em 1em;
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+}
+
+.allergeen-legend-item:hover,
+.dieet-legend-item:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+    transform: translateY(-2px);
+}
+
+/* Dashboard Improvements */
+.dashboard-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
+    gap: 1.5rem !important;
+    width: 100% !important;
+    margin: 1.5rem 0 !important;
+}
+
+.dashboard-btn-wrapper {
+    margin: 0;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-normal) !important;
+}
+
+.dashboard-btn-wrapper:hover {
+    transform: translateY(-5px) !important;
+    box-shadow: var(--shadow-lg) !important;
+}
+
+.dashboard-btn {
+    background: linear-gradient(135deg, var(--kitchen-blue), var(--kitchen-dark)) !important;
+    border: 1px solid var(--border-color) !important;
+    padding: 2rem !important;
+    min-height: 150px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 1rem !important;
+    transition: all var(--transition-normal) !important;
+    border-radius: var(--radius-lg) !important;
+    text-align: center !important;
+}
+
+.dashboard-btn i {
+    font-size: 2.5em !important;
+    margin-bottom: 1rem !important;
+    transition: transform var(--transition-normal) !important;
+}
+
+.dashboard-btn:hover {
+    background: linear-gradient(135deg, var(--kitchen-highlight), #2980b9) !important;
+}
+
+.dashboard-btn:hover i {
+    transform: scale(1.2) !important;
+}
+
+.dashboard-title {
+    color: var(--text-light);
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    font-weight: 700;
+    position: relative;
+    display: inline-block;
+}
+
+.dashboard-title::after {
+    content: "";
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    width: 100px;
+    height: 4px;
+    background: var(--kitchen-highlight);
+    border-radius: var(--radius-full);
 }
 
 /* Mobile-first responsive design */
-@media screen and (max-width: 768px) {
+@media (max-width: 768px) {
     body {
         padding: 0;
         min-height: auto;
@@ -569,7 +860,7 @@ footer {
 }
 
 /* Additional tablet breakpoint */
-@media screen and (min-width: 769px) and (max-width: 1024px) {
+@media (min-width: 769px) and (max-width: 1024px) {
     .container {
         width: 95%;
         padding: 1rem;
@@ -590,7 +881,7 @@ footer {
 }
 
 /* Tablet and desktop styles */
-@media screen and (min-width: 769px) {
+@media (min-width: 769px) {
     body {
         padding: 1rem;
     }
@@ -605,7 +896,7 @@ footer {
 }
 
 /* Larger screens */
-@media screen and (min-width: 1025px) {
+@media (min-width: 1025px) {
     .container {
         padding: 2rem;
     }
