@@ -33,7 +33,7 @@ def download_template():
         try:
             s3_client = boto3.client(
                 's3',
-                region_name='eu-west-1',
+                region_name='eu-central-1',  # Changed from eu-west-1 to eu-central-1
                 aws_access_key_id=current_app.config.get('S3_KEY'),
                 aws_secret_access_key=current_app.config.get('S3_SECRET')
             )
@@ -186,7 +186,7 @@ def import_from_supplier(supplier_id):
                 # Get file from S3
                 s3_client = boto3.client(
                     's3',
-                    region_name='eu-west-1',
+                    region_name='eu-central-1',  # Changed from eu-west-1 to eu-central-1
                     aws_access_key_id=current_app.config.get('S3_KEY'),
                     aws_secret_access_key=current_app.config.get('S3_SECRET')
                 )
@@ -278,23 +278,53 @@ def process_csv_in_chunks(stream, chef_id, default_supplier=None, update_existin
         'success': False,
         'imported': 0,
         'skipped': 0,
-        'skipped_ingredients': [],  # Add this to track skipped ingredients
+        'skipped_ingredients': [],
         'error': None
     }
     
     try:
         reader = csv.reader(stream)
-        # Skip the header row
+        # Get the header row
         headers = next(reader, None)
         if not headers:
             result['error'] = "CSV-bestand is leeg of heeft geen headers"
             return result
+        
+        # Map column indices dynamically based on headers
+        column_map = {}
+        required_fields = ['ingredient', 'naam', 'name']  # Alternative column names for ingredient
+        
+        # Check for ingredient column
+        for i, header in enumerate(headers):
+            header_lower = header.lower()
             
-        # Validate headers
-        expected_columns = ['naam', 'categorie', 'eenheid', 'prijs']
-        if len(headers) < len(expected_columns):
-            result['error'] = f"CSV-bestand heeft niet alle vereiste kolommen. Verwacht: {', '.join(expected_columns)}"
+            # Map ingredient column
+            if header_lower in ['ingredient', 'naam', 'name']:
+                column_map['naam'] = i
+                
+            # Map category column
+            elif header_lower in ['categorie', 'category']:
+                column_map['categorie'] = i
+                
+            # Map unit column
+            elif header_lower in ['eenheid', 'unit']:
+                column_map['eenheid'] = i
+                
+            # Map price column
+            elif header_lower in ['prijs_per_eenheid', 'prijs', 'price']:
+                column_map['prijs'] = i
+                
+            # Map supplier column
+            elif header_lower in ['leverancier', 'supplier']:
+                column_map['leverancier'] = i
+        
+        # Check if we have the required ingredient column
+        if 'naam' not in column_map:
+            result['error'] = f"CSV-bestand mist een kolom voor ingrediëntnaam (ingredient/naam/name)"
             return result
+        
+        # Log the column mapping for debugging
+        logger.info(f"CSV column mapping: {column_map}")
         
         # Get existing ingredients to avoid duplicates
         conn = get_db_connection()
@@ -330,7 +360,7 @@ def process_csv_in_chunks(stream, chef_id, default_supplier=None, update_existin
                 # Process when we reach chunk_size or end of file
                 if len(rows) >= chunk_size:
                     process_result = process_chunk(rows, chef_id, cur, conn, existing_ingredients, 
-                                                 categories, units, default_supplier, update_existing)
+                                                 categories, units, default_supplier, update_existing, column_map)
                     
                     result['imported'] += process_result['imported']
                     result['skipped'] += process_result['skipped']
@@ -340,7 +370,7 @@ def process_csv_in_chunks(stream, chef_id, default_supplier=None, update_existin
             # Process any remaining rows
             if rows:
                 process_result = process_chunk(rows, chef_id, cur, conn, existing_ingredients, 
-                                             categories, units, default_supplier, update_existing)
+                                             categories, units, default_supplier, update_existing, column_map)
                 
                 result['imported'] += process_result['imported']
                 result['skipped'] += process_result['skipped']
@@ -366,12 +396,12 @@ def process_csv_in_chunks(stream, chef_id, default_supplier=None, update_existin
         
     return result
 
-def process_chunk(rows, chef_id, cur, conn, existing_ingredients, categories, units, default_supplier, update_existing):
+def process_chunk(rows, chef_id, cur, conn, existing_ingredients, categories, units, default_supplier, update_existing, column_map):
     """Process a chunk of CSV rows"""
     result = {'imported': 0, 'skipped': 0, 'skipped_ingredients': []}
     
     for row in rows:
-        if len(row) < 4:  # Ensure we have all required fields
+        if len(row) < 2:  # Ensure we have at least ingredient name
             result['skipped'] += 1
             if len(row) > 0 and row[0]:
                 result['skipped_ingredients'].append({
@@ -379,16 +409,63 @@ def process_chunk(rows, chef_id, cur, conn, existing_ingredients, categories, un
                     'reden': 'Onvolledige gegevens'
                 })
             continue
-            
-        naam = row[0].strip()
-        categorie = row[1].strip() if len(row) > 1 and row[1] else "Overig"
-        eenheid = row[2].strip() if len(row) > 2 and row[2] else "stuk"
         
-        try:
-            prijs = float(row[3].replace(',', '.')) if len(row) > 3 and row[3] else 0.0
-        except ValueError:
-            prijs = 0.0
-            
+        # Extract values using the column map
+        naam = row[column_map.get('naam')].strip() if column_map.get('naam') < len(row) else None
+        
+        if not naam:
+            result['skipped'] += 1
+            continue
+        
+        # Get category with fallback to "Overig"
+        categorie = "Overig"  # Default
+        if 'categorie' in column_map and column_map['categorie'] < len(row):
+            if row[column_map['categorie']]:
+                categorie = row[column_map['categorie']].strip()
+        
+        # Get unit with fallback to "stuk"
+        eenheid = "stuk"  # Default
+        if 'eenheid' in column_map and column_map['eenheid'] < len(row):
+            if row[column_map['eenheid']]:
+                eenheid = row[column_map['eenheid']].strip()
+        
+        # Get price with fallback to 0.0
+        prijs = 0.0  # Default
+        if 'prijs' in column_map and column_map['prijs'] < len(row):
+            if row[column_map['prijs']]:
+                try:
+                    prijs = float(row[column_map['prijs']].replace(',', '.'))
+                except ValueError:
+                    prijs = 0.0
+        
+        # Get supplier name if available
+        leverancier_naam = None
+        leverancier_id = default_supplier['leverancier_id'] if default_supplier else None
+        
+        if 'leverancier' in column_map and column_map['leverancier'] < len(row):
+            if row[column_map['leverancier']]:
+                leverancier_naam = row[column_map['leverancier']].strip()
+                
+                # Try to find the supplier in the database
+                try:
+                    cur.execute("""
+                        SELECT leverancier_id FROM leveranciers 
+                        WHERE LOWER(naam) = LOWER(%s) AND (chef_id = %s OR is_admin_created = TRUE)
+                    """, (leverancier_naam, chef_id))
+                    supplier_row = cur.fetchone()
+                    
+                    if supplier_row:
+                        leverancier_id = supplier_row['leverancier_id']
+                    elif leverancier_naam:  # Only create if not empty
+                        # Create new supplier if it doesn't exist
+                        cur.execute("""
+                            INSERT INTO leveranciers (naam, chef_id) 
+                            VALUES (%s, %s)
+                        """, (leverancier_naam, chef_id))
+                        leverancier_id = cur.lastrowid
+                except Exception as e:
+                    logger.warning(f"Failed to process supplier {leverancier_naam}: {str(e)}")
+        
         # Skip or update if ingredient with same name already exists
         if naam.lower() in existing_ingredients:
             if update_existing:
@@ -400,7 +477,7 @@ def process_chunk(rows, chef_id, cur, conn, existing_ingredients, categories, un
                         SET prijs_per_eenheid = %s,
                             leverancier_id = %s
                         WHERE ingredient_id = %s
-                    """, (prijs, default_supplier['leverancier_id'], ingredient_id))
+                    """, (prijs, leverancier_id, ingredient_id))
                     result['imported'] += 1
                 except Exception as e:
                     logger.warning(f"Failed to update ingredient {naam}: {str(e)}")
@@ -450,13 +527,13 @@ def process_chunk(rows, chef_id, cur, conn, existing_ingredients, categories, un
             except Exception as e:
                 logger.warning(f"Failed to create unit {eenheid}: {str(e)}")
         
-        # Insert the ingredient with category name (assuming the table uses category name not ID)
+        # Insert the ingredient with category name
         try:
             cur.execute("""
                 INSERT INTO ingredients 
                 (naam, categorie, eenheid, prijs_per_eenheid, leverancier_id, chef_id)
                 VALUES (%s, %s, %s, %s, %s, %s)
-            """, (naam, categorie, eenheid, prijs, default_supplier['leverancier_id'], chef_id))
+            """, (naam, categorie, eenheid, prijs, leverancier_id, chef_id))
             result['imported'] += 1
         except Exception as e:
             logger.warning(f"Failed to insert ingredient {naam}: {str(e)}")
@@ -476,7 +553,7 @@ def get_supplier_csv_content(csv_path):
         try:
             s3_client = boto3.client(
                 's3',
-                region_name='eu-west-1',
+                region_name='eu-central-1',  # Changed from eu-west-1 to eu-central-1
                 aws_access_key_id=current_app.config.get('S3_KEY'),
                 aws_secret_access_key=current_app.config.get('S3_SECRET')
             )
