@@ -40,7 +40,6 @@
                     <th class="d-none d-md-table-cell">#</th>
                     <th>Blok</th>
                     <th>Onderdeel</th>
-                    <th class="d-none d-md-table-cell">Techniek</th>
                     <th>Taak</th>
                     <th>Uitgevoerd op</th>
                     <th class="col-actions">Acties</th>
@@ -50,9 +49,8 @@
                 {% for task in tasks %}
                 <tr>
                     <td class="d-none d-md-table-cell">{{ loop.index }}</td>
-                    <td>{{ task.blok }}</td>
+                    <td class="blok-cell">{{ task.blok }}</td>
                     <td>{{ task.onderdeel }}</td>
-                    <td class="d-none d-md-table-cell">{{ task.techniek }}</td>
                     <td>{{ task.taak }}</td>
                     <td>{{ task.uitgevoerd_op|default('-', true) }}</td>
                     <td>

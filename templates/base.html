@@ -128,6 +128,45 @@
             --text-light: #ECF0F1;           /* Lichte tekst */
             --text-dark: #2C3E50;            /* Donkere tekst */
             --text-muted: #95A5A6;           /* Secundaire tekst */
+            
+            /* Override Bootstrap's secondary color for better readability */
+            --bs-secondary-color: #D8E1E7 !important;  /* Using kitchen-steel for better contrast */
+            --bs-secondary: #95A5A6 !important;        /* A lighter secondary color */
+            --bs-secondary-rgb: 149, 165, 166 !important;
+        }
+
+        /* Override text colors for specific elements */
+        .text-muted, .form-text, .text-secondary {
+            color: var(--bs-secondary-color) !important;
+        }
+        
+        /* Form control text and placeholder colors */
+        .form-control {
+            color: var(--text-dark);
+        }
+        
+        .form-control::placeholder {
+            color: #95A5A6 !important;
+        }
+        
+        /* Ensure all form labels are visible */
+        label, .form-label {
+            color: var(--text-light) !important;
+        }
+        
+        /* Make modal text readable */
+        .modal-content {
+            color: var(--text-light);
+        }
+        
+        /* Ensure dropdown text is visible */
+        .dropdown-item {
+            color: var(--text-light);
+        }
+        
+        /* Fix for any Bootstrap text elements using secondary color */
+        .text-secondary {
+            color: #D8E1E7 !important;
         }
 
         body {
@@ -531,16 +570,46 @@
                                     <i class="fas fa-th-large"></i> Snelle Navigatie
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
-                                    <li><a class="dropdown-item" href="{{ url_for('ingredients.manage', chef_naam=session.get('chef_naam')) }}">
-                                        <i class="fas fa-carrot"></i> Ingrediënten
-                                    </a></li>
-                                    <li><a class="dropdown-item" href="{{ url_for('all_dishes') }}">
-                                        <i class="fas fa-utensils"></i> Gerechten
-                                    </a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="{{ url_for('suppliers.manage_suppliers', chef_naam=session.get('chef_naam')) }}">
-                                        <i class="fas fa-truck"></i> Leveranciers
-                                    </a></li>
+                                    <div class="dropdown-divider"></div>
+                                    <h6 class="dropdown-header">Snelle Toegang</h6>
+                                    
+                                    <!-- Ingrediënten -->
+                                    <a class="dropdown-item" href="{{ url_for('ingredients.manage', chef_naam=session.get('chef_naam')) }}">
+                                        <i class="fas fa-carrot fa-fw text-success"></i> Ingrediënten
+                                    </a>
+                                    
+                                    <!-- Gerechten -->
+                                    <a class="dropdown-item" href="{{ url_for('all_dishes') }}">
+                                        <i class="fas fa-utensils fa-fw text-danger"></i> Gerechten
+                                    </a>
+                                    
+                                    <!-- Leveranciers -->
+                                    <a class="dropdown-item" href="{{ url_for('suppliers.manage_suppliers', chef_naam=session.get('chef_naam')) }}">
+                                        <i class="fas fa-truck fa-fw text-info"></i> Leveranciers
+                                    </a>
+                                    
+                                    <!-- Bestellijst samenstellen -->
+                                    <a class="dropdown-item" href="{{ url_for('manage_orderlist') }}">
+                                        <i class="fas fa-shopping-cart fa-fw text-primary"></i> Bestellijst samenstellen
+                                    </a>
+                                    
+                                    <!-- HACCP -->
+                                    <a class="dropdown-item" href="{{ url_for('haccp_dashboard', chef_naam=session.get('chef_naam')) }}">
+                                        <i class="fas fa-clipboard-check fa-fw text-warning"></i> HACCP
+                                    </a>
+                                    
+                                    <!-- Kookboek exporteren -->
+                                    <form method="POST" action="{{ url_for('export_cookbook') }}" class="dropdown-item-form">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="dropdown-item btn-link">
+                                            <i class="fas fa-book fa-fw text-success"></i> Kookboek exporteren
+                                        </button>
+                                    </form>
+                                    
+                                    <!-- Menukaart Printen -->
+                                    <a class="dropdown-item" href="{{ url_for('print_menu') }}">
+                                        <i class="fas fa-print fa-fw text-info"></i> Menukaart Printen
+                                    </a>
                                 </ul>
                             </li>
                             <li class="nav-item">

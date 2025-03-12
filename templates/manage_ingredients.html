@@ -89,59 +89,50 @@
     {% for ingredient in ingredienten %}
     <tr data-ingredient-id="{{ ingredient.ingredient_id }}">
         <td>
-            <input type="text" 
-                   class="inline-edit form-control"
-                   name="naam"
-                   value="{{ ingredient.naam }}"
-                   data-original="{{ ingredient.naam }}"
-                   style="width: 200px;">
+            <div class="input-group">
+                <input type="text" name="naam" class="inline-edit" value="{{ ingredient.naam }}">
+            </div>
         </td>
         <td>
-            <select class="inline-edit form-control" name="categorie" data-original="{{ ingredient.categorie }}">
-                {% for categorie in categorieen %}
-                    <option value="{{ categorie.naam }}" {% if ingredient.categorie == categorie.naam %}selected{% endif %}>
-                        {{ categorie.naam }}
-                    </option>
-                {% endfor %}
-            </select>
+            <div class="input-group">
+                <select name="categorie" class="inline-edit">
+                    {% for categorie in categorieen %}
+                        <option value="{{ categorie.naam }}" {% if ingredient.categorie == categorie.naam %}selected{% endif %}>{{ categorie.naam }}</option>
+                    {% endfor %}
+                </select>
+            </div>
         </td>
         <td>
-            <select class="inline-edit form-control" name="eenheid" data-original="{{ ingredient.eenheid }}">
-                {% for eenheid in eenheden %}
-                    <option value="{{ eenheid.naam }}" {% if ingredient.eenheid == eenheid.naam %}selected{% endif %}>
-                        {{ eenheid.naam }}
-                    </option>
-                {% endfor %}
-            </select>
+            <div class="input-group">
+                <input type="text" name="eenheid" class="inline-edit" value="{{ ingredient.eenheid }}">
+            </div>
         </td>
         <td>
-            <select class="inline-edit form-control" name="leverancier_id" data-original="{{ ingredient.leverancier_id }}">
-                <option value="">Geen leverancier</option>
-                {% for leverancier in leveranciers %}
-                    <option value="{{ leverancier.leverancier_id }}" {% if ingredient.leverancier_id == leverancier.leverancier_id %}selected{% endif %}>
-                        {{ leverancier.naam }}
-                    </option>
-                {% endfor %}
-            </select>
+            <div class="input-group">
+                <select name="leverancier_id" class="inline-edit">
+                    <option value="">Geen leverancier</option>
+                    {% for leverancier in leveranciers %}
+                        <option value="{{ leverancier.leverancier_id }}" {% if ingredient.leverancier_naam == leverancier.naam %}selected{% endif %}>{{ leverancier.naam }}</option>
+                    {% endfor %}
+                </select>
+            </div>
         </td>
         <td class="col-price">
-            <div class="ingredient-price-group" style="display: flex; align-items: center;">
-                <span style="margin-right: 4px;">€</span>
-                <input type="text" 
-                       pattern="[0-9]*[.,]?[0-9]{0,5}"
-                       inputmode="decimal"
-                       class="inline-edit form-control price-input"
-                       name="prijs_per_eenheid"
-                       value="{{ '%.5f'|format(ingredient.prijs_per_eenheid|float) }}"
-                       data-original="{{ ingredient.prijs_per_eenheid }}"
-                       style="width: 100px; text-align: right;">
+            <div class="ingredient-price-group">
+                <span>€</span>
+                <input type="text" name="prijs_per_eenheid" 
+                       class="inline-edit price-input" 
+                       value="{{ '%.2f'|format(ingredient.prijs_per_eenheid) if ingredient.prijs_per_eenheid else '0.00' }}"
+                       pattern="[0-9]*[.,]?[0-9]{0,2}">
             </div>
         </td>
         <td class="col-actions">
             <div class="ingredient-actions">
-                <a href="{{ url_for('ingredients.edit', chef_naam=chef_naam, ingredient_id=ingredient.ingredient_id) }}" class="btn-action">
-                    <i class="fas fa-edit"></i>
-                </a>
+                <!-- Save button -->
+                <button type="button" class="btn-action btn-save" onclick="saveField(this)" title="Wijzigingen opslaan">
+                    <i class="fas fa-save"></i>
+                </button>
+                <!-- Edit button removed as requested -->
                 <form method="POST" action="{{ url_for('ingredients.delete_ingredient', chef_naam=chef_naam, ingredient_id=ingredient.ingredient_id) }}" style="display:inline;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn-action btn-delete" onclick="return confirm('Weet je zeker dat je dit ingrediënt wilt verwijderen?');">
@@ -219,19 +210,20 @@
 
     .inline-edit {
         border: 1px solid transparent;
-        background-color: transparent;
+        background-color: transparent !important; /* Added !important to ensure it overrides any other styles */
         padding: 2px 4px;
         width: 100%;
         min-width: 100px;
+        color: var(--text-light); /* Ensures text is visible against transparent background */
     }
 
     .inline-edit:hover, .inline-edit:focus {
         border-color: var(--kitchen-steel);
-        background-color: var(--kitchen-dark);
+        background-color: var(--kitchen-dark) !important; /* Added !important for hover/focus state too */
     }
 
     .inline-edit.modified {
-        background-color: rgba(255, 255, 0, 0.1);
+        background-color: rgba(255, 255, 0, 0.1) !important; /* Keep modified state visible but with !important */
     }
 
     .save-indicator {
@@ -456,8 +448,12 @@
 
     // Voeg event listeners toe voor het activeren van save buttons
     document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.inline-edit').forEach(input => {
-            input.addEventListener('change', function() {
+        // For input fields
+        document.querySelectorAll('.inline-edit').forEach(element => {
+            const original = element.value;
+            element.dataset.original = original;
+            
+            element.addEventListener('change', function() {
                 const saveBtn = this.closest('tr').querySelector('.btn-save');
                 if (this.value !== this.dataset.original) {
                     this.classList.add('modified');

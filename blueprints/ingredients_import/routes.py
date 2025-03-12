@@ -1,7 +1,7 @@
 import os
 import csv
 import io
-from flask import render_template, redirect, url_for, flash, request, session, current_app, send_file, jsonify, Markup
+from flask import render_template, redirect, url_for, flash, request, session, current_app, send_file, jsonify
 from werkzeug.utils import secure_filename
 from . import bp
 from utils.db import get_db_connection
@@ -10,6 +10,7 @@ import boto3
 from botocore.exceptions import ClientError
 from datetime import datetime
 from mysql.connector import Error  # Add this import for Error
+from markupsafe import Markup  # Import Markup from markupsafe instead of flask
 
 # Set up logging
 logger = logging.getLogger(__name__)
