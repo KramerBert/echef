@@ -154,7 +154,7 @@ def import_from_supplier(supplier_id):
     conn = get_db_connection()
     if not conn:
         flash("Database verbinding mislukt", "danger")
-        return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
+        return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
     
     cur = conn.cursor(dictionary=True)
     
@@ -168,14 +168,14 @@ def import_from_supplier(supplier_id):
         
         if not supplier:
             flash("Deze leverancier heeft geen standaard ingrediëntenlijst", "danger")
-            return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
+            return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
         
         # Get the CSV file path
         csv_path = supplier.get('csv_file_path')
         
         if not csv_path:
             flash("Geen CSV-bestand geconfigureerd voor deze leverancier", "danger")
-            return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
+            return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
         
         logger.info(f"Processing CSV from path: {csv_path}")
         stream = None
@@ -207,7 +207,7 @@ def import_from_supplier(supplier_id):
                 except ClientError as e:
                     logger.error(f"Error retrieving CSV from S3: {str(e)}")
                     flash(f"Fout bij ophalen bestand: {str(e)}", "danger")
-                    return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
+                    return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
             else:
                 # Get file from local storage
                 local_path = os.path.join(current_app.root_path, 'static', csv_path)
@@ -219,7 +219,7 @@ def import_from_supplier(supplier_id):
                 else:
                     logger.error(f"Local CSV file not found: {local_path}")
                     flash("CSV bestand niet gevonden op de server", "danger")
-                    return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
+                    return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
             
             if stream:
                 # Process the CSV in chunks to avoid timeout
@@ -245,14 +245,14 @@ def import_from_supplier(supplier_id):
             logger.error(f"Error processing CSV: {str(e)}", exc_info=True)
             flash(f"Fout bij verwerken bestand: {str(e)}", "danger")
         
-        return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
+        return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
         
     except Exception as e:
         if conn:
             conn.rollback()
         logger.error(f"Import ingredients error: {str(e)}", exc_info=True)
         flash(f"Er is een fout opgetreden bij het importeren: {str(e)}", "danger")
-        return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
+        return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
     finally:
         if cur:
             cur.close()
