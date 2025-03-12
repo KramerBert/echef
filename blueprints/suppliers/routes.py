@@ -1,7 +1,8 @@
 from flask import (
     render_template, redirect, url_for, flash, request, 
-    session, current_app, jsonify, Markup
+    session, current_app, jsonify
 )
+from markupsafe import Markup
 from . import bp
 from utils.db import get_db_connection
 import logging
