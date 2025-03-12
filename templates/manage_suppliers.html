@@ -13,7 +13,7 @@
                 {% for category, message in messages %}
                     <div class="alert alert-{{ category }}">
                         <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
-                        {{ message }}
+                        {{ message|safe }}
                     </div>
                 {% endfor %}
             </div>
@@ -210,6 +210,49 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="closeEditModal()">Annuleren</button>
                     <button type="button" class="btn btn-primary" onclick="submitEditForm()">Wijzigingen Opslaan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Skipped Ingredients Modal -->
+    <div class="modal fade" id="skippedIngredientsModal" tabindex="-1" aria-labelledby="skippedIngredientsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="skippedIngredientsModalLabel">Overgeslagen Ingrediënten</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>De volgende ingrediënten zijn overgeslagen tijdens het importeren:</p>
+                    
+                    {% if session.skipped_ingredients %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Naam</th>
+                                    <th>Reden</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ingredient in session.skipped_ingredients %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ ingredient.naam }}</td>
+                                    <td>{{ ingredient.reden }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">Geen overgeslagen ingrediënten beschikbaar.</p>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Sluiten</button>
                 </div>
             </div>
         </div>
@@ -672,6 +715,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (event.target === this) {
             closeImportModal();
         }
+    });
+
+    // Initialize modal for skipped ingredients
+    var skippedModal = new bootstrap.Modal(document.getElementById('skippedIngredientsModal'), {
+        keyboard: true
+    });
+    
+    // Show skipped ingredients modal if clicked from flash message
+    document.querySelectorAll('[data-bs-target="#skippedIngredientsModal"]').forEach(function(element) {
+        element.addEventListener('click', function(event) {
+            event.preventDefault();
+            skippedModal.show();
+        });
     });
 });
 

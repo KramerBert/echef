@@ -1,7 +1,7 @@
 import os
 import csv
 import io
-from flask import render_template, redirect, url_for, flash, request, session, current_app, send_file, jsonify
+from flask import render_template, redirect, url_for, flash, request, session, current_app, send_file, jsonify, Markup
 from werkzeug.utils import secure_filename
 from . import bp
 from utils.db import get_db_connection
@@ -148,6 +148,9 @@ def import_from_supplier(supplier_id):
         flash("Je bent niet ingelogd als chef", "danger")
         return redirect(url_for('login'))
     
+    # Check if we want to update existing ingredients
+    update_existing = request.form.get('update_existing') == 'on'
+    
     conn = get_db_connection()
     if not conn:
         flash("Database verbinding mislukt", "danger")
@@ -159,7 +162,7 @@ def import_from_supplier(supplier_id):
         # Get supplier information
         cur.execute("""
             SELECT * FROM leveranciers 
-            WHERE leverancier_id = %s AND is_admin_created = TRUE AND has_standard_list = TRUE AND csv_file_path IS NOT NULL
+            WHERE leverancier_id = %s AND is_admin_created = TRUE AND has_standard_list = TRUE
         """, (supplier_id,))
         supplier = cur.fetchone()
         
@@ -167,38 +170,304 @@ def import_from_supplier(supplier_id):
             flash("Deze leverancier heeft geen standaard ingrediëntenlijst", "danger")
             return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
         
-        # Get the CSV file from storage
-        csv_path = supplier['csv_file_path']
-        csv_content = get_supplier_csv_content(csv_path)
+        # Get the CSV file path
+        csv_path = supplier.get('csv_file_path')
         
-        if not csv_content:
-            flash("CSV bestand kon niet worden geladen", "danger")
+        if not csv_path:
+            flash("Geen CSV-bestand geconfigureerd voor deze leverancier", "danger")
             return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
         
-        # Check if update_existing checkbox is checked
-        update_existing = 'update_existing' in request.form
+        logger.info(f"Processing CSV from path: {csv_path}")
+        stream = None
         
-        # Process the CSV content
-        stream = io.StringIO(csv_content)
-        result = process_csv(stream, chef_id, default_supplier=supplier, update_existing=update_existing)
-        
-        # Return response based on result
-        if result['success']:
-            flash(f"Succesvol {result['imported']} ingrediënten geïmporteerd van {supplier['naam']}. "
-                  f"{result['updated'] if 'updated' in result else 0} ingrediënten bijgewerkt. "
-                  f"{result['skipped']} ingrediënten overgeslagen.", "success")
-        else:
-            flash(f"Er was een probleem bij het importeren: {result['error']}", "danger")
+        try:
+            # Check if using S3 storage
+            if current_app.config.get('USE_S3'):
+                # Get file from S3
+                s3_client = boto3.client(
+                    's3',
+                    region_name='eu-west-1',
+                    aws_access_key_id=current_app.config.get('S3_KEY'),
+                    aws_secret_access_key=current_app.config.get('S3_SECRET')
+                )
+                
+                try:
+                    # Get the CSV file content
+                    logger.debug(f"Retrieving file from S3: {csv_path}")
+                    response = s3_client.get_object(
+                        Bucket=current_app.config.get('S3_BUCKET'),
+                        Key=csv_path
+                    )
+                    
+                    # Read and decode the CSV content
+                    csv_content = response['Body'].read().decode('utf-8')
+                    stream = io.StringIO(csv_content)
+                    logger.debug(f"Successfully retrieved CSV content from S3")
+                    
+                except ClientError as e:
+                    logger.error(f"Error retrieving CSV from S3: {str(e)}")
+                    flash(f"Fout bij ophalen bestand: {str(e)}", "danger")
+                    return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
+            else:
+                # Get file from local storage
+                local_path = os.path.join(current_app.root_path, 'static', csv_path)
+                if os.path.exists(local_path):
+                    with open(local_path, 'r', encoding='utf-8') as f:
+                        csv_content = f.read()
+                    stream = io.StringIO(csv_content)
+                    logger.debug(f"Successfully read CSV from local file system")
+                else:
+                    logger.error(f"Local CSV file not found: {local_path}")
+                    flash("CSV bestand niet gevonden op de server", "danger")
+                    return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
             
+            if stream:
+                # Process the CSV in chunks to avoid timeout
+                result = process_csv_in_chunks(stream, chef_id, default_supplier=supplier, update_existing=update_existing)
+                
+                if result['success']:
+                    skipped_ingredients = result['skipped_ingredients']
+                    # Store skipped ingredients in session for display
+                    if skipped_ingredients:
+                        session['skipped_ingredients'] = skipped_ingredients
+                        flash_msg = f"Succesvol {result['imported']} ingrediënten geïmporteerd van {supplier['naam']}. "
+                        flash_msg += f"<a href='#' data-bs-toggle='modal' data-bs-target='#skippedIngredientsModal' class='alert-link'>"
+                        flash_msg += f"{result['skipped']} ingrediënten overgeslagen (klik voor details)</a>."
+                        flash(Markup(flash_msg), "success")  # Use Markup to prevent HTML escaping
+                    else:
+                        flash(f"Succesvol {result['imported']} ingrediënten geïmporteerd van {supplier['naam']}.", "success")
+                else:
+                    flash(f"Fout bij importeren: {result['error']}", "danger")
+            else:
+                flash("Kon CSV-bestand niet verwerken", "danger")
+                
+        except Exception as e:
+            logger.error(f"Error processing CSV: {str(e)}", exc_info=True)
+            flash(f"Fout bij verwerken bestand: {str(e)}", "danger")
+        
         return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
         
     except Exception as e:
-        logger.error(f"Import from supplier error: {str(e)}", exc_info=True)
+        if conn:
+            conn.rollback()
+        logger.error(f"Import ingredients error: {str(e)}", exc_info=True)
         flash(f"Er is een fout opgetreden bij het importeren: {str(e)}", "danger")
         return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
     finally:
-        cur.close()
-        conn.close()
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+def process_csv_in_chunks(stream, chef_id, default_supplier=None, update_existing=False, chunk_size=50):
+    """
+    Process a CSV file in chunks to avoid timeout issues
+    
+    Args:
+        stream: StringIO object containing CSV data
+        chef_id: ID of the chef
+        default_supplier: Supplier info to use as default
+        update_existing: Whether to update existing ingredients
+        chunk_size: Number of records to process in each batch
+        
+    Returns:
+        dict with results
+    """
+    logger.info(f"Starting CSV processing in chunks of {chunk_size}")
+    result = {
+        'success': False,
+        'imported': 0,
+        'skipped': 0,
+        'skipped_ingredients': [],  # Add this to track skipped ingredients
+        'error': None
+    }
+    
+    try:
+        reader = csv.reader(stream)
+        # Skip the header row
+        headers = next(reader, None)
+        if not headers:
+            result['error'] = "CSV-bestand is leeg of heeft geen headers"
+            return result
+            
+        # Validate headers
+        expected_columns = ['naam', 'categorie', 'eenheid', 'prijs']
+        if len(headers) < len(expected_columns):
+            result['error'] = f"CSV-bestand heeft niet alle vereiste kolommen. Verwacht: {', '.join(expected_columns)}"
+            return result
+        
+        # Get existing ingredients to avoid duplicates
+        conn = get_db_connection()
+        if not conn:
+            result['error'] = "Database verbinding mislukt"
+            return result
+            
+        cur = conn.cursor(dictionary=True)
+        try:
+            cur.execute("""
+                SELECT naam, ingredient_id FROM ingredients 
+                WHERE chef_id = %s
+            """, (chef_id,))
+            existing_ingredients = {row['naam'].lower(): row['ingredient_id'] for row in cur.fetchall()}
+            
+            # Get categories and units
+            categories = {}
+            units = {}
+            
+            cur.execute("SELECT categorie_id, naam FROM categorieen WHERE chef_id = %s", (chef_id,))
+            for row in cur.fetchall():
+                categories[row['naam'].lower()] = row['categorie_id']
+                
+            cur.execute("SELECT eenheid_id, naam FROM eenheden WHERE chef_id = %s", (chef_id,))
+            for row in cur.fetchall():
+                units[row['naam'].lower()] = row['eenheid_id']
+                
+            # Process in chunks
+            rows = []
+            for row in reader:
+                rows.append(row)
+                
+                # Process when we reach chunk_size or end of file
+                if len(rows) >= chunk_size:
+                    process_result = process_chunk(rows, chef_id, cur, conn, existing_ingredients, 
+                                                 categories, units, default_supplier, update_existing)
+                    
+                    result['imported'] += process_result['imported']
+                    result['skipped'] += process_result['skipped']
+                    result['skipped_ingredients'].extend(process_result['skipped_ingredients'])
+                    rows = []  # Reset for next chunk
+            
+            # Process any remaining rows
+            if rows:
+                process_result = process_chunk(rows, chef_id, cur, conn, existing_ingredients, 
+                                             categories, units, default_supplier, update_existing)
+                
+                result['imported'] += process_result['imported']
+                result['skipped'] += process_result['skipped']
+                result['skipped_ingredients'].extend(process_result['skipped_ingredients'])
+                
+            result['success'] = True
+            
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            logger.error(f"Error during CSV processing: {str(e)}", exc_info=True)
+            result['error'] = str(e)
+            return result
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
+                
+    except Exception as e:
+        logger.error(f"Error during CSV preparation: {str(e)}", exc_info=True)
+        result['error'] = str(e)
+        
+    return result
+
+def process_chunk(rows, chef_id, cur, conn, existing_ingredients, categories, units, default_supplier, update_existing):
+    """Process a chunk of CSV rows"""
+    result = {'imported': 0, 'skipped': 0, 'skipped_ingredients': []}
+    
+    for row in rows:
+        if len(row) < 4:  # Ensure we have all required fields
+            result['skipped'] += 1
+            if len(row) > 0 and row[0]:
+                result['skipped_ingredients'].append({
+                    'naam': row[0].strip(),
+                    'reden': 'Onvolledige gegevens'
+                })
+            continue
+            
+        naam = row[0].strip()
+        categorie = row[1].strip() if len(row) > 1 and row[1] else "Overig"
+        eenheid = row[2].strip() if len(row) > 2 and row[2] else "stuk"
+        
+        try:
+            prijs = float(row[3].replace(',', '.')) if len(row) > 3 and row[3] else 0.0
+        except ValueError:
+            prijs = 0.0
+            
+        # Skip or update if ingredient with same name already exists
+        if naam.lower() in existing_ingredients:
+            if update_existing:
+                try:
+                    # Update existing ingredient
+                    ingredient_id = existing_ingredients[naam.lower()]
+                    cur.execute("""
+                        UPDATE ingredients 
+                        SET prijs_per_eenheid = %s,
+                            leverancier_id = %s
+                        WHERE ingredient_id = %s
+                    """, (prijs, default_supplier['leverancier_id'], ingredient_id))
+                    result['imported'] += 1
+                except Exception as e:
+                    logger.warning(f"Failed to update ingredient {naam}: {str(e)}")
+                    result['skipped'] += 1
+                    result['skipped_ingredients'].append({
+                        'naam': naam,
+                        'reden': f'Fout bij bijwerken: {str(e)}'
+                    })
+            else:
+                result['skipped'] += 1
+                result['skipped_ingredients'].append({
+                    'naam': naam,
+                    'reden': 'Ingredient bestaat al'
+                })
+            continue
+            
+        # Add to existing ingredients dict to avoid duplicates in the import itself
+        existing_ingredients[naam.lower()] = -1  # Placeholder ID
+        
+        # Get or create category
+        category_id = None
+        if categorie.lower() in categories:
+            category_id = categories[categorie.lower()]
+        else:
+            try:
+                cur.execute("""
+                    INSERT INTO categorieen (naam, chef_id) 
+                    VALUES (%s, %s)
+                """, (categorie, chef_id))
+                category_id = cur.lastrowid
+                categories[categorie.lower()] = category_id
+            except Exception as e:
+                logger.warning(f"Failed to create category {categorie}: {str(e)}")
+        
+        # Get or create unit
+        unit_id = None
+        if eenheid.lower() in units:
+            unit_id = units[eenheid.lower()]
+        else:
+            try:
+                cur.execute("""
+                    INSERT INTO eenheden (naam, chef_id) 
+                    VALUES (%s, %s)
+                """, (eenheid, chef_id))
+                unit_id = cur.lastrowid
+                units[eenheid.lower()] = unit_id
+            except Exception as e:
+                logger.warning(f"Failed to create unit {eenheid}: {str(e)}")
+        
+        # Insert the ingredient with category name (assuming the table uses category name not ID)
+        try:
+            cur.execute("""
+                INSERT INTO ingredients 
+                (naam, categorie, eenheid, prijs_per_eenheid, leverancier_id, chef_id)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (naam, categorie, eenheid, prijs, default_supplier['leverancier_id'], chef_id))
+            result['imported'] += 1
+        except Exception as e:
+            logger.warning(f"Failed to insert ingredient {naam}: {str(e)}")
+            result['skipped'] += 1
+            result['skipped_ingredients'].append({
+                'naam': naam,
+                'reden': f'Fout bij toevoegen: {str(e)}'
+            })
+    
+    conn.commit()
+    return result
 
 def get_supplier_csv_content(csv_path):
     """Get the content of a supplier's CSV file"""

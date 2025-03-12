@@ -4065,6 +4065,17 @@ def create_app():
         
         return redirect(url_for('admin_task_trigger'))
 
+    @app.after_request
+    def after_request(response):
+        """Clear skipped ingredients from session after displaying them once"""
+        if request.endpoint == 'manage_suppliers' and 'skipped_ingredients' in session:
+            # Keep skipped ingredients for one more request after redirect
+            # This enables the modal to show them after page refresh
+            if request.method == 'GET':
+                # Only clear after GET request (after redirect from POST)
+                session.pop('skipped_ingredients', None)
+        return response
+
     return app
 
 # Move configuration constants outside create_app
