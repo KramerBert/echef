@@ -173,8 +173,10 @@ def bulk_add_ingredients(chef_naam):
         flash("Geen bestand geselecteerd.", "danger")
         return redirect(url_for('ingredients.manage', chef_naam=chef_naam))
 
-    if not file.filename.endswith('.csv'):
-        flash("Ongeldig bestandstype. Upload een CSV-bestand.", "danger")
+    # Update validation to accept both CSV and Excel files
+    file_extension = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+    if file_extension not in ['csv', 'xlsx', 'xls']:
+        flash("Ongeldig bestandstype. Upload een CSV of Excel bestand.", "danger")
         return redirect(url_for('ingredients.manage', chef_naam=chef_naam))
 
     if file.content_length > current_app.config['MAX_CONTENT_LENGTH']:
@@ -188,21 +190,40 @@ def bulk_add_ingredients(chef_naam):
     cur = conn.cursor()
 
     try:
-        csv_reader = csv.reader(io.StringIO(file.stream.read().decode('utf-8')))
-        headers = next(csv_reader)  # Get header row
+        # Process file based on its type
+        if file_extension == 'csv':
+            # Existing CSV processing code
+            csv_reader = csv.reader(io.StringIO(file.stream.read().decode('utf-8')))
+            headers = next(csv_reader)  # Get header row
+        else:
+            # Process Excel file
+            try:
+                import pandas as pd
+                # Read Excel file into pandas DataFrame
+                df = pd.read_excel(file)
+                # Convert DataFrame to a list of rows for consistent processing
+                headers = df.columns.tolist()
+                csv_reader = df.values.tolist()
+            except ImportError:
+                flash("Excel libraries niet beschikbaar. Installeer pandas en openpyxl.", "danger")
+                return redirect(url_for('ingredients.manage', chef_naam=chef_naam))
+            except Exception as e:
+                flash(f"Fout bij het lezen van Excel bestand: {str(e)}", "danger")
+                return redirect(url_for('ingredients.manage', chef_naam=chef_naam))
         
         # Map column indices to expected fields
         column_map = {
             'naam': 0,
             'categorie': 1,
             'eenheid': 2,
-            'prijs': 3
+            'prijs': 3,
+            'leverancier': 4  # Add mapping for leverancier column
         }
         
         # Try to map columns by name if headers exist
         if headers:
             for i, header in enumerate(headers):
-                header_lower = header.lower()
+                header_lower = str(header).lower()
                 if header_lower in ['naam', 'ingredient', 'name']:
                     column_map['naam'] = i
                 elif header_lower in ['categorie', 'category']:
@@ -211,18 +232,26 @@ def bulk_add_ingredients(chef_naam):
                     column_map['eenheid'] = i
                 elif header_lower in ['prijs_per_eenheid', 'prijs', 'price']:
                     column_map['prijs'] = i
+                elif header_lower in ['leverancier', 'supplier']:  # Add recognition for supplier column
+                    column_map['leverancier'] = i
         
         rows_added = 0
+        # For CSV files, we already have csv_reader after skipping headers
+        # For Excel files, we already prepared csv_reader from DataFrame
         for row in csv_reader:
+            # Skip empty rows
+            if not row or (isinstance(row, list) and not any(row)):
+                continue
+                
             if len(row) >= max(column_map.values()) + 1:  # Ensure row has enough columns
-                naam = row[column_map['naam']].strip()
-                categorie = row[column_map['categorie']].strip() if len(row) > column_map['categorie'] else "Overig"
-                eenheid = row[column_map['eenheid']].strip() if len(row) > column_map['eenheid'] else "stuk"
+                naam = str(row[column_map['naam']]).strip()
+                categorie = str(row[column_map['categorie']]).strip() if len(row) > column_map['categorie'] else "Overig"
+                eenheid = str(row[column_map['eenheid']]).strip() if len(row) > column_map['eenheid'] else "stuk"
                 
                 # Safe price parsing - handle possible format issues
                 prijs_per_eenheid = 0
                 if len(row) > column_map['prijs']:
-                    prijs_str = row[column_map['prijs']].strip()
+                    prijs_str = str(row[column_map['prijs']]).strip()
                     try:
                         # Handle various formats: '1,23', '1.23', '€1,23'
                         prijs_str = prijs_str.replace('€', '').replace(' ', '')
@@ -231,11 +260,46 @@ def bulk_add_ingredients(chef_naam):
                         # If conversion fails, set price to 0 and continue
                         logger.warning(f"Could not parse price '{prijs_str}' for ingredient '{naam}' - using 0")
                 
+                # Get leverancier if available
+                leverancier_id = None
+                if 'leverancier' in column_map and len(row) > column_map['leverancier']:
+                    leverancier_naam = str(row[column_map['leverancier']]).strip()
+                    
+                    if leverancier_naam:
+                        # Check if leverancier exists
+                        try:
+                            cur.execute("""
+                                SELECT leverancier_id FROM leveranciers
+                                WHERE (chef_id = %s OR is_admin_created = TRUE) 
+                                AND LOWER(naam) = LOWER(%s)
+                                LIMIT 1
+                            """, (session['chef_id'], leverancier_naam))
+                            
+                            leverancier_result = cur.fetchone()
+                            
+                            if leverancier_result:
+                                # Use existing supplier
+                                leverancier_id = leverancier_result[0]
+                            else:
+                                # Create new supplier
+                                cur.execute("""
+                                    INSERT INTO leveranciers (naam, chef_id)
+                                    VALUES (%s, %s)
+                                """, (leverancier_naam, session['chef_id']))
+                                leverancier_id = cur.lastrowid
+                                logger.info(f"Created new supplier: {leverancier_naam} with ID {leverancier_id}")
+                        except Exception as e:
+                            logger.error(f"Error processing supplier '{leverancier_naam}': {str(e)}")
+                
+                # Skip if naam is empty
+                if not naam:
+                    continue
+                
                 # Insert into database
                 cur.execute("""
-                    INSERT INTO ingredients (naam, categorie, eenheid, prijs_per_eenheid, chef_id)
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (naam, categorie, eenheid, prijs_per_eenheid, session['chef_id']))
+                    INSERT INTO ingredients (naam, categorie, eenheid, prijs_per_eenheid, leverancier_id, chef_id)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (naam, categorie, eenheid, prijs_per_eenheid, leverancier_id, session['chef_id']))
                 rows_added += 1
         
         conn.commit()
@@ -267,6 +331,127 @@ def download_csv_template():
         as_attachment=True,
         download_name='ingredienten_template.csv'
     )
+
+@bp.route('/download_excel_template')
+def download_excel_template():
+    """
+    Serve an Excel template for bulk adding ingredients.
+    First tries to fetch from S3, falls back to dynamic generation.
+    """
+    # Try to get from S3 first
+    if current_app.config.get('USE_S3'):
+        try:
+            import boto3
+            from botocore.exceptions import ClientError
+            
+            s3_client = boto3.client(
+                's3',
+                region_name='eu-central-1',
+                aws_access_key_id=current_app.config.get('S3_KEY'),
+                aws_secret_access_key=current_app.config.get('S3_SECRET')
+            )
+            
+            template_key = "templates/ingredients_template.xlsx"
+            
+            try:
+                # Check if template exists in S3
+                logger.info(f"Attempting to retrieve Excel template from S3: {template_key}")
+                response = s3_client.get_object(
+                    Bucket=current_app.config.get('S3_BUCKET'),
+                    Key=template_key
+                )
+                
+                # If exists, return the S3 template
+                content = response['Body'].read()
+                mem = io.BytesIO(content)
+                mem.seek(0)
+                
+                logger.info(f"Successfully retrieved Excel template from S3")
+                return send_file(
+                    mem,
+                    mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    as_attachment=True,
+                    download_name='ingredienten_template.xlsx'
+                )
+                
+            except ClientError as e:
+                if e.response['Error']['Code'] == 'NoSuchKey':
+                    logger.warning(f"Excel template not found in S3, will generate dynamically")
+                else:
+                    logger.error(f"Error retrieving Excel template from S3: {str(e)}")
+                # Fall through to dynamic generation
+                
+        except Exception as e:
+            logger.error(f"Error connecting to S3: {str(e)}")
+            # Fall through to dynamic generation
+    
+    # If S3 retrieval failed or not configured, generate dynamically
+    try:
+        import pandas as pd
+        import openpyxl
+        
+        logger.info("Generating Excel template dynamically")
+        
+        # Create example data
+        data = {
+            'naam': ['Voorbeeld Naam 1', 'Voorbeeld Naam 2'],
+            'categorie': ['Groente', 'Vlees'],
+            'eenheid': ['gram (g)', 'kilogram (kg)'],
+            'prijs_per_eenheid': [0.02, 12.95],
+            'leverancier': ['Lokale Boer', 'Slagerij']
+        }
+        
+        # Create a pandas DataFrame
+        df = pd.DataFrame(data)
+        
+        # Create an in-memory Excel file
+        output = io.BytesIO()
+        
+        # Create a workbook with column formatting
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Ingrediënten', index=False)
+            # Get workbook and active sheet
+            workbook = writer.book
+            worksheet = writer.sheets['Ingrediënten']
+            
+            # Format headers in bold
+            for col_num, column_title in enumerate(df.columns):
+                cell = worksheet.cell(row=1, column=col_num+1)
+                cell.font = openpyxl.styles.Font(bold=True)
+                
+            # Auto-adjust column width (handle possible errors gracefully)
+            try:
+                for column in worksheet.columns:
+                    max_length = 0
+                    column_letter = column[0].column_letter
+                    for cell in column:
+                        try:
+                            if len(str(cell.value)) > max_length:
+                                max_length = len(str(cell.value))
+                        except:
+                            pass
+                    adjusted_width = (max_length + 2) * 1.2
+                    worksheet.column_dimensions[column_letter].width = adjusted_width
+            except Exception as col_err:
+                logger.warning(f"Non-critical error adjusting column widths: {str(col_err)}")
+        
+        output.seek(0)
+        
+        logger.info("Successfully generated Excel template")
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name='ingredienten_template.xlsx'
+        )
+    except ImportError as e:
+        logger.error(f"Missing dependency for Excel generation: {str(e)}")
+        flash(f"Kan Excel niet genereren: ontbrekende bibliotheek {str(e)}. Installeer pandas en openpyxl.", "danger")
+        return redirect(url_for('ingredients.manage', chef_naam=session.get('chef_naam', '')))
+    except Exception as e:
+        logger.error(f"Error creating Excel template: {str(e)}", exc_info=True)
+        flash("Er is een fout opgetreden bij het genereren van het Excel template.", "danger")
+        return redirect(url_for('ingredients.manage', chef_naam=session.get('chef_naam', '')))
 
 @bp.route('/dashboard/<chef_naam>/ingredients/bulk_delete', methods=['POST'])
 @login_required
