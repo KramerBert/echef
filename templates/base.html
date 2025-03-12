@@ -385,19 +385,129 @@
             border-color: #23923d;
             color: #fff;
         }
+
+        /* Improved Navigation Styles */
+        .sticky-top {
+            background-color: var(--kitchen-black);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1030;
+        }
+        
+        /* Breadcrumb styling */
+        .breadcrumb {
+            background-color: rgba(18, 24, 32, 0.7);
+            border-radius: var(--radius-md);
+            padding: 0.5rem 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .breadcrumb-item a {
+            color: var(--kitchen-highlight);
+            transition: all var(--transition-fast);
+        }
+        
+        .breadcrumb-item a:hover {
+            color: var(--text-light);
+            text-decoration: none;
+        }
+        
+        .breadcrumb-item.active {
+            color: var(--text-muted);
+        }
+        
+        .breadcrumb-item + .breadcrumb-item::before {
+            color: var(--text-muted);
+        }
+        
+        /* Dashboard quick access button */
+        .dashboard-return {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--kitchen-highlight);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-md);
+            z-index: 1000;
+            border: none;
+            transition: all var(--transition-normal);
+        }
+        
+        .dashboard-return:hover {
+            transform: translateY(-5px);
+            background: var(--kitchen-blue);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        /* Offcanvas sidebar for mobile */
+        .offcanvas {
+            background-color: var(--kitchen-dark);
+            border-left: 1px solid var(--border-color);
+        }
+        
+        .offcanvas-header {
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .offcanvas-title {
+            color: var(--text-light);
+        }
+        
+        .nav-section-title {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 0.5rem 1rem;
+            margin-top: 1rem;
+        }
+        
+        .offcanvas-nav-link {
+            color: var(--text-light);
+            padding: 0.5rem 1rem;
+            border-left: 3px solid transparent;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .offcanvas-nav-link:hover, 
+        .offcanvas-nav-link.active {
+            background-color: rgba(52, 152, 219, 0.15);
+            border-left: 3px solid var(--kitchen-highlight);
+            color: var(--kitchen-highlight);
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <nav class="navbar navbar-expand-lg navbar-dark bg-dark" aria-label="Main navigation">
+            <!-- Sticky Navbar -->
+            <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" aria-label="Main navigation">
                 <div class="container-fluid">
                     <a class="navbar-brand" href="{{ url_for('home') }}">
                         <img src="{{ url_for('static', filename='images/logo.png') }}" alt="E-chef logo">
                     </a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    
+                    <!-- Dashboard quick access -->
+                    {% if session.get('chef_id') %}
+                    <a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}" class="btn btn-primary d-lg-none me-2">
+                        <i class="fas fa-home"></i>
+                    </a>
+                    {% endif %}
+                    
+                    <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
                         <span class="navbar-toggler-icon"></span>
                     </button>
+                    
                     <div class="collapse navbar-collapse" id="navbarNav">
                         <ul class="navbar-nav ms-auto">
                             <li class="nav-item">
@@ -415,6 +525,23 @@
                                 <a class="nav-link {% if request.path.startswith(url_for('dashboard', chef_naam=session.get('chef_naam'))) %}active{% endif %}" href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}">
                                     <i class="fas fa-tachometer-alt"></i> Dashboard
                                 </a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-th-large"></i> Snelle Navigatie
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
+                                    <li><a class="dropdown-item" href="{{ url_for('ingredients.manage', chef_naam=session.get('chef_naam')) }}">
+                                        <i class="fas fa-carrot"></i> Ingrediënten
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('all_dishes') }}">
+                                        <i class="fas fa-utensils"></i> Gerechten
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('suppliers.manage_suppliers', chef_naam=session.get('chef_naam')) }}">
+                                        <i class="fas fa-truck"></i> Leveranciers
+                                    </a></li>
+                                </ul>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ url_for('auth.logout') }}">
@@ -437,7 +564,91 @@
                     </div>
                 </div>
             </nav>
+            
+            <!-- Offcanvas Menu for mobile -->
+            <div class="offcanvas offcanvas-end" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel">
+                <div class="offcanvas-header">
+                    <h5 class="offcanvas-title" id="sidebarMenuLabel">Menu</h5>
+                    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                </div>
+                <div class="offcanvas-body">
+                    {% if session.get('chef_id') %}
+                        <a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}" class="btn btn-primary w-100 mb-3">
+                            <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                        </a>
+                        
+                        <div class="nav-section-title">Kernapplicaties</div>
+                        <nav class="nav flex-column">
+                            <a class="offcanvas-nav-link" href="{{ url_for('ingredients.manage', chef_naam=session.get('chef_naam')) }}">
+                                <i class="fas fa-carrot"></i> Ingrediënten beheren
+                            </a>
+                            <a class="offcanvas-nav-link" href="{{ url_for('all_dishes') }}">
+                                <i class="fas fa-utensils"></i> Gerechten beheren
+                            </a>
+                            <a class="offcanvas-nav-link" href="{{ url_for('print_menu') }}">
+                                <i class="fas fa-print"></i> Menukaart printen
+                            </a>
+                        </nav>
+                        
+                        <div class="nav-section-title">Administratie</div>
+                        <nav class="nav flex-column">
+                            <a class="offcanvas-nav-link" href="{{ url_for('suppliers.manage_suppliers', chef_naam=session.get('chef_naam')) }}">
+                                <i class="fas fa-truck"></i> Leveranciers
+                            </a>
+                            <a class="offcanvas-nav-link" href="{{ url_for('beheer', chef_naam=session.get('chef_naam')) }}">
+                                <i class="fas fa-cog"></i> Instellingen
+                            </a>
+                        </nav>
+                        
+                        <div class="mt-4">
+                            <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger w-100">
+                                <i class="fas fa-sign-out-alt me-2"></i> Uitloggen
+                            </a>
+                        </div>
+                    {% else %}
+                        <a href="{{ url_for('home') }}" class="offcanvas-nav-link">
+                            <i class="fas fa-home"></i> Home
+                        </a>
+                        <a href="{{ url_for('about.about') }}" class="offcanvas-nav-link">
+                            <i class="fas fa-info-circle"></i> Over e-Chef
+                        </a>
+                        <div class="mt-4">
+                            <a href="{{ url_for('auth.login') }}" class="btn btn-primary w-100 mb-2">
+                                <i class="fas fa-sign-in-alt me-2"></i> Inloggen
+                            </a>
+                            <a href="{{ url_for('auth.register') }}" class="btn btn-outline-light w-100">
+                                <i class="fas fa-user-plus me-2"></i> Registreren
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
         </header>
+
+        <!-- Add breadcrumbs just after header -->
+        {% if session.get('chef_id') and request.path != url_for('dashboard', chef_naam=session.get('chef_naam')) %}
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}">Dashboard</a></li>
+                
+                {% if request.path.endswith('ingredients/manage') %}
+                    <li class="breadcrumb-item active" aria-current="page">Ingrediënten Beheren</li>
+                {% elif request.path.endswith('all_dishes') %}
+                    <li class="breadcrumb-item active" aria-current="page">Gerechten Beheren</li>
+                {% elif request.path.endswith('suppliers/manage') %}
+                    <li class="breadcrumb-item active" aria-current="page">Leveranciers Beheren</li>
+                {% elif request.path.endswith('print_menu') %}
+                    <li class="breadcrumb-item active" aria-current="page">Menukaart Printen</li>
+                {% elif 'edit' in request.path and 'dish' in request.path %}
+                    <li class="breadcrumb-item"><a href="{{ url_for('all_dishes') }}">Gerechten</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Gerecht Bewerken</li>
+                {% elif 'haccp' in request.path %}
+                    <li class="breadcrumb-item"><a href="{{ url_for('haccp_dashboard', chef_naam=session.get('chef_naam')) }}">HACCP</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">HACCP Beheren</li>
+                {% endif %}
+            </ol>
+        </nav>
+        {% endif %}
 
         <!-- Flash messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -468,6 +679,13 @@
         </footer>
         <p class="wcag-indicator text-start flex-fill"></p>
         <a href="https://www.w3.org/WAI/WCAG2A-Conformance" class="wcag-indicator text-end flex-fill">WCAG Compliant</a>
+        
+        <!-- Quick access back to dashboard button -->
+        {% if session.get('chef_id') and request.path != url_for('dashboard', chef_naam=session.get('chef_naam')) %}
+        <a href="{{ url_for('dashboard', chef_naam=session.get('chef_naam')) }}" class="dashboard-return" aria-label="Return to dashboard">
+            <i class="fas fa-home"></i>
+        </a>
+        {% endif %}
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>

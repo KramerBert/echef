@@ -347,7 +347,7 @@ footer {
     width: 100%;
     min-width: 0;
     padding: 0.75rem;
-    border-radius: var(--radius-md);
+    border-radius: var (--radius-md);
     border: 1px solid var(--border-color);
     background-color: var(--kitchen-dark);
     color: var(--text-light);
@@ -1982,5 +1982,268 @@ textarea.form-control {
     .ck-editor__editable_inline,
     .ck-blurred {
         padding: 0.75rem !important;
+    }
+}
+
+/* Improved Allergen & Diet Checkbox Styling */
+.allergen-checkbox-group,
+.diet-checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background-color: rgba(30, 42, 56, 0.5);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+/* Simple, large checkbox styling */
+.allergen-checkbox-item,
+.diet-checkbox-item {
+    background-color: rgba(18, 24, 32, 0.7);
+    padding: 0;
+    border-radius: var(--radius-sm);
+    transition: background-color 0.2s ease;
+}
+
+.allergen-checkbox-item:hover,
+.diet-checkbox-item:hover {
+    background-color: rgba(52, 152, 219, 0.15);
+}
+
+/* Make labels large and fully clickable */
+.allergen-checkbox-item label,
+.diet-checkbox-item label {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    width: 100%;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Large native checkbox styling */
+.allergen-checkbox-item input[type="checkbox"],
+.diet-checkbox-item input[type="checkbox"] {
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+/* Custom styling for checkboxes */
+.allergen-checkbox-item input[type="checkbox"] {
+    accent-color: var(--kitchen-warning);
+}
+
+.diet-checkbox-item input[type="checkbox"] {
+    accent-color: var(--kitchen-success);
+}
+
+/* Icon and text container */
+.allergen-checkbox-info,
+.diet-checkbox-info {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.allergen-checkbox-info .allergen-icon,
+.diet-checkbox-info .diet-icon {
+    width: 1.8em;
+    height: 1.8em;
+    font-size: 0.7em;
+    margin-right: 8px;
+}
+
+/* Make the actual name look clickable with underline */
+.allergen-checkbox-info span:last-child,
+.diet-checkbox-info span:last-child {
+    text-decoration: underline;
+    color: var(--text-light);
+    transition: color 0.2s ease;
+}
+
+/* Hover effect for the clickable name */
+.allergen-checkbox-item:hover .allergen-checkbox-info span:last-child,
+.diet-checkbox-item:hover .diet-checkbox-info span:last-child {
+    color: var(--kitchen-highlight);
+}
+
+/* Active checkboxes should have more prominent name styling */
+.allergen-checkbox-item input[type="checkbox"]:checked + label .allergen-checkbox-info span:last-child {
+    color: var(--kitchen-warning);
+    font-weight: 500;
+}
+
+.diet-checkbox-item input[type="checkbox"]:checked + label .diet-checkbox-info span:last-child {
+    color: var(--kitchen-success);
+    font-weight: 500;
+}
+
+/* Section titles */
+.allergen-section-title,
+.diet-section-title {
+    margin-top: 2rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    color: var(--text-light);
+}
+
+.allergen-section-title i,
+.diet-section-title i {
+    margin-right: 0.75rem;
+    color: var(--kitchen-highlight);
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .allergen-checkbox-group,
+    .diet-checkbox-group {
+        grid-template-columns: 1fr;
+        padding: 0.75rem;
+    }
+    
+    /* Larger touch targets on mobile */
+    .allergen-checkbox-item label,
+    .diet-checkbox-item label {
+        padding: 14px;
+    }
+    
+    .allergen-checkbox-item input[type="checkbox"],
+    .diet-checkbox-item input[type="checkbox"] {
+        width: 28px;
+        height: 28px;
+    }
+}
+
+/* Enhanced Form Check Styling */
+.form-check {
+    position: relative;
+    display: block;
+    margin: 0.75rem 0;
+    min-height: 28px;
+    padding-left: 0; /* Remove default padding */
+}
+
+.form-check-input {
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
+    cursor: pointer;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+    /* Remove default accent-color to use our custom styling */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--kitchen-dark);
+}
+
+/* Custom checkbox styling for different types when checked */
+.form-check-input:checked {
+    background-color: var(--kitchen-highlight);
+    border-color: var(--kitchen-highlight);
+    /* Add checkmark */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23ffffff'%3E%3Cpath fill-rule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clip-rule='evenodd'/%3E%3C/svg%3E");
+    background-size: 75%;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* Style allergen checkboxes */
+.form-check-input.allergen-checkbox:checked {
+    background-color: var(--kitchen-warning);
+    border-color: var(--kitchen-warning);
+}
+
+/* Style diet checkboxes */
+.form-check-input.diet-checkbox:checked {
+    background-color: var(--kitchen-success);
+    border-color: var(--kitchen-success);
+}
+
+/* Label styling */
+.form-check-label {
+    position: relative;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-light);
+    font-weight: normal;
+    user-select: none;
+    transition: color var(--transition-fast);
+}
+
+/* Focus state */
+.form-check-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.4);
+    border-radius: 3px;
+}
+
+/* Hover state */
+.form-check-label:hover {
+    color: var(--kitchen-highlight);
+}
+
+/* Checked state styling with improved visibility */
+.form-check-input:checked + .form-check-label {
+    color: var(--kitchen-highlight);
+    font-weight: 500;
+}
+
+.form-check-input.allergen-checkbox:checked + .form-check-label {
+    color: var(--kitchen-warning);
+}
+
+.form-check-input.diet-checkbox:checked + .form-check-label {
+    color: var(--kitchen-success);
+}
+
+/* Inline variant */
+.form-check-inline {
+    display: inline-flex;
+    align-items: center;
+    padding-right: 1rem;
+    margin-right: 1rem;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+/* Text wrapping */
+.form-check-label span {
+    display: inline;
+    vertical-align: middle;
+}
+
+/* Disabled state */
+.form-check-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: var(--text-muted);
+}
+
+.form-check-input:disabled + .form-check-label {
+    opacity: 0.5;
+    cursor: not-allowed;
+    color: var(--text-muted);
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .form-check {
+        margin: 0.5rem 0;
+    }
+    
+    .form-check-input {
+        width: 28px;
+        height: 28px;
     }
 }

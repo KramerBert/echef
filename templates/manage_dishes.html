@@ -66,4 +66,52 @@
     </a>
 </div>
 
+<script>
+// Add this to fix allergen and diet checkbox behavior
+document.addEventListener('DOMContentLoaded', function() {
+    // Make the entire checkbox items clickable
+    const checkboxItems = document.querySelectorAll('.allergen-checkbox-item, .diet-checkbox-item');
+    
+    checkboxItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            // Only process if the click wasn't already on the checkbox input
+            if (e.target.type !== 'checkbox') {
+                // Find the checkbox within this item
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    // Toggle checkbox state
+                    checkbox.checked = !checkbox.checked;
+                    
+                    // Trigger change event for any listeners
+                    const event = new Event('change', { bubbles: true });
+                    checkbox.dispatchEvent(event);
+                }
+            }
+        });
+    });
+
+    // Prevent clicks on the icons from triggering multiple toggles
+    const icons = document.querySelectorAll('.allergen-icon, .diet-icon');
+    icons.forEach(icon => {
+        icon.addEventListener('click', function(e) {
+            e.stopPropagation();
+            
+            // Find the parent checkbox item and trigger its click event
+            const checkboxItem = icon.closest('.allergen-checkbox-item, .diet-checkbox-item');
+            if (checkboxItem) {
+                // Find the checkbox and toggle it directly
+                const checkbox = checkboxItem.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    
+                    // Trigger change event
+                    const event = new Event('change', { bubbles: true });
+                    checkbox.dispatchEvent(event);
+                }
+            }
+        });
+    });
+});
+</script>
+
 {% endblock %}
