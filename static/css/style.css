@@ -247,7 +247,7 @@ footer {
 .suppliers-table th,
 .menu-export-table th {
     background-color: var(--kitchen-blue);
-    color: var(--text-light);
+    color: var (--text-light);
     padding: 1rem;
     text-align: left;
     font-weight: 600;
@@ -1798,4 +1798,189 @@ textarea.form-control {
 .allergen-name {
     font-size: 0.9em;
     font-weight: 500;
+}
+
+/* Improved Alert Styling */
+.alert {
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-weight: 500;
+    position: relative;
+    display: block; /* Changed from flex to block */
+}
+
+/* Icon styling for alerts */
+.alert i:first-child {
+    margin-right: 10px;
+    font-size: 1.2em;
+    float: left; /* Float the icon to allow text to wrap */
+}
+
+/* Alert content wrapper for better structure */
+.alert-content {
+    margin-left: 28px; /* Space for the icon */
+}
+
+/* Make sure headings in alerts are properly displayed */
+.alert h4, .alert h5 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+/* Alert color schemes with improved contrast */
+.alert-success {
+    color: #f0fff0;
+    background-color: #285b2a;
+    border-color: #2d662f;
+}
+
+.alert-danger {
+    color: #ffe0e0;
+    background-color: #7c2929;
+    border-color: #8f2e2e;
+}
+
+.alert-warning {
+    color: #fff8e6;
+    background-color: #7d5a1c;
+    border-color: #8f6824;
+}
+
+.alert-info {
+    color: #e6f5ff;
+    background-color: #235a82;
+    border-color: #276890;
+}
+
+/* Container for all alerts */
+.alert-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 100%;
+}
+
+/* Animation for alerts */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.alert {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Dismiss button styling */
+.alert .close {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    color: inherit;
+    opacity: 0.7;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 1.2em;
+    padding: 0;
+    line-height: 1;
+}
+
+.alert .close:hover {
+    opacity: 1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .alert {
+        padding: 10px 14px;
+        font-size: 0.95em;
+    }
+    
+    .alert-content {
+        margin-left: 24px; /* Slightly smaller margin on mobile */
+    }
+}
+
+/* CKEditor Styling Improvements */
+.ck.ck-content,
+.ck-editor__editable,
+.ck-rounded-corners,
+.ck-editor__editable_inline,
+.ck-blurred {
+    /* Ensure good text contrast */
+    background-color: var(--kitchen-steel) !important;
+    color: var(--kitchen-black) !important;
+    border: 1px solid var(--kitchen-blue) !important;
+    padding: 1rem !important;
+    border-radius: var(--radius-md) !important;
+    min-height: 120px !important;
+    transition: all var(--transition-fast);
+}
+
+/* When editor is focused */
+.ck.ck-content.ck-focused,
+.ck-editor__editable.ck-focused,
+.ck-editor__editable_inline.ck-focused {
+    background-color: #fff !important;
+    border-color: var(--kitchen-highlight) !important;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25) !important;
+    outline: none !important;
+}
+
+/* Toolbar styling */
+.ck.ck-toolbar {
+    background-color: var(--kitchen-dark) !important;
+    border: 1px solid var(--border-color) !important;
+    border-bottom: none !important;
+    border-radius: var(--radius-md) var(--radius-md) 0 0 !important;
+}
+
+.ck.ck-toolbar .ck-button {
+    color: var(--text-light) !important;
+    transition: all var(--transition-fast);
+}
+
+.ck.ck-toolbar .ck-button:hover {
+    background-color: var(--kitchen-highlight) !important;
+}
+
+/* For focused buttons in the toolbar */
+.ck.ck-toolbar .ck-button.ck-on {
+    background-color: var(--kitchen-highlight) !important;
+    color: white !important;
+}
+
+/* Links inside editor */
+.ck.ck-content a {
+    color: var(--kitchen-highlight) !important;
+    text-decoration: underline !important;
+}
+
+/* Better typography inside the editor */
+.ck-content p,
+.ck-content h1,
+.ck-content h2,
+.ck-content h3,
+.ck-content h4,
+.ck-content h5 {
+    color: var(--kitchen-black) !important;
+}
+
+/* For mobile views */
+@media (max-width: 768px) {
+    .ck.ck-toolbar {
+        flex-wrap: wrap !important;
+    }
+    
+    .ck.ck-content,
+    .ck-editor__editable,
+    .ck-rounded-corners,
+    .ck-editor__editable_inline,
+    .ck-blurred {
+        padding: 0.75rem !important;
+    }
 }

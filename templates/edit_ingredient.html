@@ -65,7 +65,14 @@
     }*/
 </style>
 
-<form method="POST" action="{{ url_for('edit_ingredient', chef_naam=chef_naam, ingredient_id=ingredient.ingredient_id) }}" class="edit-ingredient-form">
+<div class="navigation-buttons mb-4">
+    <a href="{{ url_for('ingredients.manage', chef_naam=chef_naam) }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Terug naar ingrediënten
+    </a>
+</div>
+
+<!-- Edit ingredient form -->
+<form id="edit-ingredient-form" method="POST" action="{{ url_for('ingredients.edit', chef_naam=chef_naam, ingredient_id=ingredient.ingredient_id) }}" class="edit-ingredient-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="form-group">
         <label for="naam">Naam ingrediënt:</label><br>
@@ -117,6 +124,14 @@
     <button type="submit" class="btn-action">Bijwerken</button>
 </form>
 
+<!-- Delete ingredient form -->
+<form id="delete-ingredient-form" method="POST" action="{{ url_for('ingredients.delete_ingredient', chef_naam=chef_naam, ingredient_id=ingredient.ingredient_id) }}" class="mt-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-danger" onclick="return confirm('Weet je zeker dat je dit ingrediënt wilt verwijderen?');">
+        <i class="fas fa-trash"></i> Verwijderen
+    </button>
+</form>
+
 {% if gerechten_met_ingredient %}
 <hr>
 <h3>Dit ingrediënt wordt gebruikt in de volgende gerechten:</h3>
@@ -137,4 +152,27 @@
 {% endif %}
 
 <a href="{{ url_for('manage_ingredients', chef_naam=chef_naam) }}">Terug naar Ingrediëntenoverzicht</a>
+
+<!-- AJAX call for update-field -->
+<script>
+function updateField(field, value) {
+    fetch("{{ url_for('ingredients.update_ingredient_field', chef_naam=chef_naam, ingredient_id=ingredient.ingredient_id) }}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': "{{ csrf_token() }}"
+        },
+        body: JSON.stringify({ field: field, value: value })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Field updated successfully');
+        } else {
+            console.error('Error updating field');
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+</script>
 {% endblock %}
