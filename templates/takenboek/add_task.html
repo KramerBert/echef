@@ -9,7 +9,7 @@
             
             <div class="card">
                 <div class="card-body">
-                    <form method="POST" action="{{ url_for('add_task', chef_naam=chef_naam) }}">
+                    <form method="POST" action="{{ url_for('takenboek.add_task', chef_naam=chef_naam) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         
                         <div class="form-group mb-3">
@@ -38,7 +38,7 @@
                         
                         <div class="form-group mt-4">
                             <button type="submit" class="btn btn-primary">Taak Toevoegen</button>
-                            <a href="{{ url_for('takenboek', chef_naam=chef_naam) }}" class="btn btn-secondary ms-2">Annuleren</a>
+                            <a href="{{ url_for('takenboek.index', chef_naam=chef_naam) }}" class="btn btn-secondary ms-2">Annuleren</a>
                         </div>
                     </form>
                 </div>

@@ -12,7 +12,7 @@
         <div class="card-body text-center">
             <h3>Je hebt nog geen takenboek</h3>
             <p>Klik op de knop hieronder om een standaard takenboek aan te maken.</p>
-            <form method="POST" action="{{ url_for('create_takenboek', chef_naam=chef_naam) }}">
+            <form method="POST" action="{{ url_for('takenboek.create_takenboek', chef_naam=chef_naam) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-primary">Takenboek aanmaken</button>
             </form>
@@ -20,7 +20,7 @@
     </div>
     {% else %}
     <div class="mb-4">
-        <a href="{{ url_for('add_task', chef_naam=chef_naam) }}" class="btn btn-primary">
+        <a href="{{ url_for('takenboek.add_task', chef_naam=chef_naam) }}" class="btn btn-primary">
             <i class="fas fa-plus"></i> Nieuwe taak toevoegen
         </a>
     </div>
@@ -49,10 +49,10 @@
                     <td>{{ task.uitgevoerd_op|default('-', true) }}</td>
                     <td>
                         <div class="dish-actions">
-                            <a href="{{ url_for('edit_task', chef_naam=chef_naam, task_id=task.task_id) }}" class="btn-action btn-edit">
+                            <a href="{{ url_for('takenboek.edit_task', chef_naam=chef_naam, task_id=task.task_id) }}" class="btn-action btn-edit">
                                 <i class="fas fa-edit"></i> Bewerken
                             </a>
-                            <form method="POST" action="{{ url_for('delete_task', chef_naam=chef_naam, task_id=task.task_id) }}" style="display:inline;">
+                            <form method="POST" action="{{ url_for('takenboek.delete_task', chef_naam=chef_naam, task_id=task.task_id) }}" style="display:inline;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn-action btn-delete" onclick="return confirm('Weet je zeker dat je deze taak wilt verwijderen?')">
                                     <i class="fas fa-trash"></i> Verwijderen
