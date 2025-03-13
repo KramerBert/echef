@@ -49,16 +49,76 @@
         margin-bottom: 1.5rem;
     }
 
+    /* Improved heading styles for better readability */
+    .welcome-card h1.card-title {
+        font-size: 2.5rem;
+        line-height: 1.2;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Responsive typography for mobile devices */
+    @media (max-width: 768px) {
+        .welcome-card h1.card-title {
+            font-size: 1.8rem;
+            line-height: 1.3;
+            margin-bottom: 1rem;
+            padding: 0 10px; /* Add some padding on smaller screens */
+        }
+        
+        .welcome-card h5.card-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+    }
+
+    /* Even smaller screens */
+    @media (max-width: 480px) {
+        .welcome-card h1.card-title {
+            font-size: 1.5rem;
+            font-weight: 600; /* Make font slightly bolder on very small screens */
+            word-wrap: break-word; /* Ensure long words don't overflow */
+            letter-spacing: -0.02em; /* Slightly reduce letter spacing */
+        }
+    }
+
     /* Button styling */
     .btn {
         margin: 0.5rem;
         min-width: 150px;
     }
 
-    /* Logo styling */
+    /* Logo styling - improved for responsive display */
     .logo-img {
-        max-width: 300px;
+        max-width: 80%;
+        width: auto;
+        height: auto;
         margin: 1rem auto;
+        max-height: 120px;
+        object-fit: contain;
+        display: block;
+    }
+
+    /* Responsive logo sizes */
+    @media (max-width: 768px) {
+        .logo-img {
+            max-width: 70%;
+            max-height: 80px;
+            margin: 0.75rem auto;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .logo-img {
+            max-width: 80%;
+            max-height: 60px;
+            margin: 0.5rem auto;
+        }
+    }
+
+    /* Improved padding for the logo container */
+    .logo-container {
+        padding: 0.5rem;
+        margin-bottom: 1rem;
     }
 
     /* Scroll indicator styling */
@@ -88,9 +148,10 @@
 
 <div class="card text-center text-white bg-dark py-4 welcome-card" aria-label="Welcome card">
     <div class="card-body">
-        <h1 class="card-title">Welkom bij e-Chef</h1>
-        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="E-chef Logo" class="img-fluid mb-4 logo-img">
-        <h2 class="card-title">Culinair Management Platform</h2>
+        <h1 class="card-title">Culinair Management Platform</h1>        
+        <div class="logo-container">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="E-chef Logo" class="img-fluid logo-img">
+        </div>
         <h5 class="card-title">Voor Kookprofessionals</h5>
         
         <!-- Add scroll indicator -->
@@ -100,22 +161,23 @@
         
         <div class="accordion" id="featureAccordion">
             <!-- Kernfunctionaliteiten -->
-            <div class="container text-center" style="max-width: 800px; margin: 0 auto;">
-                {% for feature in [
-                    ('Recepten', 'utensils', 'Beheer Je Recepten Slimmer', 'Houd al je recepten overzichtelijk op één centrale plek met uitgebreide <strong>ingrediëntenlijsten</strong> en stap-voor-stap <strong>bereidingswijzen</strong>. 🍳'),
-                    ('Kostprijs', 'calculator', 'Slimme Kostprijsberekening', 'Laat e-Chef automatisch de <strong>kostprijs per gerecht</strong> berekenen. 💰'),
-                    ('Menukaarten', 'file-alt', 'Menukaarten Exporteren', '🍽️ Exporteer in 1 muisklik professioneel opgemaakte menukaarten en print ze uit voor je gasten of de drukker. 📄'),
-                    ('Kookboek', 'book-reader', 'Jouw Professionele Kookboek', '📖 Creëer je eigen professionele kookboek met al je recepten en technieken. 👨‍🍳'),
-                    ('Bestellijst', 'shopping-basket', 'Gemakkelijk Bestellen', '🛒 Selecteer je gerechten, geef de aantallen op en print met 1 muisklik je bestellijst per leverancier. 📝'),
-                    ('HACCP', 'clipboard-check', 'Extra: HACCP', '🧾 Maak je eigen HACCP Checklists aan en track de status van de controlepunten. ✅')
-                ] %}
+            {% for feature in [
+                ('Recepten', 'utensils', 'Beheer Je Recepten Slimmer', 'Houd al je recepten overzichtelijk op één centrale plek met uitgebreide <strong>ingrediëntenlijsten</strong> en stap-voor-stap <strong>bereidingswijzen</strong>. 🍳'),
+                ('Kostprijs', 'calculator', 'Slimme Kostprijsberekening', 'Laat e-Chef automatisch de <strong>kostprijs per gerecht</strong> berekenen. 💰'),
+                ('Menukaarten', 'file-alt', 'Menukaarten Exporteren', '🍽️ Exporteer in 1 muisklik professioneel opgemaakte menukaarten en print ze uit voor je gasten of de drukker. 📄'),
+                ('Kookboek', 'book-reader', 'Jouw Professionele Kookboek', '📖 Creëer je eigen professionele kookboek met al je recepten en technieken. 👨‍🍳'),
+                ('Leerling-Kookprofessional', 'graduation-cap', 'Digitaliseer je takenboek', '📚 Volg eenvoudig je voortgang als kookleerling en houd je taken en leerdoelen digitaal bij. 🎓'),
+                ('Bestellijst', 'shopping-basket', 'Gemakkelijk Bestellen', '🛒 Selecteer je gerechten, geef de aantallen op en print met 1 muisklik je bestellijst per leverancier. 📝'),
+                ('Leveranciers', 'truck', 'Stel je assortiment Beschikbaar', '🚚 Laat e-Chef je prijzen <strong>converteren</strong> en maak je assortiment direct beschikbaar aan chefs voor kostprijsberekingen van gerechten en menukaarten. 📊'),
+                ('HACCP', 'clipboard-check', 'Extra: HACCP', '🧾 Maak je eigen HACCP Checklists aan en track de status van de controlepunten. ✅')
+            ] %}
             <div class="accordion-item bg-dark text-white">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ feature[0] }}">
+                <h2 class="accordion-header" id="heading{{ feature[0] }}">
+                    <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ feature[0] }}" aria-expanded="false" aria-controls="collapse{{ feature[0] }}">
                         <i class="fas fa-{{ feature[1] }} icon-{{ feature[1] }} me-2"></i> {{ feature[0] }}
                     </button>
                 </h2>
-                <div id="collapse{{ feature[0] }}" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
+                <div id="collapse{{ feature[0] }}" class="accordion-collapse collapse" data-bs-parent="#featureAccordion" aria-labelledby="heading{{ feature[0] }}">
                     <div class="accordion-body">
                         <h2>{{ feature[2] }}</h2>
                         <p>{{ feature[3] | safe }}</p>
@@ -131,12 +193,12 @@
 
             <!-- Voor wie is e-Chef -->
             <div class="accordion-item bg-dark text-white">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseVoorWie">
+                <h2 class="accordion-header" id="headingVoorWie">
+                    <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseVoorWie" aria-expanded="false" aria-controls="collapseVoorWie">
                         <i class="fas fa-users-cog icon-users-cog me-2"></i> Voor wie is e-Chef
                     </button>
                 </h2>
-                <div id="collapseVoorWie" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
+                <div id="collapseVoorWie" class="accordion-collapse collapse" data-bs-parent="#featureAccordion" aria-labelledby="headingVoorWie">
                     <div class="accordion-body">
                         <h2>Gemaakt door kookprofessionals, voor kookprofessionals.</h2>
                          <h5>En gepassioneerde hobbykoks.</h5> 
@@ -147,15 +209,15 @@
 
             <!-- Quickstart -->
             <div class="accordion-item bg-dark text-white">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseQuickstart">
+                <h2 class="accordion-header" id="headingQuickstart">
+                    <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseQuickstart" aria-expanded="false" aria-controls="collapseQuickstart">
                         <i class="fas fa-rocket icon-rocket me-2"></i> Quickstart Guide
                     </button>
                 </h2>
-                <div id="collapseQuickstart" class="accordion-collapse collapse" data-bs-parent="#featureAccordion">
+                <div id="collapseQuickstart" class="accordion-collapse collapse" data-bs-parent="#featureAccordion" aria-labelledby="headingQuickstart">
                     <div class="accordion-body">
                         <p>Snel aan de slag met e-Chef? Bekijk onze quickstart guide!</p>
-                        <a href="{{ url_for('quickstart') }}" class="btn btn-info mt-2">
+                        <a href="{{ url_for('quickstart.quickstart_index') }}" class="btn btn-info mt-2">
                             <i class="fas fa-arrow-right"></i> Naar de Quickstart Guide
                         </a>
                     </div>
@@ -174,4 +236,20 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Ensure Bootstrap JS is properly loaded before initializing accordions
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if Bootstrap's collapse functionality is available
+        if (typeof bootstrap !== 'undefined') {
+            // Initialize all accordions on the page
+            var accordionElements = document.querySelectorAll('.accordion-collapse');
+            accordionElements.forEach(function(element) {
+                new bootstrap.Collapse(element, {
+                    toggle: false
+                });
+            });
+        }
+    });
+</script>
 {% endblock %}
