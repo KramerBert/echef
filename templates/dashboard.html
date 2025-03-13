@@ -58,22 +58,15 @@
                 <a href="{{ url_for('suppliers.manage_suppliers', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Manage suppliers">
                     <i class="fas fa-truck icon-suppliers"></i> Leveranciers 
                 </a>
-
+                <a href="{{ url_for('backup_restore', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Backup and Restore">
+                    <i class="fas fa-database icon-backup"></i> Backup & Restore
+                </a>
                 <a href="{{ url_for('instructions.index') }}" class="dashboard-btn" aria-label="Instructions">
                     <i class="fas fa-book icon-docs"></i> e-Chef Werkinstructie
                 </a>
-
-
-
-                
             </div>
         </div>
     </div>
-
-
-
-
-
 
 </div>
 <style>
@@ -169,6 +162,7 @@
     .dashboard-btn i.icon-suppliers { color: #1ABC9C; }      /* Turquoise voor leveranciers */
     .dashboard-btn i.icon-docs { color: #34495E; }           /* Donkerblauw voor documentatie */
     .dashboard-btn i.icon-tasks { color: #FF5733; }          /* Oranje voor takenboek */
+    .dashboard-btn i.icon-backup { color: #3498DB; }         /* Blauw voor backup & restore */
 
     /* Behoud de hover effect voor alle icoontjes */
     .dashboard-btn:hover i {

@@ -1,8 +1,9 @@
 import os
-from flask import Flask, request, redirect, url_for, render_template, session, flash, send_file, jsonify, current_app
+from flask import Flask, request, redirect, url_for, render_template, session, flash, send_file, jsonify, current_app, make_response
 from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import Error
+import json  # Adding this import to resolve the undefined variable errors
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -1265,6 +1266,22 @@ def create_app():
         finally:
             cur.close()
             conn.close()
+
+    # -----------------------------------------------------------
+    #  Backup & Restore Page
+    # -----------------------------------------------------------
+    @app.route('/dashboard/<chef_naam>/backup-restore')
+    @login_required
+    def backup_restore(chef_naam):
+        """Display backup and restore page"""
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
+        if 'chef_id' not in session or session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('login'))
+            
+        return render_template('backup_restore.html', chef_naam=chef_naam)
 
     # -----------------------------------------------------------
     #  Werkinstructie
@@ -2615,6 +2632,339 @@ def create_app():
                 # Only clear after GET request (after redirect from POST)
                 session.pop('skipped_ingredients', None)
         return response
+
+    # -----------------------------------------------------------
+    #  Backup & Restore Functionality
+    # -----------------------------------------------------------
+    @app.route('/backup/<chef_naam>', methods=['GET'])
+    @login_required
+    def backup_chef_data(chef_naam):
+        """Generate a complete backup of chef data"""
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
+        
+        if 'chef_id' not in session:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('login'))
+            
+        try:
+            chef_id = session['chef_id']
+            
+            conn = get_db_connection()
+            if conn is None:
+                flash("Database connection error.", "danger")
+                return redirect(url_for('dashboard', chef_naam=chef_naam))
+                
+            cur = conn.cursor(dictionary=True)
+            
+            # Create a backup dictionary
+            backup_data = {
+                'metadata': {
+                    'chef_id': chef_id,
+                    'chef_naam': chef_naam,
+                    'created_at': datetime.now().isoformat(),
+                    'version': '1.0'
+                },
+                'data': {}
+            }
+            
+            # Backup dishes
+            cur.execute("SELECT * FROM dishes WHERE chef_id = %s", (chef_id,))
+            backup_data['data']['dishes'] = cur.fetchall()
+            
+            # Backup dish_ingredients
+            cur.execute("""
+                SELECT di.* 
+                FROM dish_ingredients di
+                JOIN dishes d ON di.dish_id = d.dish_id
+                WHERE d.chef_id = %s
+            """, (chef_id,))
+            backup_data['data']['dish_ingredients'] = cur.fetchall()
+            
+            # Backup dish_allergenen
+            cur.execute("""
+                SELECT da.* 
+                FROM dish_allergenen da
+                JOIN dishes d ON da.dish_id = d.dish_id
+                WHERE d.chef_id = %s
+            """, (chef_id,))
+            backup_data['data']['dish_allergenen'] = cur.fetchall()
+            
+            # Backup dish_dieten
+            cur.execute("""
+                SELECT dd.* 
+                FROM dish_dieten dd
+                JOIN dishes d ON dd.dish_id = d.dish_id
+                WHERE d.chef_id = %s
+            """, (chef_id,))
+            backup_data['data']['dish_dieten'] = cur.fetchall()
+            
+            # Backup ingredients
+            cur.execute("SELECT * FROM ingredients WHERE chef_id = %s", (chef_id,))
+            backup_data['data']['ingredients'] = cur.fetchall()
+            
+            # Backup leveranciers
+            cur.execute("SELECT * FROM leveranciers WHERE chef_id = %s", (chef_id,))
+            backup_data['data']['leveranciers'] = cur.fetchall()
+            
+            # Backup eenheden
+            cur.execute("SELECT * FROM eenheden WHERE chef_id = %s", (chef_id,))
+            backup_data['data']['eenheden'] = cur.fetchall()
+            
+            # Backup categorieen
+            cur.execute("SELECT * FROM categorieen WHERE chef_id = %s", (chef_id,))
+            backup_data['data']['categorieen'] = cur.fetchall()
+            
+            # Backup dish_categories
+            cur.execute("SELECT * FROM dish_categories WHERE chef_id = %s", (chef_id,))
+            backup_data['data']['dish_categories'] = cur.fetchall()
+            
+            # Backup HACCP data if exists
+            cur.execute("SELECT * FROM haccp_checklists WHERE chef_id = %s", (chef_id,))
+            backup_data['data']['haccp_checklists'] = cur.fetchall()
+            
+            # Get checkpoints for these checklists
+            haccp_ids = [row['checklist_id'] for row in backup_data['data']['haccp_checklists']]
+            if haccp_ids:
+                placeholder = ','.join(['%s'] * len(haccp_ids))
+                cur.execute(f"""
+                    SELECT * FROM haccp_checkpunten 
+                    WHERE checklist_id IN ({placeholder})
+                """, tuple(haccp_ids))
+                backup_data['data']['haccp_checkpunten'] = cur.fetchall()
+                
+                # Get measurements for these chef's checkpoints
+                cur.execute("""
+                    SELECT m.* 
+                    FROM haccp_metingen m
+                    JOIN haccp_checkpunten p ON m.punt_id = p.punt_id
+                    JOIN haccp_checklists c ON p.checklist_id = c.checklist_id
+                    WHERE c.chef_id = %s
+                """, (chef_id,))
+                backup_data['data']['haccp_metingen'] = cur.fetchall()
+            
+            # Backup takenboek if exists
+            try:
+                cur.execute("SELECT * FROM tasks WHERE chef_id = %s", (chef_id,))
+                backup_data['data']['tasks'] = cur.fetchall()
+            except:
+                # Table might not exist
+                pass
+                
+            cur.close()
+            conn.close()
+            
+            # Convert Decimal objects to strings
+            def decimal_serializer(obj):
+                if isinstance(obj, Decimal):
+                    return str(obj)
+                # Convert datetime objects
+                if isinstance(obj, datetime):
+                    return obj.isoformat()
+                raise TypeError(f"Type {type(obj)} not serializable")
+                
+            # Generate JSON file
+            now = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_filename = f"echef_backup_{chef_naam}_{now}.json"
+            
+            # Return the file as a download
+            response = make_response(json.dumps(backup_data, default=decimal_serializer, indent=2))
+            response.headers.set('Content-Type', 'application/json')
+            response.headers.set('Content-Disposition', f'attachment; filename={backup_filename}')
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error creating backup: {str(e)}", exc_info=True)
+            flash(f"Er is een fout opgetreden bij het maken van de backup: {str(e)}", "danger")
+            return redirect(url_for('dashboard', chef_naam=chef_naam))
+
+    @app.route('/restore/<chef_naam>', methods=['POST'])
+    @login_required
+    def restore_chef_data(chef_naam):
+        """Restore chef data from backup file"""
+        if session['chef_naam'] != chef_naam:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('auth.login'))
+            
+        if 'chef_id' not in session:
+            flash("Geen toegang. Log opnieuw in.", "danger")
+            return redirect(url_for('login'))
+            
+        form = FlaskForm()
+        if not form.validate_on_submit():
+            flash("Ongeldige CSRF-token.", "danger")
+            return redirect(url_for('dashboard', chef_naam=chef_naam))
+            
+        if 'backup_file' not in request.files:
+            flash("Geen backup bestand geselecteerd.", "danger")
+            return redirect(url_for('dashboard', chef_naam=chef_naam))
+            
+        file = request.files['backup_file']
+        if file.filename == '':
+            flash("Geen backup bestand geselecteerd.", "danger")
+            return redirect(url_for('dashboard', chef_naam=chef_naam))
+            
+        try:
+            # Verify it's a JSON file
+            if not file.filename.endswith('.json'):
+                flash("Ongeldig bestandsformaat. Upload een .json backup bestand.", "danger")
+                return redirect(url_for('dashboard', chef_naam=chef_naam))
+                
+            # Read and validate the backup file
+            backup_content = file.read().decode('utf-8')
+            backup_data = json.loads(backup_content)
+            
+            # Basic validation
+            if 'metadata' not in backup_data or 'data' not in backup_data:
+                flash("Ongeldig backup formaat.", "danger")
+                return redirect(url_for('dashboard', chef_naam=chef_naam))
+                
+            # Verify the backup belongs to this chef
+            if str(backup_data['metadata']['chef_id']) != str(session['chef_id']):
+                flash("Deze backup hoort niet bij jouw account.", "danger")
+                return redirect(url_for('dashboard', chef_naam=chef_naam))
+                
+            # Start restoration process
+            conn = get_db_connection()
+            if conn is None:
+                flash("Database connection error.", "danger")
+                return redirect(url_for('dashboard', chef_naam=chef_naam))
+                
+            cur = conn.cursor(dictionary=True)
+            chef_id = session['chef_id']
+            
+            # Confirm restoration
+            confirm = request.form.get('confirm_restore', 'false')
+            if confirm != 'true':
+                flash("Om een backup te herstellen, moet je de waarschuwing bevestigen.", "warning")
+                return redirect(url_for('dashboard', chef_naam=chef_naam))
+                
+            # Start transaction
+            conn.start_transaction()
+            
+            try:
+                # Clear existing data (in reverse order of dependencies)
+                tables_to_clear = [
+                    "haccp_metingen",
+                    "haccp_checkpunten",
+                    "haccp_checklists",
+                    "dish_dieten",
+                    "dish_allergenen",
+                    "dish_ingredients",
+                    "dishes",
+                    "ingredients",
+                    "leveranciers",
+                    "eenheden",
+                    "categorieen",
+                    "dish_categories"
+                ]
+                
+                for table in tables_to_clear:
+                    # Some tables need special handling due to foreign key relationships
+                    if table == "dish_ingredients":
+                        cur.execute(f"""
+                            DELETE di FROM dish_ingredients di 
+                            JOIN dishes d ON di.dish_id = d.dish_id 
+                            WHERE d.chef_id = %s
+                        """, (chef_id,))
+                    elif table == "dish_allergenen":
+                        cur.execute(f"""
+                            DELETE da FROM dish_allergenen da 
+                            JOIN dishes d ON da.dish_id = d.dish_id 
+                            WHERE d.chef_id = %s
+                        """, (chef_id,))
+                    elif table == "dish_dieten":
+                        cur.execute(f"""
+                            DELETE dd FROM dish_dieten dd 
+                            JOIN dishes d ON dd.dish_id = d.dish_id 
+                            WHERE d.chef_id = %s
+                        """, (chef_id,))
+                    elif table == "haccp_metingen":
+                        # Skip if not in backup
+                        if 'haccp_metingen' not in backup_data['data']:
+                            continue
+                        cur.execute(f"""
+                            DELETE m FROM haccp_metingen m
+                            JOIN haccp_checkpunten p ON m.punt_id = p.punt_id
+                            JOIN haccp_checklists c ON p.checklist_id = c.checklist_id
+                            WHERE c.chef_id = %s
+                        """, (chef_id,))
+                    elif table == "haccp_checkpunten":
+                        # Skip if not in backup
+                        if 'haccp_checkpunten' not in backup_data['data']:
+                            continue
+                        cur.execute(f"""
+                            DELETE p FROM haccp_checkpunten p
+                            JOIN haccp_checklists c ON p.checklist_id = c.checklist_id
+                            WHERE c.chef_id = %s
+                        """, (chef_id,))
+                    else:
+                        # Skip if not in backup
+                        if table not in backup_data['data']:
+                            continue
+                        cur.execute(f"DELETE FROM {table} WHERE chef_id = %s", (chef_id,))
+                
+                # Restore each table (in order of dependencies)
+                restore_order = [
+                    "leveranciers", 
+                    "categorieen", 
+                    "eenheden", 
+                    "dish_categories",
+                    "ingredients",
+                    "dishes",
+                    "dish_ingredients",
+                    "dish_allergenen",
+                    "dish_dieten",
+                    "haccp_checklists",
+                    "haccp_checkpunten",
+                    "haccp_metingen"
+                ]
+                
+                # Add tasks if present
+                if 'tasks' in backup_data['data']:
+                    restore_order.append("tasks")
+                
+                for table in restore_order:
+                    # Skip if not in backup
+                    if table not in backup_data['data'] or not backup_data['data'][table]:
+                        continue
+                    
+                    for row in backup_data['data'][table]:
+                        # Convert keys to list for consistent ordering
+                        columns = list(row.keys())
+                        values = [row[col] for col in columns]
+                        
+                        # Build placeholders
+                        placeholders = ', '.join(['%s'] * len(values))
+                        columns_str = ', '.join(columns)
+                        
+                        # Insert query with ignore duplicate keys
+                        query = f"INSERT IGNORE INTO {table} ({columns_str}) VALUES ({placeholders})"
+                        cur.execute(query, tuple(values))
+                
+                conn.commit()
+                flash("Backup succesvol hersteld! Je data is teruggezet naar de staat van de backup.", "success")
+                
+            except Exception as e:
+                conn.rollback()
+                logger.error(f"Error restoring backup: {str(e)}", exc_info=True)
+                flash(f"Fout bij het herstellen van de backup: {str(e)}", "danger")
+                
+            finally:
+                cur.close()
+                conn.close()
+                
+            return redirect(url_for('dashboard', chef_naam=chef_naam))
+            
+        except json.JSONDecodeError:
+            flash("Het geselecteerde bestand is geen geldige JSON backup.", "danger")
+            return redirect(url_for('dashboard', chef_naam=chef_naam))
+            
+        except Exception as e:
+            logger.error(f"Error processing backup file: {str(e)}", exc_info=True)
+            flash(f"Fout bij het verwerken van het backup bestand: {str(e)}", "danger")
+            return redirect(url_for('dashboard', chef_naam=chef_naam))
 
     return app
 

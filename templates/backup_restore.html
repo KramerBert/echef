@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Backup & Restore - E-chef{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1>Backup & Restore</h1>
+            <p class="lead">Beheer je gegevens met de backup en restore functionaliteit.</p>
+            <a href="{{ url_for('dashboard', chef_naam=chef_naam) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Terug naar Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 bg-dark text-white">
+                <div class="card-header">
+                    <h3><i class="fas fa-download text-info"></i> Backup Maken</h3>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        Download een complete backup van al je gegevens. Dit bestand bevat al je recepten, ingrediënten, leveranciers en instellingen.
+                    </p>
+                    <p class="card-text text-muted">
+                        <i class="fas fa-info-circle"></i> Het is raadzaam om regelmatig een backup te maken van je gegevens.
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('backup_chef_data', chef_naam=chef_naam) }}" class="btn btn-info btn-lg w-100">
+                        <i class="fas fa-save"></i> Backup Maken
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 bg-dark text-white">
+                <div class="card-header">
+                    <h3><i class="fas fa-upload text-warning"></i> Backup Herstellen</h3>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-warning">
+                        <strong>Waarschuwing:</strong> Hiermee worden je huidige gegevens vervangen door die uit de backup!
+                    </p>
+                    <form method="POST" action="{{ url_for('restore_chef_data', chef_naam=chef_naam) }}" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="backup_file" class="form-label">Selecteer backup bestand (.json)</label>
+                            <input type="file" class="form-control" id="backup_file" name="backup_file" accept=".json" required>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="confirm_restore" name="confirm_restore" value="true" required>
+                            <label class="form-check-label" for="confirm_restore">
+                                Ik begrijp dat deze actie mijn huidige gegevens zal vervangen
+                            </label>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-warning btn-lg w-100" onclick="return confirm('Weet je zeker dat je deze backup wilt herstellen? Alle huidige gegevens worden vervangen door die uit de backup!');">
+                            <i class="fas fa-sync-alt"></i> Backup Herstellen
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card bg-dark text-white">
+                <div class="card-header">
+                    <h3><i class="fas fa-question-circle"></i> Veelgestelde vragen</h3>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="faqAccordion">
+                        <div class="accordion-item bg-dark text-white">
+                            <h2 class="accordion-header" id="headingOne">
+                                <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                    Wat bevat de backup precies?
+                                </button>
+                            </h2>
+                            <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    De backup bevat al je recepten, ingrediënten, leveranciers, instellingen, gerechten, HACCP data en alle andere gegevens die je in e-Chef hebt opgeslagen.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item bg-dark text-white">
+                            <h2 class="accordion-header" id="headingTwo">
+                                <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                    Hoe vaak moet ik een backup maken?
+                                </button>
+                            </h2>
+                            <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    We raden aan om een backup te maken na elke belangrijke wijziging aan je gegevens, bijvoorbeeld na het toevoegen van nieuwe recepten of het bijwerken van je ingrediënten.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item bg-dark text-white">
+                            <h2 class="accordion-header" id="headingThree">
+                                <button class="accordion-button collapsed bg-dark text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                    Kan ik een backup van iemand anders importeren?
+                                </button>
+                            </h2>
+                            <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    Nee, je kunt alleen backups herstellen die van jouw eigen account zijn gemaakt. Dit is om veiligheidsredenen en om de integriteit van je gegevens te waarborgen.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .accordion-button:after {
+        color: white;
+    }
+    
+    .accordion-button:not(.collapsed) {
+        background-color: var(--kitchen-blue);
+        color: white;
+    }
+</style>
+{% endblock %}
