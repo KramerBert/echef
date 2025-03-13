@@ -5,18 +5,50 @@
     <div class="">
       <h1>e-Chef Dashboard van {{ session.get('chef_display_naam', chef_naam.replace('_', ' ')) }}</h1>
 
-        <hr class="mb-4">
+      <!-- Stats counter section -->
+      <div class="stats-container my-4">
+          <a href="{{ url_for('all_dishes') }}" class="stat-card-link">
+              <div class="stat-card">
+                  <div class="stat-icon">
+                      <i class="fa-solid fa-utensils icon-dishes"></i>
+                  </div>
+                  <div class="stat-content">
+                      <div class="stat-value">{{ dish_count|default(0) }}</div>
+                      <div class="stat-label">Gerechten</div>
+                  </div>
+              </div>
+          </a>
+          
+          <a href="{{ url_for('ingredients.manage', chef_naam=chef_naam) }}" class="stat-card-link">
+              <div class="stat-card">
+                  <div class="stat-icon">
+                      <i class="fas fa-carrot icon-ingredients"></i>
+                  </div>
+                  <div class="stat-content">
+                      <div class="stat-value">{{ ingredient_count|default(0) }}</div>
+                      <div class="stat-label">Ingrediënten</div>
+                  </div>
+              </div>
+          </a>
+          
+          <a href="{{ url_for('suppliers.manage_suppliers', chef_naam=chef_naam) }}" class="stat-card-link">
+              <div class="stat-card">
+                  <div class="stat-icon">
+                      <i class="fas fa-truck icon-suppliers"></i>
+                  </div>
+                  <div class="stat-content">
+                      <div class="stat-value">{{ supplier_count|default(0) }}</div>
+                      <div class="stat-label">Leveranciers</div>
+                  </div>
+              </div>
+          </a>
+      </div>
+
+      <hr class="mb-4">
     <div class="mb-4">
         <div class="">
             <div class="dashboard-grid" role="group" aria-label="Primary dashboard actions">
                 
-                <a href="{{ url_for('ingredients.manage', chef_naam=chef_naam) }}" class="dashboard-btn" aria-label="Manage ingredients">
-                    <i class="fas fa-carrot icon-ingredients"></i> Ingrediënten beheren
-                </a>
-               
-                <a href="{{ url_for('all_dishes') }}" class="dashboard-btn" aria-label="Manage dishes">
-                    <i class="fa-solid fa-utensils icon-dishes"></i> Gerechten beheren
-                </a>
                 <a href="{{ url_for('print_menu') }}" class="dashboard-btn" aria-label="Print menu">
                     <i class="fas fa-print icon-menu"></i> Menukaart Printen
                 </a>
@@ -195,6 +227,102 @@
         
         .dashboard-btn, .dashboard-btn-wrapper .dashboard-btn {
             padding: 0.8rem;
+        }
+    }
+
+    /* Stats container styles */
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    /* Style for the link wrapper around stat cards */
+    .stat-card-link {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+    
+    .stat-card-link:hover {
+        text-decoration: none;
+        color: inherit;
+    }
+    
+    .stat-card {
+        background-color: var(--kitchen-dark);
+        border: 1px solid var(--kitchen-steel);
+        border-radius: 4px;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: all 0.3s ease;
+        cursor: pointer; /* Add pointer cursor to indicate clickable */
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        border-color: var(--kitchen-highlight);
+        background-color: var(--kitchen-blue); /* Slightly different background on hover */
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background-color: var(--kitchen-black);
+    }
+    
+    .stat-icon i {
+        font-size: 1.5rem;
+    }
+    
+    .stat-content {
+        flex: 1;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--text-light);
+    }
+    
+    .stat-label {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    /* Preserve icon colors in stat cards */
+    .stat-icon i.icon-dishes { color: #E74C3C; }
+    .stat-icon i.icon-ingredients { color: #2ECC71; }
+    .stat-icon i.icon-suppliers { color: #1ABC9C; }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .stats-container {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .stats-container {
+            grid-template-columns: repeat(2, 1fr);
         }
     }
 </style>

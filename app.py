@@ -2360,7 +2360,47 @@ def create_app():
             flash("Geen toegang. Log opnieuw in.", "danger")
             return redirect(url_for('login'))
             
-        return render_template('dashboard.html', chef_naam=chef_naam, form=FlaskForm())
+        # Fetch counts for dishes and ingredients
+        conn = get_db_connection()
+        if conn is None:
+            flash("Database connection error.", "danger")
+            return redirect(url_for('home'))
+        
+        try:
+            cur = conn.cursor(dictionary=True)
+            
+            # Count dishes
+            cur.execute("SELECT COUNT(*) as dish_count FROM dishes WHERE chef_id = %s", 
+                        (session['chef_id'],))
+            dish_count = cur.fetchone()['dish_count']
+            
+            # Count ingredients
+            cur.execute("SELECT COUNT(*) as ingredient_count FROM ingredients WHERE chef_id = %s", 
+                        (session['chef_id'],))
+            ingredient_count = cur.fetchone()['ingredient_count']
+            
+            # Count suppliers
+            cur.execute("SELECT COUNT(*) as supplier_count FROM leveranciers WHERE chef_id = %s", 
+                        (session['chef_id'],))
+            supplier_count = cur.fetchone()['supplier_count']
+            
+            cur.close()
+            conn.close()
+            
+            return render_template('dashboard.html', 
+                                 chef_naam=chef_naam, 
+                                 dish_count=dish_count, 
+                                 ingredient_count=ingredient_count, 
+                                 supplier_count=supplier_count,
+                                 form=FlaskForm())
+        
+        except Exception as e:
+            if conn and conn.is_connected():
+                cur.close()
+                conn.close()
+            logger.error(f"Error fetching dashboard counts: {str(e)}")
+            flash("Er is een fout opgetreden bij het laden van uw gegevens.", "danger")
+            return render_template('dashboard.html', chef_naam=chef_naam, form=FlaskForm())
 
     @app.route('/dashboard/<chef_naam>/dish/<int:dish_id>/costs', methods=['GET', 'POST'])
     @login_required
