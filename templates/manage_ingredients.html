@@ -7,7 +7,11 @@
     <a href="{{ url_for('dashboard', chef_naam=chef_naam) }}" class="btn-action">
         <i class="fas fa-arrow-left"></i> Dashboard
     </a>
-    <!-- Add Bulk Delete Button -->
+    <!-- Add New Ingredient Button -->
+    <button type="button" class="btn-action btn-primary" style="margin-left: 10px;" onclick="openNewIngredientModal()">
+        <i class="fas fa-plus"></i> Nieuw Ingrediënt
+    </button>
+    <!-- Bulk Delete Button -->
     <button type="button" class="btn-action btn-danger" style="margin-left: 10px;" onclick="openBulkDeleteModal()">
         <i class="fas fa-trash-alt"></i> Bulk Verwijderen
     </button>
@@ -21,49 +25,7 @@
     {% endfor %}
 </div>
 
-<!-- Nieuw ingrediënt formulier -->
-<div class="add-ingredient-form" style="margin-top: 20px;">
-    <h3>Nieuw Ingrediënt Toevoegen</h3>
-    <form method="POST" action="{{ url_for('ingredients.manage', chef_naam=chef_naam) }}" class="ingredient-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="form-group">
-            <input type="text" name="naam" placeholder="Naam" required class="form-control">
-        </div>
-        <div class="form-group">
-            <select name="categorie" class="form-control">
-            <option value="">Kies categorie</option>
-            {% for categorie in categorieen %}
-                <option value="{{ categorie.naam }}">{{ categorie.naam }}</option>
-            {% endfor %}
-            </select>
-        </div>
-        <div class="form-group">
-            <select name="eenheid" class="form-control">
-            <option value="">Kies eenheid</option>
-            {% for eenheid in eenheden %}
-                <option value="{{ eenheid.naam }}">{{ eenheid.naam }}</option>
-            {% endfor %}
-            </select>
-        </div>
-        <div class="form-group">
-            <input type="number" 
-                   name="prijs_per_eenheid" 
-                   placeholder="Prijs per eenheid" 
-                   step="0.00001" 
-                   required 
-                   pattern="[0-9]*[.,]?[0-9]{0,5}"
-                   class="form-control">
-            <select name="leverancier_id" class="form-control">
-                <option value="">Kies leverancier</option>
-                {% for leverancier in leveranciers %}
-                    <option value="{{ leverancier.leverancier_id }}">{{ leverancier.naam }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <button type="submit" class="btn-action"><i class="fas fa-plus"></i> Toevoegen</button>
-    </form>
-</div>
-
+<!-- Remove original form here - it will be in the modal -->
 
 <div class="search-filter">
     <input type="text" id="ingredientSearch" class="form-control" 
@@ -148,13 +110,10 @@
 <!-- CSV import sectie -->
 <div class="csv-import" style="margin-top: 20px;">
     <h3>Ingrediënten Importeren</h3>
-    <p>Je kunt meerdere ingrediënten tegelijk importeren met een CSV of Excel bestand.</p>
+    <p>Je kunt meerdere ingrediënten tegelijk importeren met een Excel bestand.</p>
     
     <div class="d-flex flex-column flex-md-row gap-3 mb-2">
-        <a href="{{ url_for('ingredients.download_csv_template') }}" class="btn btn-info">
-            <i class="fas fa-download"></i> CSV Template Downloaden
-        </a>
-        <!-- Added Excel template download button -->
+        <!-- Removed CSV template download button, keeping only Excel -->
         <a href="{{ url_for('ingredients.download_excel_template') }}" class="btn btn-success">
             <i class="fas fa-file-excel"></i> Excel Template Downloaden
         </a>
@@ -163,8 +122,8 @@
     <form method="POST" action="{{ url_for('ingredients.bulk_add_ingredients', chef_naam=chef_naam) }}" enctype="multipart/form-data" class="mb-4">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="mb-3">
-            <label for="csv_file" class="form-label">Selecteer CSV of Excel bestand</label>
-            <input type="file" id="csv_file" name="csv_file" class="form-control" accept=".csv,.xlsx,.xls" required>
+            <label for="csv_file" class="form-label">Selecteer Excel bestand</label>
+            <input type="file" id="csv_file" name="csv_file" class="form-control" accept=".xlsx,.xls" required>
             <div class="form-text">
                 <p>Het bestand moet de volgende kolommen bevatten:</p>
                 <ul>
@@ -388,6 +347,91 @@
     .ingredient-table td {
         color: var(--text-light);
     }
+
+    /* Add styling for the new ingredient modal */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.4);
+    }
+
+    .modal-dialog {
+        max-width: 600px;
+        margin: 30px auto;
+    }
+
+    .modal.show {
+        display: block;
+    }
+
+    /* Custom modal styling to replace Bootstrap modal */
+    #modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 998;
+        display: none;
+    }
+
+    .custom-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 999;
+        overflow: auto;
+        outline: 0;
+    }
+
+    .custom-modal-dialog {
+        position: relative;
+        width: auto;
+        margin: 30px auto;
+        max-width: 600px;
+    }
+
+    .custom-modal-content {
+        position: relative;
+        background-color: var(--kitchen-dark);
+        border: 1px solid rgba(0, 0, 0, 0.2);
+        border-radius: 6px;
+        box-shadow: 0 3px 9px rgba(0, 0, 0, 0.5);
+        background-clip: padding-box;
+        outline: 0;
+    }
+
+    .custom-modal-header {
+        padding: 15px;
+        border-bottom: 1px solid var(--kitchen-steel);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .custom-modal-body {
+        padding: 15px;
+    }
+
+    .custom-modal-footer {
+        padding: 15px;
+        text-align: right;
+        border-top: 1px solid var (--kitchen-steel);
+    }
+
+    body.modal-open {
+        overflow: hidden;
+    }
 </style>
 
 
@@ -533,15 +577,40 @@
         });
     });
 
-    function openBulkDeleteModal() {
-        $('#bulkDeleteModal').modal('show');
+    // Custom modal implementation to avoid Bootstrap modal freezing issues
+    function openNewIngredientModal() {
+        document.getElementById('newIngredientModal').style.display = 'block';
+        document.body.classList.add('modal-open');
+        document.getElementById('modal-backdrop').style.display = 'block';
+        // Focus on first input
+        setTimeout(() => {
+            document.getElementById('naam').focus();
+        }, 100);
+    }
+
+    function closeNewIngredientModal() {
+        document.getElementById('newIngredientModal').style.display = 'none';
+        document.body.classList.remove('modal-open');
+        document.getElementById('modal-backdrop').style.display = 'none';
         // Reset form
+        document.getElementById('newIngredientForm').reset();
+    }
+
+    function openBulkDeleteModal() {
+        document.getElementById('bulkDeleteModal').style.display = 'block';
+        document.body.classList.add('modal-open');
+        document.getElementById('modal-backdrop').style.display = 'block';
+        // Reset form state
         document.getElementById('filter_type').value = 'leverancier';
         updateFilterOptions();
     }
 
     function closeBulkDeleteModal() {
-        $('#bulkDeleteModal').modal('hide');
+        document.getElementById('bulkDeleteModal').style.display = 'none';
+        document.body.classList.remove('modal-open');
+        document.getElementById('modal-backdrop').style.display = 'none';
+        // Reset form
+        document.getElementById('bulkDeleteForm').reset();
     }
 
     function updateFilterOptions() {
@@ -638,20 +707,106 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize filter options
         updateFilterOptions();
+        
+        // Add proper event listeners for modal close buttons
+        $('.modal .close, .modal .btn-secondary[data-dismiss="modal"]').on('click', function() {
+            const modalId = $(this).closest('.modal').attr('id');
+            if (modalId === 'newIngredientModal') {
+                closeNewIngredientModal();
+            } else if (modalId === 'bulkDeleteModal') {
+                closeBulkDeleteModal();
+            }
+        });
+        
+        // Initialize Bootstrap modals properly
+        $('.modal').each(function() {
+            $(this).on('shown.bs.modal', function() {
+                // Focus on the first input when modal is shown
+                $(this).find('input:visible:first').focus();
+            });
+        });
     });
 </script>
 
-<!-- Bulk Delete Modal -->
-<div class="modal fade" id="bulkDeleteModal" tabindex="-1" role="dialog" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="bulkDeleteModalLabel">Ingrediënten Bulk Verwijderen</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeBulkDeleteModal()">
+<!-- Modal backdrop -->
+<div id="modal-backdrop"></div>
+
+<!-- New Ingredient Modal (using custom modal) -->
+<div class="custom-modal" id="newIngredientModal">
+    <div class="custom-modal-dialog">
+        <div class="custom-modal-content">
+            <div class="custom-modal-header">
+                <h5>Nieuw Ingrediënt Toevoegen</h5>
+                <button type="button" class="close" onclick="closeNewIngredientModal()">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <div class="modal-body">
+            <div class="custom-modal-body">
+                <form id="newIngredientForm" method="POST" action="{{ url_for('ingredients.manage', chef_naam=chef_naam) }}" class="ingredient-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label for="naam">Naam</label>
+                        <input type="text" id="naam" name="naam" placeholder="Naam" required class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="categorie">Categorie</label>
+                        <select id="categorie" name="categorie" class="form-control" required>
+                            <option value="">Kies categorie</option>
+                            {% for categorie in categorieen %}
+                                <option value="{{ categorie.naam }}">{{ categorie.naam }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="eenheid">Eenheid</label>
+                        <select id="eenheid" name="eenheid" class="form-control" required>
+                            <option value="">Kies eenheid</option>
+                            {% for eenheid in eenheden %}
+                                <option value="{{ eenheid.naam }}">{{ eenheid.naam }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="prijs_per_eenheid">Prijs per eenheid</label>
+                        <input type="number" 
+                               id="prijs_per_eenheid"
+                               name="prijs_per_eenheid" 
+                               placeholder="Prijs per eenheid" 
+                               step="0.00001" 
+                               required 
+                               pattern="[0-9]*[.,]?[0-9]{0,5}"
+                               class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="leverancier_id">Leverancier</label>
+                        <select id="leverancier_id" name="leverancier_id" class="form-control">
+                            <option value="">Kies leverancier</option>
+                            {% for leverancier in leveranciers %}
+                                <option value="{{ leverancier.leverancier_id }}">{{ leverancier.naam }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="custom-modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeNewIngredientModal()">Annuleren</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Toevoegen</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Delete Modal (using custom modal) -->
+<div class="custom-modal" id="bulkDeleteModal">
+    <div class="custom-modal-dialog">
+        <div class="custom-modal-content">
+            <div class="custom-modal-header">
+                <h5>Ingrediënten Bulk Verwijderen</h5>
+                <button type="button" class="close" onclick="closeBulkDeleteModal()">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="custom-modal-body">
                 <form id="bulkDeleteForm" method="POST" action="{{ url_for('ingredients.bulk_delete_ingredients', chef_naam=chef_naam) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     
@@ -698,12 +853,13 @@
                         Ingrediënten die gebruikt worden in recepten worden niet verwijderd.
                     </div>
                 </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="closeBulkDeleteModal()">Annuleren</button>
-                <button type="button" class="btn btn-danger" onclick="confirmBulkDelete()">Verwijderen</button>
+                <div class="custom-modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeBulkDeleteModal()">Annuleren</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmBulkDelete()">Verwijderen</button>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
 {% endblock %}

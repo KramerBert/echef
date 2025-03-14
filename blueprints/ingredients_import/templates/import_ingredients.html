@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h1>Ingrediënten Importeren</h1>
+    <p>Upload een Excel bestand om ingrediënten in bulk te importeren.</p>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>Excel Upload</h2>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                {{ form.csrf_token }}
+                <div class="form-group">
+                    {{ form.file.label }}
+                    {{ form.file(class="form-control-file") }}
+                    {% if form.file.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.file.errors %}
+                        <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                <button type="submit" class="btn btn-primary">Importeren</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>Instructies</h2>
+        </div>
+        <div class="card-body">
+            <p>Het Excel bestand moet de volgende kolommen bevatten:</p>
+            <ul>
+                <li><strong>naam</strong> - Naam van het ingrediënt</li>
+                <li><strong>eenheid</strong> - Eenheid (g, kg, l, ml, etc.)</li>
+                <li><strong>prijs_per_eenheid</strong> - Prijs per eenheid (decimaal getal)</li>
+                <li><strong>categorie</strong> - Categorie van het ingrediënt</li>
+                <li><strong>leverancier</strong> - (Optioneel) Naam van de leverancier</li>
+            </ul>
+            
+            <div class="alert alert-info">
+                <p><strong>Belangrijk:</strong> Als een leverancier wordt opgegeven, moet deze al bestaan in het systeem. 
+                Ingrediënten met onbekende leveranciers worden niet geïmporteerd.</p>
+            </div>
+            
+            <p>Download een voorbeeld bestand: <a href="{{ url_for('static', filename='examples/ingredient_import_template.xlsx') }}" class="btn btn-sm btn-outline-primary">Excel Template</a></p>
+        </div>
+    </div>
+    
+    <div class="mt-3">
+        <a href="{{ url_for('ingredients_bp.manage_ingredients', chef_naam=chef_naam) }}" class="btn btn-secondary">Terug naar Ingrediënten</a>
+    </div>
+</div>
+{% endblock %}
