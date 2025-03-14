@@ -4,6 +4,7 @@ from flask import (
     render_template, redirect, url_for, flash, request, 
     session, jsonify, current_app, send_file
 )
+from markupsafe import Markup  # Add this import to fix the error
 from werkzeug.utils import secure_filename
 from . import bp
 from utils.db import get_db_connection
@@ -187,7 +188,7 @@ def bulk_add_ingredients(chef_naam):
     if conn is None:
         flash("Database connection error.", "danger")
         return redirect(url_for('ingredients.manage', chef_naam=chef_naam))
-    cur = conn.cursor()
+    cur = conn.cursor(dictionary=True)  # Use dictionary cursor for easier referencing
 
     try:
         # Process file based on its type
@@ -211,13 +212,29 @@ def bulk_add_ingredients(chef_naam):
                 flash(f"Fout bij het lezen van Excel bestand: {str(e)}", "danger")
                 return redirect(url_for('ingredients.manage', chef_naam=chef_naam))
         
+        # First, get all existing ingredients for this chef
+        cur.execute("""
+            SELECT i.naam, i.ingredient_id, i.leverancier_id, l.naam as leverancier_naam 
+            FROM ingredients i
+            LEFT JOIN leveranciers l ON i.leverancier_id = l.leverancier_id
+            WHERE i.chef_id = %s
+        """, (session['chef_id'],))
+        
+        existing_ingredients = {}
+        for row in cur.fetchall():
+            key = (row['naam'].lower(), row['leverancier_id'])
+            existing_ingredients[key] = {
+                'id': row['ingredient_id'],
+                'leverancier_naam': row['leverancier_naam']
+            }
+
         # Map column indices to expected fields
         column_map = {
             'naam': 0,
             'categorie': 1,
             'eenheid': 2,
             'prijs': 3,
-            'leverancier': 4  # Add mapping for leverancier column
+            'leverancier': 4
         }
         
         # Try to map columns by name if headers exist
@@ -232,10 +249,13 @@ def bulk_add_ingredients(chef_naam):
                     column_map['eenheid'] = i
                 elif header_lower in ['prijs_per_eenheid', 'prijs', 'price']:
                     column_map['prijs'] = i
-                elif header_lower in ['leverancier', 'supplier']:  # Add recognition for supplier column
+                elif header_lower in ['leverancier', 'supplier']:
                     column_map['leverancier'] = i
         
         rows_added = 0
+        rows_updated = 0
+        updated_prices = {}  # Track which ingredients have price updates
+        
         # For CSV files, we already have csv_reader after skipping headers
         # For Excel files, we already prepared csv_reader from DataFrame
         for row in csv_reader:
@@ -262,6 +282,7 @@ def bulk_add_ingredients(chef_naam):
                 
                 # Get leverancier if available
                 leverancier_id = None
+                leverancier_naam = None
                 if 'leverancier' in column_map and len(row) > column_map['leverancier']:
                     leverancier_naam = str(row[column_map['leverancier']]).strip()
                     
@@ -279,13 +300,14 @@ def bulk_add_ingredients(chef_naam):
                             
                             if leverancier_result:
                                 # Use existing supplier
-                                leverancier_id = leverancier_result[0]
+                                leverancier_id = leverancier_result['leverancier_id']
                             else:
                                 # Create new supplier
                                 cur.execute("""
                                     INSERT INTO leveranciers (naam, chef_id)
                                     VALUES (%s, %s)
                                 """, (leverancier_naam, session['chef_id']))
+                                conn.commit()  # Commit to get lastrowid
                                 leverancier_id = cur.lastrowid
                                 logger.info(f"Created new supplier: {leverancier_naam} with ID {leverancier_id}")
                         except Exception as e:
@@ -295,18 +317,68 @@ def bulk_add_ingredients(chef_naam):
                 if not naam:
                     continue
                 
-                # Insert into database
+                # Check if this ingredient already exists with the same supplier
+                ingredient_key = (naam.lower(), leverancier_id)
+                if ingredient_key in existing_ingredients:
+                    # Update price for existing ingredient
+                    existing_id = existing_ingredients[ingredient_key]['id']
+                    
+                    # Update the price
+                    cur.execute("""
+                        UPDATE ingredients 
+                        SET prijs_per_eenheid = %s
+                        WHERE ingredient_id = %s
+                    """, (prijs_per_eenheid, existing_id))
+                    
+                    # Store this ingredient ID for later cost recalculation
+                    updated_prices[existing_id] = prijs_per_eenheid
+                    
+                    rows_updated += 1
+                else:
+                    # Insert new ingredient
+                    cur.execute("""
+                        INSERT INTO ingredients (naam, categorie, eenheid, prijs_per_eenheid, leverancier_id, chef_id)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (naam, categorie, eenheid, prijs_per_eenheid, leverancier_id, session['chef_id']))
+                    
+                    rows_added += 1
+        
+        # Update all dish costs for ingredients with changed prices
+        if updated_prices:
+            for ingredient_id, new_price in updated_prices.items():
+                # Update the price_total for all dish_ingredients entries using this ingredient
                 cur.execute("""
-                    INSERT INTO ingredients (naam, categorie, eenheid, prijs_per_eenheid, leverancier_id, chef_id)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                """, (naam, categorie, eenheid, prijs_per_eenheid, leverancier_id, session['chef_id']))
-                rows_added += 1
+                    UPDATE dish_ingredients 
+                    SET prijs_totaal = hoeveelheid * %s
+                    WHERE ingredient_id = %s
+                """, (new_price, ingredient_id))
+            
+            # Update the total ingredient price for all dishes
+            cur.execute("""
+                UPDATE dishes d
+                SET totaal_ingredient_prijs = (
+                    SELECT COALESCE(SUM(di.prijs_totaal), 0)
+                    FROM dish_ingredients di
+                    WHERE di.dish_id = d.dish_id
+                )
+                WHERE d.chef_id = %s
+            """, (session['chef_id'],))
         
         conn.commit()
-        flash(f"Succesvol {rows_added} ingrediënten toegevoegd!", "success")
+        
+        # Provide feedback with both numbers
+        if rows_added > 0 and rows_updated > 0:
+            flash(f"Succesvol {rows_added} nieuwe ingrediënten toegevoegd en {rows_updated} bestaande ingrediënten bijgewerkt!", "success")
+        elif rows_added > 0:
+            flash(f"Succesvol {rows_added} nieuwe ingrediënten toegevoegd!", "success")
+        elif rows_updated > 0:
+            flash(f"Succesvol {rows_updated} bestaande ingrediënten bijgewerkt!", "success")
+        else:
+            flash("Geen ingrediënten toegevoegd of bijgewerkt.", "info")
+            
     except Exception as e:
         conn.rollback()
-        logger.error(f"Error in bulk_add_ingredients: {str(e)}")
+        logger.error(f"Error in bulk_add_ingredients: {str(e)}", exc_info=True)
         flash(f"Fout bij toevoegen ingrediënten: {str(e)}", "danger")
     finally:
         cur.close()
@@ -480,72 +552,84 @@ def bulk_delete_ingredients(chef_naam):
     cur = conn.cursor(dictionary=True)
     
     try:
-        # Count ingredients to be deleted
+        # First, identify which ingredients are used in dish cost calculations
+        cur.execute("""
+            SELECT DISTINCT i.ingredient_id, i.naam 
+            FROM ingredients i
+            JOIN dish_ingredients di ON i.ingredient_id = di.ingredient_id
+            WHERE i.chef_id = %s
+        """, (session['chef_id'],))
+        
+        used_ingredients = {row['ingredient_id']: row['naam'] for row in cur.fetchall()}
+        
+        # Identify ingredients to delete based on filter type
         if filter_type == 'leverancier':
             cur.execute("""
-                SELECT COUNT(*) as count 
-                FROM ingredients i
-                JOIN leveranciers l ON i.leverancier_id = l.leverancier_id
-                WHERE i.chef_id = %s AND l.leverancier_id = %s
+                SELECT ingredient_id, naam 
+                FROM ingredients 
+                WHERE chef_id = %s AND leverancier_id = %s
             """, (session['chef_id'], filter_value))
-            count = cur.fetchone()['count']
             
-            if count > 0:
-                cur.execute("""
-                    DELETE i FROM ingredients i
-                    JOIN leveranciers l ON i.leverancier_id = l.leverancier_id
-                    WHERE i.chef_id = %s AND l.leverancier_id = %s
-                """, (session['chef_id'], filter_value))
-                conn.commit()
-                flash(f"{count} ingrediënten verwijderd van geselecteerde leverancier.", "success")
-            else:
-                flash("Geen ingrediënten gevonden voor deze leverancier.", "warning")
-        
         elif filter_type == 'categorie':
             cur.execute("""
-                SELECT COUNT(*) as count FROM ingredients
+                SELECT ingredient_id, naam 
+                FROM ingredients 
                 WHERE chef_id = %s AND categorie = %s
             """, (session['chef_id'], filter_value))
-            count = cur.fetchone()['count']
             
-            if count > 0:
-                cur.execute("""
-                    DELETE FROM ingredients
-                    WHERE chef_id = %s AND categorie = %s
-                """, (session['chef_id'], filter_value))
-                conn.commit()
-                flash(f"{count} ingrediënten verwijderd uit categorie '{filter_value}'.", "success")
-            else:
-                flash("Geen ingrediënten gevonden in deze categorie.", "warning")
-        
-        elif filter_type == 'alle' and filter_value == 'alle':
+        elif filter_type == 'alle':
             cur.execute("""
-                SELECT COUNT(*) as count FROM ingredients
+                SELECT ingredient_id, naam 
+                FROM ingredients 
                 WHERE chef_id = %s
             """, (session['chef_id'],))
-            count = cur.fetchone()['count']
-            
-            if count > 0:
-                cur.execute("""
-                    DELETE FROM ingredients
-                    WHERE chef_id = %s
-                """, (session['chef_id'],))
-                conn.commit()
-                flash(f"Alle {count} ingrediënten verwijderd.", "success")
+        
+        candidates = cur.fetchall()
+        
+        # Track which ingredients will be deleted and which are protected
+        to_delete = []
+        protected = []
+        
+        for ingredient in candidates:
+            if ingredient['ingredient_id'] in used_ingredients:
+                protected.append(ingredient['naam'])
             else:
-                flash("Je hebt nog geen ingrediënten toegevoegd.", "warning")
+                to_delete.append(ingredient['ingredient_id'])
+        
+        # If there are ingredients to delete, delete them
+        if to_delete:
+            placeholders = ', '.join(['%s'] * len(to_delete))
+            delete_query = f"""
+                DELETE FROM ingredients 
+                WHERE chef_id = %s 
+                AND ingredient_id IN ({placeholders})
+            """
+            
+            cur.execute(delete_query, [session['chef_id']] + to_delete)
+            conn.commit()
+            
+            deleted_count = cur.rowcount
+            flash(f"{deleted_count} ingrediënten verwijderd.", "success")
         else:
-            flash("Ongeldige selectie voor bulk verwijdering.", "danger")
-    
+            flash("Geen ingrediënten gevonden om te verwijderen.", "info")
+        
+        # If there were protected ingredients, inform the user
+        if protected:
+            flash_message = f"{len(protected)} ingrediënten konden niet worden verwijderd omdat ze gebruikt worden in kostprijsberekeningen: "
+            if len(protected) > 5:
+                flash_message += f"{', '.join(protected[:5])}, en {len(protected) - 5} meer."
+            else:
+                flash_message += f"{', '.join(protected)}."
+            
+            flash(Markup(flash_message), "warning")
+            
     except Exception as e:
         conn.rollback()
-        logger.error(f'Error in bulk_delete_ingredients: {str(e)}')
-        flash(f"Fout bij verwijderen ingrediënten: {str(e)}", "danger")
-    
+        flash(f"Fout bij verwijderen: {str(e)}", "danger")
     finally:
         cur.close()
         conn.close()
-    
+
     return redirect(url_for('ingredients.manage', chef_naam=chef_naam))
 
 @bp.route('/dashboard/<chef_naam>/ingredients/<int:ingredient_id>', methods=['GET', 'POST'], endpoint='edit')
