@@ -1154,16 +1154,53 @@ def create_app():
             html_content = re.sub(r'<style[^>]*>[\s\S]*?</style>', '', html_content)
         except (TypeError, AttributeError):
             html_content = ''
+        # Replace common line break elements with newlines first
+        html_content = re.sub(r'<br\s*/?>', '\n', html_content)
+        html_content = re.sub(r'</p><p>', '\n\n', html_content)
+        html_content = re.sub(r'</li><li>', '\n', html_content)
+        html_content = re.sub(r'</ul>', '\n', html_content)
         # Remove all HTML tags
         text = re.sub(r'<[^>]+>', '', html_content)
         # Convert HTML entities
         text = html.unescape(text)
-        # Replace multiple whitespace with single space
-        text = re.sub(r'\s+', ' ', text)
-        # Convert <br> and </p> to newlines
-        text = re.sub(r'<br\s*/?>', '\n', text)
-        text = re.sub(r'</p>', '\n\n', text)
+        # Replace multiple spaces with single space
+        text = re.sub(r' +', ' ', text)
+        # Preserve line breaks (don't collapse them)
+        text = re.sub(r'\n+', '\n', text)
         return text.strip()
+
+    def format_ingredients_list(ingredients_text):
+        """Special handling for ingredients to ensure each item appears on a new line"""
+        if not ingredients_text:
+            return ''
+        
+        # First convert from HTML to text
+        text = html_to_text(ingredients_text)
+        
+        # Try to detect if the text is already formatted with line breaks
+        if '\n' in text:
+            return text  # Already has line breaks, return as is
+            
+        # Split by common ingredient list separators if no line breaks found
+        items = []
+        # Try splitting by semicolons first
+        if ';' in text:
+            items = [item.strip() for item in text.split(';')]
+        # Otherwise check for numbered items or bullet points
+        elif bool(re.search(r'^\d+\.|\d+\)', text)):
+            # Split by numbered items (1. or 1) pattern)
+            items = re.split(r'(?:\d+\.|\d+\))\s*', text)
+            items = [item.strip() for item in items if item.strip()]
+        # Or split by comma if items likely contain amounts (numbers with units)
+        elif ',' in text and bool(re.search(r'\d+\s*(g|kg|l|ml|cl|el|tl|st)', text)):
+            items = [item.strip() for item in text.split(',')]
+        
+        # If we identified list items, join them with new lines
+        if items:
+            return '\n'.join(items)
+        
+        # Otherwise return original text with preserved line breaks
+        return text
 
     @app.template_filter('format_price')
     def format_price(value):
@@ -1206,14 +1243,17 @@ def create_app():
                 flash("Gerecht niet gevonden of geen toegang.", "danger")
                 return redirect(url_for('all_dishes'))
 
-            # Haal ingrediënten op
+            # Haal ingrediënten op voor kostprijsberekening
             cur.execute("""
-                SELECT di.hoeveelheid, i.naam AS ingredient_naam, i.eenheid
+                SELECT di.hoeveelheid, di.prijs_totaal, i.naam AS ingredient_naam, i.eenheid, i.prijs_per_eenheid
                 FROM dish_ingredients di
                 JOIN ingredients i ON di.ingredient_id = i.ingredient_id
                 WHERE di.dish_id = %s
             """, (dish_id,))
             gerecht_ingredienten = cur.fetchall()
+            
+            # Bereken totale kostprijs
+            totaal_ingredient_prijs = sum(float(ingredient['prijs_totaal']) for ingredient in gerecht_ingredienten)
 
             # Maak Word document
             doc = Document()
@@ -1223,27 +1263,69 @@ def create_app():
                 doc.add_heading('Beschrijving', level=2)
                 doc.add_paragraph(html_to_text(gerecht['beschrijving']))
             
-            # Voeg ingrediëntenlijst toe
+            # Gebruik ingredienten uit het tekstveld in plaats van de tabel
             doc.add_heading('Ingrediënten', level=2)
-            table = doc.add_table(rows=1, cols=3)
-            table.style = 'Table Grid'
-            
-            # Tabel headers
-            header_cells = table.rows[0].cells
-            header_cells[0].text = 'Ingrediënt'
-            header_cells[1].text = 'Hoeveelheid'
-            header_cells[2].text = 'Eenheid'
-
-            # Voeg ingrediënten toe aan tabel
-            for ingredient in gerecht_ingredienten:
-                row_cells = table.add_row().cells
-                row_cells[0].text = ingredient['ingredient_naam']
-                row_cells[1].text = str(ingredient['hoeveelheid'])
-                row_cells[2].text = ingredient['eenheid']
+            if gerecht['ingredienten'] and gerecht['ingredienten'].strip():
+                # Apply special formatting for ingredients list to preserve structure
+                ingredients_text = format_ingredients_list(gerecht['ingredienten'])
+                doc.add_paragraph(ingredients_text)
+            else:
+                doc.add_paragraph("Geen ingrediëntenlijst opgegeven.")
 
             if gerecht['bereidingswijze']:
                 doc.add_heading('Bereidingswijze', level=2)
                 doc.add_paragraph(html_to_text(gerecht['bereidingswijze']))
+                
+            # Voeg kostprijsberekening toe onderaan het document
+            doc.add_heading('Kostprijsberekening', level=2)
+            price_table = doc.add_table(rows=1, cols=4)
+            price_table.style = 'Table Grid'
+            
+            # Headers voor kostprijstabel
+            price_header = price_table.rows[0].cells
+            price_header[0].text = 'Ingrediënt'
+            price_header[1].text = 'Hoeveelheid'
+            price_header[2].text = 'Prijs per eenheid'
+            price_header[3].text = 'Totaal'
+            
+            # Maak de headers vet
+            for cell in price_header:
+                for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.bold = True
+            
+            # Voeg ingrediënten met prijzen toe
+            for ingredient in gerecht_ingredienten:
+                row_cells = price_table.add_row().cells
+                row_cells[0].text = ingredient['ingredient_naam']
+                row_cells[1].text = f"{ingredient['hoeveelheid']} {ingredient['eenheid']}"
+                row_cells[2].text = f"€{ingredient['prijs_per_eenheid']}"
+                row_cells[3].text = f"€{ingredient['prijs_totaal']}"
+            
+            # Voeg totaal toe onderaan de tabel
+            total_row = price_table.add_row().cells
+            total_row[0].text = ''
+            total_row[1].text = ''
+            total_row[2].text = 'Totale kostprijs:'
+            total_row[3].text = f"€{totaal_ingredient_prijs:.2f}"
+            
+            # Maak de totaalrij vet
+            for i in range(2, 4):
+                for paragraph in total_row[i].paragraphs:
+                    for run in paragraph.runs:
+                        run.bold = True
+            
+            # Voeg verkoopprijs toe onder de kostprijstabel als deze beschikbaar is
+            if gerecht['verkoopprijs']:
+                price_paragraph = doc.add_paragraph()
+                price_paragraph.add_run(f"Verkoopprijs: €{gerecht['verkoopprijs']}").bold = True
+                
+                # Bereken en toon winstmarge als verkoopprijs aanwezig is
+                if float(gerecht['verkoopprijs']) > 0:
+                    margin = float(gerecht['verkoopprijs']) - totaal_ingredient_prijs
+                    margin_percentage = (margin / float(gerecht['verkoopprijs'])) * 100 if float(gerecht['verkoopprijs']) > 0 else 0
+                    margin_paragraph = doc.add_paragraph()
+                    margin_paragraph.add_run(f"Winstmarge: €{margin:.2f} ({margin_percentage:.2f}%)").italic = True
 
             # Sla document op in memory
             buffer = io.BytesIO()
