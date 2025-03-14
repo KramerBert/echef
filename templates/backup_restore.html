@@ -126,5 +126,42 @@
         background-color: var(--kitchen-blue);
         color: white;
     }
+    .card {
+        background-color: var(--kitchen-dark);
+        border: 1px solid var(--kitchen-steel);
+    }
+    
+    .card-header {
+        background-color: var(--kitchen-blue);
+        border-bottom: 1px solid var(--kitchen-steel);
+    }
+    
+    /* Fix accordion styles */
+    .accordion-button {
+        background-color: var(--kitchen-blue) !important;
+        color: var(--text-light) !important;
+    }
+    
+    .accordion-button:not(.collapsed) {
+        color: white !important;
+        background-color: var(--kitchen-highlight) !important;
+    }
+    
+    .accordion-body {
+        background-color: var(--kitchen-dark);
+        color: var(--text-light);
+    }
+    
+    /* Fix form controls */
+    .form-control {
+        background-color: var(--kitchen-steel);
+        color: var(--text-dark) !important;
+        border: 1px solid var(--kitchen-blue);
+    }
+    
+    /* Fix check labels */
+    .form-check-label {
+        color: var(--text-light) !important;
+    }
 </style>
 {% endblock %}

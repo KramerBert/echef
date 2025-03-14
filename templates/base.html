@@ -135,6 +135,40 @@
             --bs-secondary-rgb: 149, 165, 166 !important;
         }
 
+        /* Fix form control text and placeholder colors */
+        .form-control {
+            color: var(--text-dark) !important; /* Force text to be dark on light backgrounds */
+            background-color: var(--kitchen-steel) !important;
+            border: 1px solid var(--kitchen-blue);
+        }
+        
+        .form-control::placeholder {
+            color: #666666 !important; /* Darker placeholder for better contrast */
+            opacity: 0.8;
+        }
+        
+        /* Ensure all form labels are visible */
+        label, .form-label {
+            color: var(--text-light) !important;
+            font-weight: 500; /* Make labels slightly bolder */
+        }
+        
+        /* Make modal text readable */
+        .modal-content {
+            color: var(--text-dark); /* Changed to dark text on light modal background */
+            background-color: #f8f9fa;
+        }
+        
+        /* Ensure dropdown text is visible */
+        .dropdown-item {
+            color: var(--text-dark); /* Changed to dark text for dropdowns */
+        }
+        
+        /* Fix for any Bootstrap text elements using secondary color */
+        .text-secondary {
+            color: #D8E1E7 !important;
+        }
+
         /* Override text colors for specific elements */
         .text-muted, .form-text, .text-secondary {
             color: var(--bs-secondary-color) !important;
@@ -184,7 +218,7 @@
             max-width: 1400px;  /* Verhoog van 800px naar 1400px */
             padding: 20px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-            background-color: var(--kitchen-dark);
+            background-color: var (--kitchen-dark);
         }
         .flash-message {
             border: 1px solid #ccc;
@@ -523,6 +557,77 @@
             border-left: 3px solid var(--kitchen-highlight);
             color: var(--kitchen-highlight);
             text-decoration: none;
+        }
+
+        /* Fix input colors and contrast */
+        input[type="text"],
+        input[type="number"],
+        input[type="password"],
+        input[type="email"],
+        textarea,
+        select {
+            color: var(--text-dark) !important; /* Make text dark */
+            background-color: var(--kitchen-steel) !important; /* Light background */
+        }
+        
+        /* Fix for inline editable fields */
+        .inline-edit {
+            color: var(--text-dark) !important;
+            background-color: var(--kitchen-steel) !important;
+        }
+
+        /* Fix for search boxes and filters */
+        .search-box, 
+        .category-filter select,
+        #dishSearch, 
+        #ingredientSearch,
+        #categoryFilter {
+            color: var(--text-dark) !important;
+            background-color: var(--kitchen-steel) !important;
+        }
+        
+        /* Improve table contrast */
+        table th {
+            background-color: var(--kitchen-blue);
+            color: var(--text-light) !important;
+        }
+
+        table td {
+            color: var(--text-light);
+            border-color: var(--kitchen-steel);
+        }
+        
+        /* Table cells that contain inputs */
+        table td input, 
+        table td select {
+            color: var(--text-dark) !important;
+            background-color: white !important;
+        }
+
+        /* Fix modal dialogs */
+        .modal-dialog .modal-content {
+            background-color: var(--kitchen-dark);
+            color: var(--text-light);
+        }
+
+        .modal-dialog .modal-body {
+            background-color: var(--kitchen-dark);
+            color: var(--text-light);
+        }
+
+        /* Other text elements */
+        h1, h2, h3, h4, h5, h6, p, span:not(.badge) {
+            color: var(--text-light);
+        }
+        
+        /* Make badges stand out */
+        .badge {
+            color: white !important;
+        }
+
+        /* Fix alert texts */
+        .alert {
+            color: var(--text-dark);
         }
     </style>
 </head>

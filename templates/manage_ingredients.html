@@ -326,6 +326,68 @@
         from { transform: translateX(100%); opacity: 0; }
         to { transform: translateX(0); opacity: 1; }
     }
+
+    /* Add after existing style tags in the template */
+    
+    /* Fix inline edit fields */
+    .inline-edit {
+        color: var(--text-dark) !important;
+        background-color: var(--kitchen-steel) !important;
+        border: 1px solid #ccc;
+    }
+
+    .inline-edit:hover, .inline-edit:focus {
+        border-color: var(--kitchen-highlight);
+        background-color: white !important;
+    }
+
+    /* Fix search filters */
+    #ingredientSearch, #categoryFilter {
+        background-color: var(--kitchen-steel);
+        color: var(--text-dark) !important;
+        border: 1px solid var(--kitchen-blue);
+    }
+    
+    /* Fix modal content colors */
+    .modal-content {
+        background-color: var(--kitchen-dark);
+        color: var(--text-light);
+    }
+
+    .modal-header, .modal-footer {
+        border-color: var(--kitchen-steel);
+    }
+
+    /* Specific form elements inside modals */
+    .modal-content .form-control {
+        background-color: var(--kitchen-steel);
+        color: var(--text-dark) !important;
+    }
+    
+    /* Improved color for filter buttons */
+    .filter-button {
+        color: var(--text-light);
+        background-color: var(--kitchen-blue);
+        padding: 5px 10px;
+        margin-right: 5px;
+        border-radius: 4px;
+        text-decoration: none;
+        border: 1px solid transparent;
+    }
+
+    .filter-button.active {
+        background-color: var(--kitchen-highlight);
+        border-color: white;
+    }
+    
+    /* Fix table rows */
+    .ingredient-table tr {
+        background-color: var(--kitchen-dark);
+    }
+
+    .ingredient-table td {
+        color: var(--text-light);
+    }
 </style>
 
 

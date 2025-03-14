@@ -385,9 +385,9 @@
 
     /* Search and Filters */
     .search-box {
-        background: var(--kitchen-dark);
-        border: 1px solid var(--kitchen-steel);
-        color: var(--text-light);
+        background: var(--kitchen-steel);
+        color: var(--text-dark) !important;
+        border: 1px solid var(--kitchen-blue);
         padding: 0.5rem;
         margin-bottom: 1rem;
         width: 100%;
@@ -521,6 +521,55 @@
             background: var(--kitchen-dark);
             z-index: 1;
         }
+    }
+
+    /* Improve form controls within HACCP sections */
+    .card .form-control {
+        background-color: var(--kitchen-steel);
+        color: var(--text-dark) !important;
+        border: 1px solid var(--kitchen-blue);
+    }
+    
+    /* Improve modal dialog contrast */
+    .modal-dialog .modal-content {
+        background-color: var(--kitchen-dark);
+    }
+    
+    .modal-header {
+        background-color: var(--kitchen-blue);
+        color: var(--text-light);
+    }
+    
+    .modal-body {
+        color: var(--text-light);
+    }
+    
+    .modal-body .text-dark {
+        color: var(--text-light) !important;
+    }
+    
+    .modal-body input,
+    .modal-body textarea {
+        background-color: var(--kitchen-steel);
+        color: var(--text-dark) !important;
+        border: 1px solid var(--kitchen-blue);
+    }
+    
+    /* Fix search boxes */
+    .search-box {
+        background: var(--kitchen-steel);
+        color: var(--text-dark) !important;
+        border: 1px solid var(--kitchen-blue);
+    }
+    
+    /* Table headers and data */
+    .table thead th {
+        background-color: var(--kitchen-blue);
+        color: var(--text-light) !important;
+    }
+    
+    .table tbody td {
+        color: var (--text-light);
     }
 </style>
 

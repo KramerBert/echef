@@ -22,8 +22,8 @@ select,
     width: 100%;
     padding: 8px;
     margin-top: 5px;
-    background-color: var(--kitchen-light, #fff) !important;
-    color: var(--text-dark, #333) !important;
+    background-color: var(--kitchen-steel) !important; /* Use steel color as background */
+    color: var(--text-dark) !important; /* Use dark text color */
     box-sizing: border-box;
     border: 1px solid var(--border-color, #ccc);
     border-radius: 4px;
@@ -209,9 +209,31 @@ h2, h3, p {
 
 .allergen-label,
 .diet-label {
-    color: var(--kitchen-steel);
+    color: var(--text-light) !important;
 }
 
+.ck-editor__editable.ck-editor__editable_inline {
+    color: var(--text-dark) !important;
+    background-color: var(--kitchen-steel) !important;
+}
+
+.ck.ck-editor__main > .ck-editor__editable {
+    background-color: var(--kitchen-steel) !important;
+    color: var(--text-dark) !important;
+}
+
+.ck.ck-toolbar {
+    background-color: var(--kitchen-dark);
+    color: var(--text-light);
+}
+
+.card-body {
+    background-color: var(--kitchen-dark);
+}
+
+.form-check-input:checked + .form-check-label {
+    color: var(--text-light);
+}
 
 </style>
 
@@ -260,12 +282,12 @@ h2, h3, p {
         </div>
 
         <div class="form-group">
-            <h3>Ingrediënten<i>(Lijst van ingrediënten voor op de menukaart)</i></h3>
+            <h3>Ingrediënten:<i></i></h3>
             <textarea id="ingredienten" name="ingredienten" class="form-control editor">{{ gerecht.ingredienten if gerecht.ingredienten else '' }}</textarea>
         </div>
 
         <div class="form-group">
-            <h3>Bereidingswijze bijwerken <i>(Belangrijk voor het draaiboek)</i></h3>
+            <h3>Bereidingswijze: <i></i></h3>
             <textarea id="bereidingswijze" name="bereidingswijze" class="form-control editor">{{ gerecht.bereidingswijze if gerecht.bereidingswijze else '' }}</textarea>
         </div>
 

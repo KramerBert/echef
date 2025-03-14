@@ -38,4 +38,48 @@
         </button>
     </form>
 </div>
+
+<style>
+    /* Add these to existing styles */
+    
+    /* Fix table text colors */
+    .table th {
+        color: var(--text-light) !important;
+        background-color: var(--kitchen-blue);
+    }
+    
+    .table td {
+        color: var(--text-light);
+    }
+    
+    /* Fix checkbox styling */
+    .form-check-input {
+        background-color: var(--kitchen-steel);
+        border: 1px solid var(--kitchen-blue);
+    }
+    
+    .form-check-label {
+        color: var(--text-light);
+    }
+    
+    /* Fix form controls */
+    .form-control {
+        background-color: var(--kitchen-steel);
+        color: var(--text-dark) !important;
+        border: 1px solid var(--kitchen-blue);
+    }
+    
+    /* Preview modal fixes */
+    .modal-content {
+        background-color: var(--kitchen-dark);
+        color: var(--text-light);
+    }
+    
+    .menu-preview {
+        background-color: white;
+        color: black;
+        padding: 20px;
+        border-radius: 5px;
+    }
+</style>
 {% endblock %}
