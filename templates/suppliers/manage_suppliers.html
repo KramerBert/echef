@@ -1,5 +1,19 @@
 <!-- Look for a form similar to this and ensure the supplier_id is properly set -->
 <form method="post" action="{{ url_for('ingredients_import.import_from_system_supplier', supplier_id=supplier.leverancier_id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button type="submit" class="btn btn-primary">Importeer</button>
+    <input type="hidden" name="supplier_id_value" value="{{ supplier.leverancier_id|default('null') }}">
+    <button type="submit" class="btn btn-primary" onclick="return validateSupplierForm(this.form)">Importeer</button>
 </form>
+
+<script>
+function validateSupplierForm(form) {
+    // Get supplier ID from hidden field instead of directly from Jinja
+    var supplierId = form.querySelector('input[name="supplier_id_value"]').value;
+    
+    if (!supplierId || supplierId === "null") {
+        alert("Geen geldige leverancier geselecteerd.");
+        return false;
+    }
+    return true;
+}
+</script>

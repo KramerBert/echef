@@ -2,8 +2,8 @@ import os
 import io
 from flask import render_template, redirect, url_for, flash, request, session, current_app, send_file, jsonify
 from werkzeug.utils import secure_filename
-from flask_wtf import FlaskForm  # Add missing import
-from flask_wtf.file import FileField, FileRequired, FileAllowed  # Add missing imports
+from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileRequired, FileAllowed
 from . import bp
 from utils.db import get_db_connection
 import logging
@@ -12,7 +12,7 @@ from botocore.exceptions import ClientError
 from datetime import datetime
 from mysql.connector import Error
 from markupsafe import Markup
-import pandas as pd  # Make sure pandas is imported for Excel handling
+import pandas as pd
 from tasks import import_ingredients_from_supplier
 from rq_config import enqueue_job
 from rq.job import Job
@@ -251,17 +251,33 @@ def import_from_standard_list(supplier_id):
         if conn:
             conn.close()
 
+# Fix specific route to handle "null" supplier ID
+@bp.route('/import-from-system-supplier/null', methods=['POST'])
+@login_required
+def import_from_null_supplier():
+    """Handle the case where null is passed as supplier_id"""
+    chef_naam = session.get('chef_naam')
+    logger.warning(f"Null supplier ID passed in import request")
+    flash("Geen leverancier geselecteerd. Probeer opnieuw.", "danger")
+    return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
+
 @bp.route('/import-from-system-supplier/<int:supplier_id>', methods=['POST'])
 @login_required
 def import_from_system_supplier(supplier_id):
     """Import ingredients from a system supplier"""
     chef_naam = session.get('chef_naam')
+    
+    # Add additional logging to help diagnose the issue
+    logger.info(f"Processing import request for supplier_id={supplier_id}, chef_naam={chef_naam}")
+    
     if not chef_naam:
+        logger.warning(f"No chef_naam in session during import request for supplier {supplier_id}")
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('auth.login'))
     
-    # Add validation for supplier_id to prevent "null" issue
-    if supplier_id is None:
+    # Stronger validation for supplier_id
+    if supplier_id is None or supplier_id <= 0:
+        logger.warning(f"Invalid supplier_id: {supplier_id} for chef {chef_naam}")
         flash("Geen leverancier geselecteerd.", "danger")
         return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
 
@@ -427,7 +443,7 @@ def process_excel_data(df, chef_id, default_supplier=None, update_existing=False
         cur = conn.cursor(dictionary=True)
         try:
             cur.execute("""
-                SELECT naam, ingredient_id FROM ingredients 
+                SELECT naam, ingredient_id FROM ingredients
                 WHERE chef_id = %s
             """, (chef_id,))
             existing_ingredients = {row['naam'].lower(): row['ingredient_id'] for row in cur.fetchall()}
@@ -447,11 +463,9 @@ def process_excel_data(df, chef_id, default_supplier=None, update_existing=False
             # Process each row in the dataframe
             for _, row in df.iterrows():
                 naam = row.get('naam') or row.get('ingredient') or row.get('name')
-                
                 if not naam or pd.isna(naam):
                     result['skipped'] += 1
                     continue
-                
                 naam = str(naam).strip()
                 
                 # Get category with fallback to "Overig"
@@ -485,7 +499,6 @@ def process_excel_data(df, chef_id, default_supplier=None, update_existing=False
                             WHERE LOWER(naam) = LOWER(%s) AND (chef_id = %s OR is_admin_created = TRUE)
                         """, (leverancier_naam, chef_id))
                         supplier_row = cur.fetchone()
-                        
                         if supplier_row:
                             leverancier_id = supplier_row['leverancier_id']
                         elif leverancier_naam:  # Only create if not empty
@@ -505,7 +518,7 @@ def process_excel_data(df, chef_id, default_supplier=None, update_existing=False
                             # Update existing ingredient
                             ingredient_id = existing_ingredients[naam.lower()]
                             cur.execute("""
-                                UPDATE ingredients 
+                                UPDATE ingredients
                                 SET prijs_per_eenheid = %s,
                                     leverancier_id = %s
                                 WHERE ingredient_id = %s
@@ -525,7 +538,6 @@ def process_excel_data(df, chef_id, default_supplier=None, update_existing=False
                             'reden': 'Ingredient bestaat al'
                         })
                     continue
-                    
                 # Add to existing ingredients dict to avoid duplicates in the import itself
                 existing_ingredients[naam.lower()] = -1  # Placeholder ID
                 
@@ -589,7 +601,6 @@ def process_excel_data(df, chef_id, default_supplier=None, update_existing=False
                 cur.close()
             if conn:
                 conn.close()
-                
     except Exception as e:
         logger.error(f"Error during Excel preparation: {str(e)}", exc_info=True)
         result['error'] = str(e)
