@@ -23,72 +23,44 @@ def login_required(f):
 @bp.route('/dashboard/<chef_naam>/suppliers', methods=['GET', 'POST'])
 @login_required
 def manage_suppliers(chef_naam):
-    if session['chef_naam'] != chef_naam:
+    """Manage suppliers for a chef"""
+    if session.get('chef_naam') != chef_naam:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('auth.login'))
-    if 'chef_id' not in session or session['chef_naam'] != chef_naam:
-        flash("Geen toegang. Log opnieuw in.", "danger")
-        return redirect(url_for('login'))
-
-    form = request.form
+    
     conn = get_db_connection()
     if conn is None:
         flash("Database connection error.", "danger")
         return redirect(url_for('dashboard', chef_naam=chef_naam))
+    
     cur = conn.cursor(dictionary=True)
-
+    
     try:
-        # Fetch admin-created suppliers first
+        # Get user's suppliers
         cur.execute("""
             SELECT * FROM leveranciers 
-            WHERE is_admin_created = TRUE 
-            ORDER BY naam
-        """)
-        admin_suppliers = cur.fetchall()
-        
-        # Fetch chef's personal suppliers
-        cur.execute("""
-            SELECT * FROM leveranciers 
-            WHERE chef_id = %s 
+            WHERE chef_id = %s AND is_admin_created = FALSE
             ORDER BY naam
         """, (session['chef_id'],))
-        chef_suppliers = cur.fetchall()
+        leveranciers = cur.fetchall()
         
-        # Combine both lists, with chef's suppliers first
-        leveranciers = chef_suppliers + admin_suppliers
-
-        # POST request handler for adding new supplier
-        if request.method == 'POST':
-            naam = request.form.get('naam')
-            contact = request.form.get('contact', '')
-            telefoon = request.form.get('telefoon', '')
-            email = request.form.get('email', '')
-
-            if naam:
-                try:
-                    cur.execute("""
-                        INSERT INTO leveranciers (naam, contact, telefoon, email, chef_id) 
-                        VALUES (%s, %s, %s, %s, %s)
-                    """, (naam, contact, telefoon, email, session['chef_id']))
-                    conn.commit()
-                    flash(f"Leverancier '{naam}' toegevoegd!", "success")
-                    return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
-                except Exception as e:
-                    conn.rollback()
-                    logger.error(f"Error adding supplier: {str(e)}")
-                    flash(f"Fout bij toevoegen leverancier: {str(e)}", "danger")
-            else:
-                flash("Naam is verplicht.", "danger")
-
+        # Get system suppliers created by admins
+        cur.execute("""
+            SELECT l.*, 
+                   (SELECT COUNT(*) FROM system_ingredients si WHERE si.leverancier_id = l.leverancier_id) AS ingredient_count
+            FROM leveranciers l
+            WHERE l.is_admin_created = TRUE
+            ORDER BY l.naam
+        """)
+        system_leveranciers = cur.fetchall()
+        
         return render_template('manage_suppliers.html',
-                            chef_naam=chef_naam,
-                            leveranciers=leveranciers,
-                            admin_suppliers=admin_suppliers,
-                            form=form)
-
+                              chef_naam=chef_naam,
+                              leveranciers=leveranciers,
+                              system_leveranciers=system_leveranciers)
     except Exception as e:
-        logger.error(f"Error in manage_suppliers: {str(e)}")
-        flash(f"Er is een fout opgetreden: {str(e)}", "danger")
+        logger.error(f"Error fetching suppliers: {str(e)}")
+        flash(f"Error: {str(e)}", "danger")
         return redirect(url_for('dashboard', chef_naam=chef_naam))
     finally:
         cur.close()

@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Excel Bestand Herstellen - {{ supplier.naam }} - E-chef{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="navigation-buttons mb-4">
+        <a href="{{ url_for('admin.manage_system_suppliers') }}" class="btn-action">
+            <i class="fas fa-arrow-left"></i> Terug naar Systeemleveranciers
+        </a>
+    </div>
+
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>Excel bestand niet gevonden in S3 bucket</strong>
+        <p class="mt-2">Het Excel bestand voor leverancier "{{ supplier.naam }}" werd niet gevonden op de opgegeven locatie. Upload een nieuw bestand om dit probleem op te lossen.</p>
+        <hr>
+        <p class="mb-0"><strong>Bestandspad:</strong> <code>{{ file_path }}</code></p>
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="alert-container mb-4">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
+                        {{ message|safe }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-header">
+            <h2>Excel Bestand Herstellen voor {{ supplier.naam }}</h2>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('admin.recover_missing_excel', supplier_id=supplier.leverancier_id, file_path=file_path) }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="form-group">
+                    <label for="excel_file">Selecteer een nieuw Excel bestand</label>
+                    <input type="file" class="form-control-file" id="excel_file" name="excel_file" accept=".xlsx,.xls" required>
+                    <small class="form-text text-muted">
+                        Upload een Excel bestand met ingrediënten voor deze leverancier. Het bestand moet kolommen bevatten voor 'naam', 'categorie', 'eenheid' en 'prijs_per_eenheid'.
+                    </small>
+                </div>
+                
+                <div class="form-group mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload"></i> Upload Excel Bestand
+                    </button>
+                    <a href="{{ url_for('admin.manage_system_ingredients', supplier_id=supplier.leverancier_id) }}" class="btn btn-secondary">
+                        Annuleren
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3>Wat is er gebeurd?</h3>
+        </div>
+        <div class="card-body">
+            <p>Er zijn verschillende redenen waarom een Excel bestand niet meer in de S3 bucket kan zijn:</p>
+            <ul>
+                <li>Het bestand is handmatig verwijderd</li>
+                <li>Er was een probleem tijdens de oorspronkelijke upload</li>
+                <li>De bestandsreferentie in de database werd gewijzigd zonder het bestand te verplaatsen</li>
+                <li>Er was een S3 bucket migratie of herstructurering</li>
+            </ul>
+            <p>Door een nieuw bestand te uploaden, los je dit probleem op voor deze leverancier.</p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        background-color: var(--kitchen-dark);
+        border: 1px solid var(--kitchen-steel);
+        color: var(--text-light);
+        margin-bottom: 1.5rem;
+    }
+    
+    .card-header {
+        background-color: var(--kitchen-primary);
+        border-bottom: 1px solid var(--kitchen-steel);
+    }
+    
+    .form-control-file {
+        color: var(--text-light);
+    }
+    
+    .btn-action {
+        padding: 0.75rem 1.25rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-block;
+        text-align: center;
+        text-decoration: none;
+        font-size: 1rem;
+        background: linear-gradient(145deg, var(--kitchen-primary), var(--kitchen-dark));
+        color: var(--text-light);
+    }
+    
+    .btn-action:hover {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-primary));
+        transform: translateY(-1px);
+    }
+    
+    code {
+        background-color: rgba(0, 0, 0, 0.2);
+        padding: 0.2rem 0.4rem;
+        border-radius: 3px;
+        color: var(--text-light);
+    }
+</style>
+{% endblock %}

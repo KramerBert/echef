@@ -127,7 +127,7 @@ def import_ingredients(chef_naam):
 
 @bp.route('/from-supplier/<int:supplier_id>', methods=['POST'])
 @login_required
-def import_from_supplier(supplier_id):
+def import_from_standard_list(supplier_id):
     """Import ingredients from a supplier's standard list"""
     chef_id = session.get('chef_id')
     chef_naam = session.get('chef_naam')
@@ -246,6 +246,145 @@ def import_from_supplier(supplier_id):
             cur.close()
         if conn:
             conn.close()
+
+@bp.route('/import-from-supplier/<int:supplier_id>', methods=['POST'])
+@login_required
+def import_from_system_supplier(supplier_id):
+    """Import ingredients from a system supplier"""
+    chef_naam = session.get('chef_naam')
+    if not chef_naam:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('auth.login'))
+
+    update_existing = request.form.get('update_existing') == 'on'
+    
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
+    
+    cur = conn.cursor(dictionary=True)
+    
+    try:
+        # Start transaction
+        conn.start_transaction()
+        
+        # First, check if the supplier exists
+        cur.execute("""
+            SELECT * FROM leveranciers
+            WHERE leverancier_id = %s AND is_admin_created = TRUE
+        """, (supplier_id,))
+        
+        system_supplier = cur.fetchone()
+        if not system_supplier:
+            flash("Leverancier niet gevonden of geen systeemsjabloon.", "danger")
+            return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
+        
+        # Create a copy of the supplier for the chef
+        cur.execute("""
+            INSERT INTO leveranciers (naam, contact, telefoon, email, chef_id)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (system_supplier['naam'], system_supplier['contact'], 
+              system_supplier['telefoon'], system_supplier['email'], 
+              session['chef_id']))
+        
+        new_supplier_id = cur.lastrowid
+        
+        # Get all system ingredients for this supplier
+        cur.execute("""
+            SELECT * FROM system_ingredients
+            WHERE leverancier_id = %s
+        """, (supplier_id,))
+        
+        system_ingredients = cur.fetchall()
+        
+        # Log the number of ingredients found for debugging
+        logger.info(f"Found {len(system_ingredients)} system ingredients for supplier {supplier_id}")
+        
+        imported_count = 0
+        skipped_ingredients = []
+        
+        # Process each ingredient
+        for ingredient in system_ingredients:
+            try:
+                # Check if ingredient with same name already exists
+                cur.execute("""
+                    SELECT ingredient_id FROM ingredients
+                    WHERE naam = %s AND chef_id = %s
+                """, (ingredient['naam'], session['chef_id']))
+                
+                existing = cur.fetchone()
+                
+                if existing and not update_existing:
+                    skipped_ingredients.append(ingredient['naam'])
+                    continue
+                    
+                if existing and update_existing:
+                    # Update existing ingredient - handle possible missing columns
+                    allergenen = ingredient.get('allergenen', '')
+                    
+                    # Update existing ingredient with basic fields that are guaranteed to exist
+                    cur.execute("""
+                        UPDATE ingredients
+                        SET leverancier_id = %s,
+                            eenheid = %s,
+                            prijs_per_eenheid = %s,
+                            categorie = %s
+                        WHERE ingredient_id = %s AND chef_id = %s
+                    """, (
+                        new_supplier_id,
+                        ingredient['eenheid'],
+                        ingredient['prijs_per_eenheid'],
+                        ingredient['categorie'],
+                        existing['ingredient_id'],
+                        session['chef_id']
+                    ))
+                # Create new ingredient without allergenen
+                if not existing or not update_existing:
+                    # Create new ingredient with basic fields that are guaranteed to exist
+                    cur.execute("""
+                        INSERT INTO ingredients (
+                            chef_id, leverancier_id, naam,
+                            eenheid, prijs_per_eenheid, categorie
+                        ) VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (
+                        session['chef_id'],
+                        new_supplier_id,
+                        ingredient['naam'],
+                        ingredient['eenheid'],
+                        ingredient['prijs_per_eenheid'],
+                        ingredient['categorie']
+                     ))
+                    
+                imported_count += 1
+                
+            except Exception as e:
+                logger.error(f"Error processing ingredient {ingredient.get('naam', 'unknown')}: {str(e)}")
+                logger.error(f"Ingredient data: {ingredient}")
+                skipped_ingredients.append(f"{ingredient.get('naam', 'unknown')} (error: {str(e)})")
+                continue
+        
+        conn.commit()
+        
+        if len(system_ingredients) == 0:
+            flash("Geen ingrediënten gevonden voor deze systeemleverancier.", "warning")
+        elif skipped_ingredients:
+            session['skipped_ingredients'] = skipped_ingredients
+            flash(f"Leverancier en {imported_count} ingrediënten geïmporteerd. {len(skipped_ingredients)} ingrediënten overgeslagen.", 
+                 "warning")
+        else:
+            flash(f"Leverancier en {imported_count} ingrediënten succesvol geïmporteerd!", "success")
+            
+        return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
+        
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error importing supplier: {str(e)}")
+        flash(f"Fout bij importeren: {str(e)}", "danger")
+        return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
+    finally:
+        cur.close()
+        conn.close()
 
 def process_excel_data(df, chef_id, default_supplier=None, update_existing=False):
     """

@@ -163,6 +163,7 @@ def login():
                         return redirect(url_for('auth.login'))
                     session['chef_id'] = int(chef_id)
                     session['chef_naam'] = chef['naam']
+                    session['is_admin'] = chef['is_admin']  # Sla admin status op in sessie
                     session.permanent = True
                     
                     flash("Succesvol ingelogd!", "success")

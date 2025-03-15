@@ -1,0 +1,616 @@
+{% extends "base.html" %}
+{% block title %}Systeemleveranciers Beheer - E-chef{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="navigation-buttons mb-4">
+        <a href="{{ url_for('admin.admin_dashboard') }}" class="btn-action">
+            <i class="fas fa-arrow-left"></i> Admin Dashboard
+        </a>
+    </div>
+
+    <h1>Systeemleveranciers Beheer</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="alert-container mb-4">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
+                        {{ message|safe }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2>Systeemleveranciers</h2>
+                <button type="button" class="btn-action btn-add" onclick="openAddModal()">
+                    <i class="fas fa-plus"></i> Nieuwe Systeemleverancier
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Logo</th>
+                            <th>Naam</th>
+                            <th>Contact</th>
+                            <th>Telefoon</th>
+                            <th>E-mail</th>
+                            <th>Excel Bestand</th>
+                            <th>Acties</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for supplier in suppliers %}
+                        <tr>
+                            <td>{{ supplier.leverancier_id }}</td>
+                            <td>
+                                {% if supplier.logo_path %}
+                                <img src="{{ supplier.logo_path|file_url }}" alt="{{ supplier.naam }} logo" class="supplier-logo">
+                                {% else %}
+                                <div class="supplier-logo-placeholder">{{ supplier.naam|truncate(2, True, '') }}</div>
+                                {% endif %}
+                            </td>
+                            <td>{{ supplier.naam }}</td>
+                            <td>{{ supplier.contact }}</td>
+                            <td>{{ supplier.telefoon }}</td>
+                            <td>{{ supplier.email }}</td>
+                            <td>
+                                {% if supplier.has_standard_list and supplier.excel_file_path %}
+                                <span class="badge badge-success"><i class="fas fa-file-excel"></i> Ja</span>
+                                <form method="POST" action="{{ url_for('admin.process_supplier_excel', supplier_id=supplier.leverancier_id) }}" class="mt-1">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-sync"></i> Verwerk Excel
+                                    </button>
+                                </form>
+                                {% else %}
+                                <span class="badge badge-secondary">Nee</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="openEditModal('{{ supplier.leverancier_id }}', '{{ supplier.naam|e }}', '{{ supplier.contact|e }}', '{{ supplier.telefoon|e }}', '{{ supplier.email|e }}', '{{ supplier.excel_file_path|e }}', {{ supplier.has_standard_list|tojson }}, '{{ supplier.logo_path|e }}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteSupplier('{{ supplier.leverancier_id }}', '{{ supplier.naam|e }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                <a href="{{ url_for('admin.manage_system_ingredients', supplier_id=supplier.leverancier_id) }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-list"></i> Ingrediënten
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- New section for promoting regular suppliers to system suppliers -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2>Reguliere Leveranciers Promoten</h2>
+            </div>
+            <p class="text-muted">Selecteer een chef om diens leveranciers te bekijken en te promoten naar systeemleverancier.</p>
+            
+            <div class="form-group mb-4">
+                <label for="chef-select">Selecteer Chef</label>
+                <select id="chef-select" class="form-control" onchange="loadChefSuppliers(this.value)">
+                    <option value="">-- Selecteer een chef --</option>
+                    {% for chef in chefs %}
+                    <option value="{{ chef.chef_id }}">{{ chef.naam }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div id="chef-suppliers-container" class="d-none">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Naam</th>
+                                <th>Contact</th>
+                                <th>Telefoon</th>
+                                <th>E-mail</th>
+                                <th>Aantal ingrediënten</th>
+                                <th>Acties</th>
+                            </tr>
+                        </thead>
+                        <tbody id="chef-suppliers-body">
+                            <!-- Will be populated by AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Supplier Modal -->
+<div class="modal fade" id="addSupplierModal" tabindex="-1" role="dialog" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addSupplierModalLabel">Nieuwe Systeemleverancier Toevoegen</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeAddModal()">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addSupplierForm" method="POST" action="{{ url_for('admin.add_system_supplier') }}" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label for="naam">Naam</label>
+                        <input type="text" class="form-control" id="naam" name="naam" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contact">Contactpersoon</label>
+                        <input type="text" class="form-control" id="contact" name="contact">
+                    </div>
+                    <div class="form-group">
+                        <label for="telefoon">Telefoonnummer</label>
+                        <input type="tel" class="form-control" id="telefoon" name="telefoon">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">E-mail</label>
+                        <input type="email" class="form-control" id="email" name="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="logo_file">Logo</label>
+                        <input type="file" class="form-control-file" id="logo_file" name="logo_file" accept=".jpg,.jpeg,.png,.gif">
+                        <small class="form-text text-muted">Upload een logo voor deze leverancier (JPG, PNG of GIF).</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="excel_file">Excel Bestand met Ingrediënten</label>
+                        <input type="file" class="form-control-file" id="excel_file" name="excel_file" accept=".xlsx,.xls">
+                        <small class="form-text text-muted">Upload een Excel bestand met ingrediëntenlijst voor deze leverancier.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="closeAddModal()">Annuleren</button>
+                <button type="button" class="btn btn-primary" onclick="submitAddForm()">Leverancier Toevoegen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Supplier Modal -->
+<div class="modal fade" id="editSupplierModal" tabindex="-1" role="dialog" aria-labelledby="editSupplierModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editSupplierModalLabel">Systeemleverancier Bewerken</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeEditModal()">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editSupplierForm" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" id="edit_leverancier_id" name="leverancier_id">
+                    <div class="form-group">
+                        <label for="edit_naam">Naam</label>
+                        <input type="text" class="form-control" id="edit_naam" name="naam" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_contact">Contactpersoon</label>
+                        <input type="text" class="form-control" id="edit_contact" name="contact">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_telefoon">Telefoonnummer</label>
+                        <input type="tel" class="form-control" id="edit_telefoon" name="telefoon">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_email">E-mail</label>
+                        <input type="email" class="form-control" id="edit_email" name="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_logo_file">Logo</label>
+                        <input type="file" class="form-control-file" id="edit_logo_file" name="logo_file" accept=".jpg,.jpeg,.png,.gif">
+                        <small class="form-text text-muted">Upload een logo voor deze leverancier (JPG, PNG of GIF).</small>
+                    </div>
+                    <div id="current_logo_container" class="d-none mb-3">
+                        <div class="card bg-dark">
+                            <div class="card-body">
+                                <h6 class="card-title">Huidig logo:</h6>
+                                <div class="text-center mb-3">
+                                    <img id="current_logo_preview" src="" alt="Logo" class="img-fluid supplier-logo-preview">
+                                </div>
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="remove_logo" name="remove_logo" value="true">
+                                    <label class="custom-control-label" for="remove_logo">Verwijder logo</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_excel_file">Excel Bestand met Ingrediënten</label>
+                        <input type="file" class="form-control-file" id="edit_excel_file" name="excel_file" accept=".xlsx,.xls">
+                        <small class="form-text text-muted">Upload een Excel bestand met ingrediëntenlijst voor deze leverancier.</small>
+                    </div>
+                    <div id="current_file_container" class="d-none mb-3">
+                        <div class="card bg-dark">
+                            <div class="card-body">
+                                <h6 class="card-title">Huidig Excel bestand:</h6>
+                                <p id="current_file_name" class="card-text mb-2"></p>
+                                <p class="text-info small">Bestandspad: <span id="current_file_path" class="font-monospace"></span></p>
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="remove_excel" name="remove_excel" value="true">
+                                    <label class="custom-control-label" for="remove_excel">Verwijder Excel bestand</label>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-warning">
+                                        <i class="fas fa-exclamation-triangle"></i> 
+                                        Als je een nieuw bestand uploadt, wordt het huidige bestand vervangen.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="closeEditModal()">Annuleren</button>
+                <button type="button" class="btn btn-primary" onclick="submitEditForm()">Wijzigingen Opslaan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Ingredients Modal -->
+<div class="modal fade" id="viewIngredientsModal" tabindex="-1" role="dialog" aria-labelledby="viewIngredientsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewIngredientsModalLabel">Ingrediënten van <span id="supplierNameInModal"></span></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeViewIngredientsModal()">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Naam</th>
+                                <th>Categorie</th>
+                                <th>Eenheid</th>
+                                <th>Prijs per eenheid</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ingredients-list">
+                            <!-- Will be populated by AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="closeViewIngredientsModal()">Sluiten</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+function openAddModal() {
+    $('#addSupplierModal').modal('show');
+}
+
+function closeAddModal() {
+    $('#addSupplierModal').modal('hide');
+}
+
+function submitAddForm() {
+    document.getElementById('addSupplierForm').submit();
+}
+
+function openEditModal(leverancierId, naam, contact, telefoon, email, excelFilePath, hasStandardList, logoPath) {
+    document.getElementById('edit_leverancier_id').value = leverancierId;
+    document.getElementById('edit_naam').value = naam || '';
+    document.getElementById('edit_contact').value = contact || '';
+    document.getElementById('edit_telefoon').value = telefoon || '';
+    document.getElementById('edit_email').value = email || '';
+    
+    // Handle Excel file information
+    const currentFileContainer = document.getElementById('current_file_container');
+    const currentFileName = document.getElementById('current_file_name');
+    const currentFilePath = document.getElementById('current_file_path'); // Add this line
+    const removeExcelCheckbox = document.getElementById('remove_excel');
+    
+    if (excelFilePath && hasStandardList) {
+        currentFileContainer.classList.remove('d-none');
+        // Extract just the filename from the path
+        const fileName = excelFilePath.split('/').pop();
+        currentFileName.textContent = fileName;
+        currentFilePath.textContent = excelFilePath; // Add this line
+        removeExcelCheckbox.checked = false;
+    } else {
+        currentFileContainer.classList.add('d-none');
+        currentFileName.textContent = '';
+        currentFilePath.textContent = ''; // Add this line
+        removeExcelCheckbox.checked = false;
+    }
+    
+    // Handle logo information
+    const currentLogoContainer = document.getElementById('current_logo_container');
+    const currentLogoPreview = document.getElementById('current_logo_preview');
+    const removeLogoCheckbox = document.getElementById('remove_logo');
+    
+    if (logoPath) {
+        currentLogoContainer.classList.remove('d-none');
+        
+        // Use the file_url filter from the template if possible, otherwise use a direct URL
+        // This is simplified and may need adjustment based on your actual URL structure
+        let logoUrl;
+        if (logoPath.startsWith('http')) {
+            logoUrl = logoPath;
+        } else {
+            // Assuming S3 bucket URL
+            logoUrl = '{{ config.S3_LOCATION }}/' + logoPath;
+        }
+        
+        currentLogoPreview.src = logoUrl;
+        removeLogoCheckbox.checked = false;
+    } else {
+        currentLogoContainer.classList.add('d-none');
+        currentLogoPreview.src = '';
+        removeLogoCheckbox.checked = false;
+    }
+    
+    // Update form action
+    document.getElementById('editSupplierForm').action = 
+        `{{ url_for('admin.update_system_supplier', supplier_id=0) }}`.replace('0', leverancierId);
+    
+    $('#editSupplierModal').modal('show');
+}
+
+function closeEditModal() {
+    $('#editSupplierModal').modal('hide');
+}
+
+function submitEditForm() {
+    document.getElementById('editSupplierForm').submit();
+}
+
+function deleteSupplier(leverancierId, naam) {
+    if (!confirm(`Weet je zeker dat je systeemleverancier "${naam}" wilt verwijderen?`)) {
+        return;
+    }
+    
+    fetch(`{{ url_for('admin.delete_system_supplier', supplier_id=0) }}`.replace('0', leverancierId), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Er is een fout opgetreden bij het verwijderen van de leverancier.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Er is een fout opgetreden bij het verwijderen van de leverancier.');
+    });
+}
+
+function loadChefSuppliers(chefId) {
+    if (!chefId) {
+        document.getElementById('chef-suppliers-container').classList.add('d-none');
+        return;
+    }
+    
+    fetch(`{{ url_for('admin.get_chef_suppliers') }}?chef_id=${chefId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const container = document.getElementById('chef-suppliers-container');
+            const tbody = document.getElementById('chef-suppliers-body');
+            
+            // Clear previous results
+            tbody.innerHTML = '';
+            
+            // Add each supplier
+            data.suppliers.forEach(supplier => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${supplier.naam || ''}</td>
+                    <td>${supplier.contact || ''}</td>
+                    <td>${supplier.telefoon || ''}</td>
+                    <td>${supplier.email || ''}</td>
+                    <td>${supplier.ingredient_count || 0}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" onclick="viewIngredients(${supplier.leverancier_id}, '${supplier.naam.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-eye"></i> Ingrediënten
+                        </button>
+                        <button class="btn btn-sm btn-success" onclick="promoteSupplier(${supplier.leverancier_id}, '${supplier.naam.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-level-up-alt"></i> Promoten
+                        </button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            container.classList.remove('d-none');
+        } else {
+            alert(data.error || 'Er is een fout opgetreden bij het ophalen van leveranciers.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Er is een fout opgetreden bij het ophalen van leveranciers.');
+    });
+}
+
+function viewIngredients(leverancierId, naam) {
+    document.getElementById('supplierNameInModal').textContent = naam;
+    
+    fetch(`{{ url_for('admin.get_supplier_ingredients') }}?supplier_id=${leverancierId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const tbody = document.getElementById('ingredients-list');
+            
+            // Clear previous results
+            tbody.innerHTML = '';
+            
+            // Add each ingredient
+            data.ingredients.forEach(ingredient => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${ingredient.naam || ''}</td>
+                    <td>${ingredient.categorie || ''}</td>
+                    <td>${ingredient.eenheid || ''}</td>
+                    <td>€${parseFloat(ingredient.prijs_per_eenheid).toFixed(5)}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            $('#viewIngredientsModal').modal('show');
+        } else {
+            alert(data.error || 'Er is een fout opgetreden bij het ophalen van ingrediënten.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Er is een fout opgetreden bij het ophalen van ingrediënten.');
+    });
+}
+
+function closeViewIngredientsModal() {
+    $('#viewIngredientsModal').modal('hide');
+}
+
+function promoteSupplier(leverancierId, naam) {
+    if (!confirm(`Weet je zeker dat je leverancier "${naam}" wilt promoten naar een systeemleverancier? Alle ingrediënten worden meegenomen.`)) {
+        return;
+    }
+    
+    fetch(`{{ url_for('admin.promote_supplier_to_system') }}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            leverancier_id: leverancierId
+        }),
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Leverancier "${naam}" is succesvol gepromoveerd naar systeemleverancier met ${data.ingredient_count} ingrediënten.`);
+            location.reload();
+        } else {
+            alert(data.error || 'Er is een fout opgetreden bij het promoveren van de leverancier.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Er is een fout opgetreden bij het promoveren van de leverancier.');
+    });
+}
+</script>
+
+<style>
+    .table {
+        color: var(--text-light);
+    }
+    .btn-action {
+        padding: 0.75rem 1.25rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-block;
+        text-align: center;
+        text-decoration: none;
+        font-size: 1rem;
+    }
+    .btn-add {
+        background: linear-gradient(145deg, var(--kitchen-success), var(--kitchen-dark));
+        color: var(--text-light);
+    }
+    .btn-add:hover {
+        background: linear-gradient(145deg, var(--kitchen-dark), var(--kitchen-success));
+        transform: translateY(-1px);
+    }
+    .modal-content {
+        background-color: var(--kitchen-dark);
+        color: var(--text-light);
+    }
+    .modal-header {
+        border-bottom: 1px solid var(--kitchen-steel);
+    }
+    .modal-footer {
+        border-top: 1px solid var(--kitchen-steel);
+    }
+    .form-control {
+        background-color: var(--kitchen-black);
+        color: var(--text-light);
+        border: 1px solid var(--kitchen-steel);
+    }
+    .form-control:focus {
+        background-color: var(--kitchen-black);
+        color: var (--text-light);
+    }
+    .supplier-logo {
+        width: 40px;
+        height: 40px;
+        object-fit: contain;
+        border-radius: 4px;
+    }
+
+    .supplier-logo-placeholder {
+        width: 40px;
+        height: 40px;
+        background-color: var(--kitchen-primary);
+        color: var(--text-light);
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+
+    .supplier-logo-preview {
+        max-width: 100%;
+        max-height: 150px;
+    }
+</style>
+{% endblock %}

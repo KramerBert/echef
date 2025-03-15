@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Ingrediënten Beheer - {{ supplier.naam }} - E-chef{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="navigation-buttons mb-4">
+        <a href="{{ url_for('admin.manage_system_suppliers') }}" class="btn-action">
+            <i class="fas fa-arrow-left"></i> Terug naar Systeemleveranciers
+        </a>
+    </div>
+
+    <h1>Ingrediënten voor {{ supplier.naam }}</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="alert-container mb-4">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
+                        {{ message|safe }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2>Nieuw Ingredient Toevoegen</h2>
+            <form method="POST" action="{{ url_for('admin.manage_system_ingredients', supplier_id=supplier.leverancier_id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label for="naam">Naam</label>
+                        <input type="text" class="form-control" id="naam" name="naam" required>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label for="categorie">Categorie</label>
+                        <input type="text" class="form-control" id="categorie" name="categorie">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label for="eenheid">Eenheid</label>
+                        <input type="text" class="form-control" id="eenheid" name="eenheid">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="prijs_per_eenheid">Prijs per eenheid</label>
+                        <input type="number" class="form-control" id="prijs_per_eenheid" name="prijs_per_eenheid" step="0.00001">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end mb-3">
+                        <button type="submit" class="btn btn-primary w-100">Toevoegen</button>
+                    </div>
+                </div>
+            </form>
+            
+            {% if supplier.excel_file_path %}
+            <div class="mt-3">
+                <h4>Excel Bestand Verwerken</h4>
+                <p>De leverancier heeft een Excel bestand, maar de ingrediënten zijn nog niet verwerkt of bijgewerkt.</p>
+                <div class="card bg-light text-dark mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title">Bestandsinformatie:</h6>
+                        <p class="card-text small">Bestandspad: <code>{{ supplier.excel_file_path }}</code></p>
+                    </div>
+                </div>
+                <form method="POST" action="{{ url_for('admin.process_supplier_excel', supplier_id=supplier.leverancier_id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-file-excel mr-1"></i> Excel Bestand Verwerken
+                    </button>
+                    <small class="form-text text-muted mt-2">
+                        Let op: Dit zal alle bestaande ingrediënten voor deze leverancier vervangen met die uit het Excel bestand.
+                    </small>
+                </form>
+                <div class="mt-3">
+                    <p class="text-info">
+                        <i class="fas fa-info-circle"></i> 
+                        Als je een foutmelding krijgt over een ontbrekend bestand, ga dan terug naar de lijst met systeemleveranciers en upload opnieuw een Excel bestand voor deze leverancier.
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <h2>Alle Ingrediënten</h2>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Naam</th>
+                            <th>Categorie</th>
+                            <th>Eenheid</th>
+                            <th>Prijs per eenheid</th>
+                            <th>Acties</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ingredient in ingredients %}
+                        <tr>
+                            <td>{{ ingredient.system_ingredient_id }}</td>
+                            <td>{{ ingredient.naam }}</td>
+                            <td>{{ ingredient.categorie }}</td>
+                            <td>{{ ingredient.eenheid }}</td>
+                            <td>{{ "€{:.5f}".format(ingredient.prijs_per_eenheid) }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-danger" onclick="deleteIngredient('{{ ingredient.system_ingredient_id }}', '{{ ingredient.naam|e }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function deleteIngredient(ingredientId, naam) {
+    if (confirm(`Weet je zeker dat je ingredient "${naam}" wilt verwijderen?`)) {
+        fetch(`{{ url_for('admin.delete_system_ingredient', supplier_id=supplier.leverancier_id, ingredient_id=0) }}`.replace('0', ingredientId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'Er is een fout opgetreden bij het verwijderen van het ingredient.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Er is een fout opgetreden bij het verwijderen van het ingredient.');
+        });
+    }
+}
+</script>
+{% endblock %}

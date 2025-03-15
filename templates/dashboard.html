@@ -100,6 +100,18 @@
         </div>
     </div>
 
+    {% if session.is_admin %}
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title"><i class="fas fa-shield-alt"></i> Admin functies</h5>
+            <p class="card-text">Beheer het systeem als administrator.</p>
+            <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-danger">
+                <i class="fas fa-cogs"></i> Admin Dashboard
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
 </div>
 <style>
     .dashboard-card {

@@ -1,809 +1,873 @@
-from flask import render_template, redirect, url_for, flash, request, session, jsonify, current_app, send_file
-from werkzeug.security import check_password_hash
-from werkzeug.utils import secure_filename
-from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField
-from wtforms.validators import DataRequired, Email
-from utils.db import get_db_connection
+from flask import render_template, redirect, url_for, flash, request, session, jsonify, current_app
 from . import bp
+from utils.db import get_db_connection
+from utils.auth_decorators import admin_required
+from werkzeug.utils import secure_filename
 import logging
 import os
-import datetime
-import boto3  # Add this import for AWS S3 operations
-from botocore.exceptions import ClientError  # Also add this for better error handling
 
 logger = logging.getLogger(__name__)
 
-class AdminLoginForm(FlaskForm):
-    email = StringField('E-mailadres', validators=[DataRequired(), Email()])
-    password = PasswordField('Wachtwoord', validators=[DataRequired()])
-    submit = SubmitField('Inloggen')
-
-# Admin login vereist decorator
-def admin_required(f):
-    def decorated_function(*args, **kwargs):
-        if 'admin_id' not in session:
-            flash("Toegang geweigerd. Log in als beheerder.", "danger")
-            return redirect(url_for('admin.login'))
-        return f(*args, **kwargs)
-    decorated_function.__name__ = f.__name__
-    return decorated_function
-
-@bp.route('/login', methods=['GET', 'POST'])
-def login():
-    """Admin login route"""
-    # Check if already logged in
-    if 'admin_id' in session:
-        return redirect(url_for('admin.dashboard'))
-        
-    form = AdminLoginForm()
-    if (form.validate_on_submit()):
-        email = form.email.data
-        password = form.password.data
-        
-        conn = get_db_connection()
-        if not conn:
-            flash("Database verbinding mislukt", "danger")
-            return render_template('admin/login.html', form=form)
-            
-        cur = conn.cursor(dictionary=True)
-        try:
-            cur.execute("SELECT * FROM admins WHERE email = %s", (email,))
-            admin = cur.fetchone()
-            
-            if admin and check_password_hash(admin['password_hash'], password):
-                session['admin_id'] = admin['admin_id']
-                session['admin_username'] = admin['username']
-                session['admin_email'] = admin['email']
-                flash("Succesvol ingelogd als beheerder!", "success")
-                return redirect(url_for('admin.dashboard'))
-            else:
-                flash("Ongeldige inloggegevens", "danger")
-        except Exception as e:
-            logger.error(f"Admin login error: {str(e)}")
-            flash("Er is een fout opgetreden bij het inloggen", "danger")
-        finally:
-            cur.close()
-            conn.close()
-            
-    return render_template('admin/login.html', form=form)
-
-@bp.route('/logout')
-def logout():
-    """Admin logout route"""
-    session.pop('admin_id', None)
-    session.pop('admin_username', None)
-    flash("U bent uitgelogd als beheerder", "success")
-    return redirect(url_for('admin.login'))
-
 @bp.route('/dashboard')
 @admin_required
-def dashboard():
-    """Admin dashboard route"""
-    conn = get_db_connection()
-    if not conn:
-        flash("Database verbinding mislukt", "danger")
-        return redirect(url_for('admin.login'))
-        
-    cur = conn.cursor(dictionary=True)
-    try:
-        # Haal statistieken op voor het dashboard
-        cur.execute("SELECT COUNT(*) as total_chefs FROM chefs")
-        chefs_count = cur.fetchone()['total_chefs']
-        
-        cur.execute("SELECT COUNT(*) as total_dishes FROM dishes")
-        dishes_count = cur.fetchone()['total_dishes']
-        
-        cur.execute("SELECT COUNT(*) as total_ingredients FROM ingredients")
-        ingredients_count = cur.fetchone()['total_ingredients']
-        
-        # Simplified query that doesn't reference non-existent columns
-        cur.execute("""
-            SELECT c.chef_id, c.naam, c.email,
-                   (SELECT COUNT(*) FROM dishes WHERE chef_id = c.chef_id) as dish_count,
-                   (SELECT COUNT(*) FROM ingredients WHERE chef_id = c.chef_id) as ingredient_count
-            FROM chefs c
-            ORDER BY c.chef_id DESC
-        """)
-        chefs = cur.fetchall()
-        
-        return render_template('admin/dashboard.html', 
-                              chefs_count=chefs_count,
-                              dishes_count=dishes_count,
-                              ingredients_count=ingredients_count,
-                              chefs=chefs)
-    except Exception as e:
-        logger.error(f"Admin dashboard error: {str(e)}")
-        flash("Er is een fout opgetreden bij het laden van het dashboard", "danger")
-        return redirect(url_for('admin.login'))
-    finally:
-        cur.close()
-        conn.close()
+def admin_dashboard():
+    """Admin dashboard pagina"""
+    return render_template('admin/dashboard.html')
 
-@bp.route('/chef/<int:chef_id>/details')
+@bp.route('/users')
 @admin_required
-def chef_details(chef_id):
-    """Toon gedetailleerde informatie over een chef"""
+def manage_users():
+    """Beheer alle gebruikers"""
     conn = get_db_connection()
-    if not conn:
-        flash("Database verbinding mislukt", "danger")
-        return redirect(url_for('admin.dashboard'))
-        
-    cur = conn.cursor(dictionary=True)
-    try:
-        # Haal chef informatie op
-        cur.execute("SELECT * FROM chefs WHERE chef_id = %s", (chef_id,))
-        chef = cur.fetchone()
-        
-        if not chef:
-            flash("Chef niet gevonden", "danger")
-            return redirect(url_for('admin.dashboard'))
-        
-        # Haal dishes op voor deze chef
-        cur.execute("SELECT * FROM dishes WHERE chef_id = %s", (chef_id,))
-        dishes = cur.fetchall()
-        
-        # Haal ingrediënten op voor deze chef
-        cur.execute("SELECT * FROM ingredients WHERE chef_id = %s LIMIT 100", (chef_id,))
-        ingredients = cur.fetchall()
-        
-        # Andere informatie zoals HACCP records, etc.
-        cur.execute("SELECT * FROM haccp_checklists WHERE chef_id = %s", (chef_id,))
-        haccp_checklists = cur.fetchall()
-        
-        return render_template('admin/chef_details.html', 
-                              chef=chef,
-                              dishes=dishes,
-                              ingredients=ingredients,
-                              haccp_checklists=haccp_checklists)
-    except Exception as e:
-        logger.error(f"Chef details error: {str(e)}")
-        flash(f"Er is een fout opgetreden: {str(e)}", "danger")
-        return redirect(url_for('admin.dashboard'))
-    finally:
-        cur.close()
-        conn.close()
-
-@bp.route('/chef/<int:chef_id>/delete', methods=['POST'])
-@admin_required
-def delete_chef(chef_id):
-    """Verwijder een chef en alle bijbehorende gegevens"""
-    conn = get_db_connection()
-    if not conn:
-        flash("Database verbinding mislukt", "danger")
-        return redirect(url_for('admin.dashboard'))
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('admin.admin_dashboard'))
     
     cur = conn.cursor(dictionary=True)
     
     try:
-        # Begin een transactie
-        conn.start_transaction()
-        
-        # Haal eerst de chef informatie op om te bevestigen dat deze bestaat
-        cur.execute("SELECT * FROM chefs WHERE chef_id = %s", (chef_id,))
-        chef = cur.fetchone()
-        
-        if not chef:
-            conn.rollback()
-            flash("Chef niet gevonden", "danger")
-            return redirect(url_for('admin.dashboard'))
-        
-        # NIEUW: Verwijder password_resets records
-        cur.execute("DELETE FROM password_resets WHERE chef_id = %s", (chef_id,))
-        
-        # Verwijder alle gerelateerde records in de juiste volgorde
-        # Eerst dish_allergenen en dish_dieten omdat deze foreign keys hebben naar dishes
-        cur.execute("""
-            DELETE da FROM dish_allergenen da
-            JOIN dishes d ON da.dish_id = d.dish_id
-            WHERE d.chef_id = %s
-        """, (chef_id,))
-        
-        cur.execute("""
-            DELETE dd FROM dish_dieten dd
-            JOIN dishes d ON dd.dish_id = d.dish_id
-            WHERE d.chef_id = %s
-        """, (chef_id,))
-        
-        # Verwijder dish_ingredients
-        cur.execute("""
-            DELETE di FROM dish_ingredients di
-            JOIN dishes d ON di.dish_id = d.dish_id
-            WHERE d.chef_id = %s
-        """, (chef_id,))
-        
-        # NIEUW: Verwijder haccp_temperatuur records
-        cur.execute("DELETE FROM haccp_temperatuur WHERE chef_id = %s", (chef_id,))
-        
-        # NIEUW: Verwijder haccp_schoonmaak_planning records
-        cur.execute("DELETE FROM haccp_schoonmaak_planning WHERE chef_id = %s", (chef_id,))
-        
-        # NIEUW: Verwijder haccp_productie records
-        cur.execute("DELETE FROM haccp_productie WHERE chef_id = %s", (chef_id,))
-        
-        # NIEUW: Verwijder haccp_ongedierte records
-        cur.execute("DELETE FROM haccp_ongedierte WHERE chef_id = %s", (chef_id,))
-        
-        # NIEUW: Verwijder haccp_allergenen_controle records
-        cur.execute("DELETE FROM haccp_allergenen_controle WHERE chef_id = %s", (chef_id,))
-        
-        # NIEUW: Verwijder haccp_hygiene_controle records
-        cur.execute("DELETE FROM haccp_hygiene_controle WHERE chef_id = %s", (chef_id,))
-        
-        # Verwijder haccp metingen
-        cur.execute("""
-            DELETE m FROM haccp_metingen m
-            JOIN haccp_checkpunten p ON m.punt_id = p.punt_id
-            JOIN haccp_checklists c ON p.checklist_id = c.checklist_id
-            WHERE c.chef_id = %s
-        """, (chef_id,))
-        
-        # Verwijder haccp_checkpunten
-        cur.execute("""
-            DELETE p FROM haccp_checkpunten p
-            JOIN haccp_checklists c ON p.checklist_id = c.checklist_id
-            WHERE c.chef_id = %s
-        """, (chef_id,))
-        
-        # Verwijder haccp_checklists
-        cur.execute("DELETE FROM haccp_checklists WHERE chef_id = %s", (chef_id,))
-        
-        # Verwijder dishes
-        cur.execute("DELETE FROM dishes WHERE chef_id = %s", (chef_id,))
-        
-        # Verwijder ingredients
-        cur.execute("DELETE FROM ingredients WHERE chef_id = %s", (chef_id,))
-        
-        # Verwijder leveranciers
-        cur.execute("DELETE FROM leveranciers WHERE chef_id = %s", (chef_id,))
-        
-        # Verwijder categorieen
-        cur.execute("DELETE FROM categorieen WHERE chef_id = %s", (chef_id,))
-        
-        # Verwijder eenheden
-        cur.execute("DELETE FROM eenheden WHERE chef_id = %s", (chef_id,))
-        
-        # Verwijder dish_categories
-        cur.execute("DELETE FROM dish_categories WHERE chef_id = %s", (chef_id,))
-        
-        # Verwijder de chef zelf
-        cur.execute("DELETE FROM chefs WHERE chef_id = %s", (chef_id,))
-        
-        # Commit de transactie als alles succesvol is
-        conn.commit()
-        
-        flash(f"Chef {chef['naam']} ({chef['email']}) en alle gerelateerde gegevens zijn succesvol verwijderd!", "success")
-        return redirect(url_for('admin.dashboard'))
-        
+        # Removed username column from the query since it doesn't exist
+        cur.execute("SELECT chef_id, naam, email, is_admin FROM chefs ORDER BY naam")
+        users = cur.fetchall()
+        return render_template('admin/users.html', users=users)
     except Exception as e:
-        # Rollback bij fout
-        conn.rollback()
-        logger.error(f"Delete chef error: {str(e)}")
-        flash(f"Er is een fout opgetreden bij het verwijderen van de chef: {str(e)}", "danger")
-        return redirect(url_for('admin.dashboard'))
-    finally:
-        cur.close()
-        conn.close()
-
-@bp.route('/chef/<int:chef_id>/toggle_status', methods=['POST'])
-@admin_required
-def toggle_chef_status(chef_id):
-    """Activeer of deactiveer een chef account"""
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"success": False, "error": "Database verbinding mislukt"}), 500
-    
-    cur = conn.cursor(dictionary=True)
-    try:
-        # Haal huidige status op
-        cur.execute("SELECT active FROM chefs WHERE chef_id = %s", (chef_id,))
-        chef = cur.fetchone()
-        
-        if not chef:
-            return jsonify({"success": False, "error": "Chef niet gevonden"}), 404
-        
-        # Toggle status
-        new_status = 0 if chef['active'] == 1 else 1
-        cur.execute("UPDATE chefs SET active = %s WHERE chef_id = %s", (new_status, chef_id))
-        conn.commit()
-        
-        status_text = "geactiveerd" if new_status == 1 else "gedeactiveerd"
-        return jsonify({
-            "success": True, 
-            "message": f"Chef {status_text}",
-            "new_status": new_status
-        })
-    except Exception as e:
-        logger.error(f"Toggle chef status error: {str(e)}")
-        return jsonify({"success": False, "error": str(e)}), 500
+        logger.error(f"Error fetching users: {str(e)}")
+        flash(f"Error: {str(e)}", "danger")
+        return redirect(url_for('admin.admin_dashboard'))
     finally:
         cur.close()
         conn.close()
 
 @bp.route('/suppliers')
 @admin_required
-def manage_suppliers():
-    """Admin supplier management page"""
+def manage_system_suppliers():
+    """Beheer systeemleveranciers"""
     conn = get_db_connection()
-    if not conn:
-        flash("Database verbinding mislukt", "danger")
-        return redirect(url_for('admin.dashboard'))
-        
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('admin.admin_dashboard'))
+    
     cur = conn.cursor(dictionary=True)
+    
     try:
-        # Retrieve all admin-created suppliers
+        # Fetch system suppliers
         cur.execute("""
-            SELECT * FROM leveranciers 
-            WHERE is_admin_created = TRUE
-            ORDER BY naam
+            SELECT l.*, 
+                   (SELECT COUNT(*) FROM system_ingredients WHERE leverancier_id = l.leverancier_id) as ingredient_count 
+            FROM leveranciers l 
+            WHERE l.is_admin_created = TRUE
         """)
-        suppliers = cur.fetchall()
+        system_suppliers = cur.fetchall()
         
-        return render_template('admin/suppliers.html', suppliers=suppliers)
+        # Fetch all chefs for the dropdown
+        cur.execute("SELECT chef_id, naam FROM chefs ORDER BY naam")
+        chefs = cur.fetchall()
+        
+        return render_template('admin/suppliers.html', 
+                              suppliers=system_suppliers, 
+                              chefs=chefs)
     except Exception as e:
-        logger.error(f"Admin suppliers error: {str(e)}")
-        flash("Er is een fout opgetreden bij het laden van leveranciers", "danger")
-        return redirect(url_for('admin.dashboard'))
+        logger.error(f"Error fetching system suppliers: {str(e)}")
+        flash(f"Error: {str(e)}", "danger")
+        return redirect(url_for('admin.admin_dashboard'))
     finally:
         cur.close()
         conn.close()
 
-@bp.route('/suppliers/create', methods=['GET', 'POST'])
+@bp.route('/suppliers/add', methods=['POST'])
 @admin_required
-def create_supplier():
-    """Create a new admin supplier"""
-    if request.method == 'POST':
-        # Get form data
-        naam = request.form.get('naam')
-        contact = request.form.get('contact')
-        telefoon = request.form.get('telefoon')
-        email = request.form.get('email')
-        has_standard_list = bool(request.form.get('has_standard_list'))
-        
-        # Handle banner image upload
-        banner_image = None
-        if 'banner_image' in request.files and request.files['banner_image'].filename:
-            file = request.files['banner_image']
-            if file:
-                # Use our storage utility instead of direct filesystem operations
-                banner_image = current_app.storage.save_file(
-                    file, 
-                    'uploads/banners'
-                )
-        
-        # Handle CSV file upload
-        csv_file_path = None
-        if 'ingredients_csv' in request.files and request.files['ingredients_csv'].filename:
-            file = request.files['ingredients_csv']
-            if file:
-                # Use our storage utility
-                csv_file_path = current_app.storage.save_file(
-                    file,
-                    'uploads/ingredient_lists'
-                )
-        
-        conn = get_db_connection()
-        if not conn:
-            flash("Database verbinding mislukt", "danger")
-            return redirect(url_for('admin.manage_suppliers'))
-        
-        cur = conn.cursor()
-        try:
-            # Insert new supplier with CSV file path
-            cur.execute("""
-                INSERT INTO leveranciers 
-                (naam, contact, telefoon, email, banner_image, is_admin_created, has_standard_list, chef_id, csv_file_path, csv_last_updated)
-                VALUES (%s, %s, %s, %s, %s, TRUE, %s, NULL, %s, %s)
-            """, (naam, contact, telefoon, email, banner_image, has_standard_list, csv_file_path, 
-                 datetime.datetime.now() if csv_file_path else None))
-            
-            conn.commit()
-            flash("Leverancier succesvol aangemaakt!", "success")
-            return redirect(url_for('admin.manage_suppliers'))
-        except Exception as e:
-            conn.rollback()
-            logger.error(f"Create supplier error: {str(e)}")
-            flash(f"Er is een fout opgetreden bij het aanmaken van de leverancier: {str(e)}", "danger")
-            return redirect(url_for('admin.manage_suppliers'))
-        finally:
-            cur.close()
-            conn.close()
-            
-    # GET request: render form
-    return render_template('admin/create_supplier.html')
-
-@bp.route('/suppliers/<int:supplier_id>/edit', methods=['GET', 'POST'])
-@admin_required
-def edit_supplier(supplier_id):
-    """Edit an admin supplier"""
+def add_system_supplier():
+    """Voeg een nieuwe systeemleverancier toe"""
     conn = get_db_connection()
-    if not conn:
-        flash("Database verbinding mislukt", "danger")
-        return redirect(url_for('admin.manage_suppliers'))
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('admin.manage_system_suppliers'))
     
-    cur = conn.cursor(dictionary=True)
+    cur = conn.cursor()
     
     try:
-        # Get supplier information
+        naam = request.form.get('naam')
+        contact = request.form.get('contact', '')
+        telefoon = request.form.get('telefoon', '')
+        email = request.form.get('email', '')
+        
+        if not naam:
+            flash("Naam is verplicht.", "danger")
+            return redirect(url_for('admin.manage_system_suppliers'))
+        
+        # Handle Excel file upload
+        excel_file_path = None
+        has_standard_list = False
+        
+        if 'excel_file' in request.files and request.files['excel_file'].filename:
+            excel_file = request.files['excel_file']
+            if excel_file.filename.lower().endswith(('.xlsx', '.xls')):
+                try:
+                    # Generate a safe filename
+                    filename = secure_filename(f"{naam.replace(' ', '_')}_ingredienten.xlsx")
+                    
+                    # Use the app's storage system (S3 or local)
+                    path = f"supplier_excel/{filename}"
+                    current_app.storage.save_file(excel_file, path)
+                    
+                    excel_file_path = path
+                    has_standard_list = True
+                    
+                except Exception as e:
+                    logger.error(f"Error uploading Excel file: {str(e)}")
+                    flash(f"Fout bij uploaden Excel bestand: {str(e)}", "warning")
+            else:
+                flash("Alleen Excel bestanden (xlsx, xls) zijn toegestaan", "warning")
+        
+        # Handle logo file upload
+        logo_path = None
+        if 'logo_file' in request.files and request.files['logo_file'].filename:
+            logo_file = request.files['logo_file']
+            if logo_file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
+                try:
+                    # Generate a safe filename
+                    filename = secure_filename(f"{naam.replace(' ', '_')}_logo{os.path.splitext(logo_file.filename)[1]}")
+                    
+                    # Use the app's storage system (S3 or local)
+                    path = f"supplier_logos/{filename}"
+                    current_app.storage.save_file(logo_file, path)
+                    
+                    logo_path = path
+                    
+                except Exception as e:
+                    logger.error(f"Error uploading logo file: {str(e)}")
+                    flash(f"Fout bij uploaden logo: {str(e)}", "warning")
+            else:
+                flash("Alleen afbeeldingsbestanden (jpg, jpeg, png, gif) zijn toegestaan voor het logo", "warning")
+        
+        # Systeemleverancier toevoegen met is_admin_created=TRUE
         cur.execute("""
-            SELECT * FROM leveranciers 
-            WHERE leverancier_id = %s AND is_admin_created = TRUE
-        """, (supplier_id,))
-        supplier = cur.fetchone()
+            INSERT INTO leveranciers (naam, contact, telefoon, email, is_admin_created, excel_file_path, has_standard_list, logo_path) 
+            VALUES (%s, %s, %s, %s, TRUE, %s, %s, %s)
+        """, (naam, contact, telefoon, email, excel_file_path, has_standard_list, logo_path))
         
-        if not supplier:
-            flash("Leverancier niet gevonden", "danger")
-            return redirect(url_for('admin.manage_suppliers'))
-        
-        if request.method == 'POST':
-            # Get form data
-            naam = request.form.get('naam')
-            contact = request.form.get('contact')
-            telefoon = request.form.get('telefoon')
-            email = request.form.get('email')
-            has_standard_list = bool(request.form.get('has_standard_list'))
-            
-            # Handle banner image upload
-            banner_image = supplier['banner_image']
-            if 'banner_image' in request.files and request.files['banner_image'].filename:
-                file = request.files['banner_image']
-                if file:
-                    # Delete old banner if exists
-                    if banner_image:
-                        current_app.storage.delete_file(banner_image)
-                    
-                    # Upload new banner
-                    banner_image = current_app.storage.save_file(
-                        file,
-                        'uploads/banners'
-                    )
-            
-            # Handle CSV file upload
-            csv_file_path = supplier['csv_file_path']
-            csv_updated = False
-            if 'ingredients_csv' in request.files and request.files['ingredients_csv'].filename:
-                file = request.files['ingredients_csv']
-                if file:
-                    # Delete old CSV if exists
-                    if csv_file_path:
-                        current_app.storage.delete_file(csv_file_path)
-                    
-                    # Upload new CSV
-                    csv_file_path = current_app.storage.save_file(
-                        file, 
-                        'uploads/ingredient_lists'
-                    )
-                    csv_updated = True
-            
-            # Update supplier
-            cur.execute("""
-                UPDATE leveranciers 
-                SET naam = %s, contact = %s, telefoon = %s, email = %s, 
-                    banner_image = %s, has_standard_list = %s, csv_file_path = %s,
-                    csv_last_updated = %s
-                WHERE leverancier_id = %s
-            """, (naam, contact, telefoon, email, banner_image, has_standard_list, 
-                  csv_file_path, datetime.datetime.now() if csv_updated else supplier['csv_last_updated'], 
-                  supplier_id))
-            
-            conn.commit()
-            flash("Leverancier succesvol bijgewerkt!", "success")
-            return redirect(url_for('admin.manage_suppliers'))
-            
-        return render_template('admin/edit_supplier.html', supplier=supplier)
-    
+        conn.commit()
+        flash(f"Systeemleverancier '{naam}' succesvol toegevoegd!", "success")
     except Exception as e:
         conn.rollback()
-        logger.error(f"Edit supplier error: {str(e)}")
-        flash(f"Er is een fout opgetreden bij het bewerken van de leverancier: {str(e)}", "danger")
-        return redirect(url_for('admin.manage_suppliers'))
+        logger.error(f"Error adding system supplier: {str(e)}")
+        flash(f"Fout bij toevoegen van systeemleverancier: {str(e)}", "danger")
     finally:
         cur.close()
         conn.close()
+    
+    return redirect(url_for('admin.manage_system_suppliers'))
+
+@bp.route('/suppliers/<int:supplier_id>/update', methods=['POST'])
+@admin_required
+def update_system_supplier(supplier_id):
+    """Update een bestaande systeemleverancier"""
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('admin.manage_system_suppliers'))
+    
+    cur = conn.cursor(dictionary=True)
+    
+    try:
+        naam = request.form.get('naam')
+        contact = request.form.get('contact', '')
+        telefoon = request.form.get('telefoon', '')
+        email = request.form.get('email', '')
+        
+        if not naam:
+            flash("Naam is verplicht.", "danger")
+            return redirect(url_for('admin.manage_system_suppliers'))
+        
+        # Controleer eerst of dit een admin-gemaakte leverancier is
+        cur.execute("SELECT is_admin_created, excel_file_path, logo_path FROM leveranciers WHERE leverancier_id = %s", (supplier_id,))
+        supplier = cur.fetchone()
+        
+        if not supplier or not supplier.get('is_admin_created'):
+            flash("Alleen systeemleveranciers kunnen hier worden bewerkt.", "danger")
+            return redirect(url_for('admin.manage_system_suppliers'))
+        
+        # Handle Excel file upload
+        excel_file_path = supplier.get('excel_file_path')  # Keep existing file by default
+        has_standard_list = bool(excel_file_path)  # Keep existing status by default
+        
+        if 'excel_file' in request.files and request.files['excel_file'].filename:
+            excel_file = request.files['excel_file']
+            if excel_file.filename.lower().endswith(('.xlsx', '.xls')):
+                try:
+                    # Generate a safe filename
+                    filename = secure_filename(f"{naam.replace(' ', '_')}_ingredienten.xlsx")
+                    
+                    # Use the app's storage system (S3 or local)
+                    path = f"supplier_excel/{filename}"
+                    
+                    # Remove old file if it exists
+                    if excel_file_path:
+                        try:
+                            current_app.storage.delete_file(excel_file_path)
+                        except Exception as e:
+                            logger.warning(f"Could not delete old Excel file: {str(e)}")
+                    
+                    current_app.storage.save_file(excel_file, path)
+                    excel_file_path = path
+                    has_standard_list = True
+                    
+                except Exception as e:
+                    logger.error(f"Error uploading Excel file: {str(e)}")
+                    flash(f"Fout bij uploaden Excel bestand: {str(e)}", "warning")
+            else:
+                flash("Alleen Excel bestanden (xlsx, xls) zijn toegestaan", "warning")
+        
+        # Handle excel file removal
+        if request.form.get('remove_excel') == 'true' and excel_file_path:
+            try:
+                current_app.storage.delete_file(excel_file_path)
+                excel_file_path = None
+                has_standard_list = False
+                flash("Excel bestand verwijderd.", "success")
+            except Exception as e:
+                logger.error(f"Error removing Excel file: {str(e)}")
+                flash(f"Fout bij verwijderen Excel bestand: {str(e)}", "warning")
+        
+        # Handle logo file upload
+        logo_path = supplier.get('logo_path')  # Keep existing logo by default
+        
+        if 'logo_file' in request.files and request.files['logo_file'].filename:
+            logo_file = request.files['logo_file']
+            if logo_file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
+                try:
+                    # Generate a safe filename
+                    filename = secure_filename(f"{naam.replace(' ', '_')}_logo{os.path.splitext(logo_file.filename)[1]}")
+                    
+                    # Use the app's storage system (S3 or local)
+                    path = f"supplier_logos/{filename}"
+                    
+                    # Remove old file if it exists
+                    if logo_path:
+                        try:
+                            current_app.storage.delete_file(logo_path)
+                        except Exception as e:
+                            logger.warning(f"Could not delete old logo file: {str(e)}")
+                    
+                    current_app.storage.save_file(logo_file, path)
+                    logo_path = path
+                    
+                except Exception as e:
+                    logger.error(f"Error uploading logo file: {str(e)}")
+                    flash(f"Fout bij uploaden logo: {str(e)}", "warning")
+            else:
+                flash("Alleen afbeeldingsbestanden (jpg, jpeg, png, gif) zijn toegestaan voor het logo", "warning")
+        
+        # Handle logo removal
+        if request.form.get('remove_logo') == 'true' and logo_path:
+            try:
+                current_app.storage.delete_file(logo_path)
+                logo_path = None
+                flash("Logo verwijderd.", "success")
+            except Exception as e:
+                logger.error(f"Error removing logo file: {str(e)}")
+                flash(f"Fout bij verwijderen logo: {str(e)}", "warning")
+        
+        # Update de leverancier
+        cur.execute("""
+            UPDATE leveranciers 
+            SET naam = %s, contact = %s, telefoon = %s, email = %s, excel_file_path = %s, 
+                has_standard_list = %s, logo_path = %s
+            WHERE leverancier_id = %s AND is_admin_created = TRUE
+        """, (naam, contact, telefoon, email, excel_file_path, has_standard_list, logo_path, supplier_id))
+        
+        conn.commit()
+        flash(f"Systeemleverancier succesvol bijgewerkt!", "success")
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error updating system supplier: {str(e)}")
+        flash(f"Fout bij bijwerken van systeemleverancier: {str(e)}", "danger")
+    finally:
+        cur.close()
+        conn.close()
+    
+    return redirect(url_for('admin.manage_system_suppliers'))
 
 @bp.route('/suppliers/<int:supplier_id>/delete', methods=['POST'])
 @admin_required
-def delete_supplier(supplier_id):
-    """Delete an admin supplier"""
+def delete_system_supplier(supplier_id):
+    """Verwijder een systeemleverancier"""
     conn = get_db_connection()
-    if not conn:
-        flash("Database verbinding mislukt", "danger")
-        return redirect(url_for('admin.manage_suppliers'))
+    if conn is None:
+        return jsonify({'success': False, 'error': 'Database connection error'}), 500
     
     cur = conn.cursor(dictionary=True)
     
     try:
-        # Check if supplier exists and is admin-created
-        cur.execute("""
-            SELECT * FROM leveranciers 
-            WHERE leverancier_id = %s AND is_admin_created = TRUE
-        """, (supplier_id,))
-        
+        # Controleer eerst of dit een admin-gemaakte leverancier is
+        cur.execute("SELECT is_admin_created FROM leveranciers WHERE leverancier_id = %s", (supplier_id,))
         supplier = cur.fetchone()
-        if not supplier:
-            flash("Leverancier niet gevonden of geen admin leverancier", "danger")
-            return redirect(url_for('admin.manage_suppliers'))
         
-        # Delete supplier
-        cur.execute("DELETE FROM leveranciers WHERE leverancier_id = %s", (supplier_id,))
+        if not supplier or not supplier.get('is_admin_created'):
+            return jsonify({'success': False, 'error': 'Alleen systeemleveranciers kunnen hier worden verwijderd'}), 403
+        
+        # Verwijder de leverancier
+        cur.execute("DELETE FROM leveranciers WHERE leverancier_id = %s AND is_admin_created = TRUE", (supplier_id,))
         conn.commit()
         
-        # Remove banner image if it exists
-        if supplier['banner_image']:
-            banner_path = os.path.join(current_app.root_path, 'static', supplier['banner_image'])
-            if os.path.exists(banner_path):
-                os.remove(banner_path)
-        
-        flash("Leverancier succesvol verwijderd!", "success")
-        return redirect(url_for('admin.manage_suppliers'))
-    
+        return jsonify({'success': True})
     except Exception as e:
         conn.rollback()
-        logger.error(f"Delete supplier error: {str(e)}")
-        flash(f"Er is een fout opgetreden bij het verwijderen van de leverancier: {str(e)}", "danger")
-        return redirect(url_for('admin.manage_suppliers'))
+        logger.error(f"Error deleting system supplier: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         cur.close()
         conn.close()
 
-@bp.route('/suppliers/<int:supplier_id>/delete-csv', methods=['POST'])
+@bp.route('/users/<int:chef_id>/toggle-admin', methods=['POST'])
 @admin_required
-def delete_supplier_csv(supplier_id):
-    """Delete the CSV file from a supplier"""
-    logger.info(f"Attempting to delete CSV for supplier ID: {supplier_id}")
-    
-    # Check if this is an AJAX request
-    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-    
+def toggle_admin_status(chef_id):
+    """Toggle admin status for a user"""
+    # Prevent self-demotion to maintain at least one admin
+    if chef_id == session['chef_id']:
+        return jsonify({'success': False, 'error': 'Je kunt je eigen admin status niet wijzigen'})
+        
     conn = get_db_connection()
-    if not conn:
-        logger.error("Database connection failed")
-        if is_ajax:
-            return jsonify({"success": False, "error": "Database verbinding mislukt"}), 500
-        else:
-            flash("Database verbinding mislukt", "danger")
-            return redirect(url_for('admin.manage_suppliers'))
+    if conn is None:
+        return jsonify({'success': False, 'error': 'Database connection error'})
     
     cur = conn.cursor(dictionary=True)
     
     try:
-        # Get supplier information
+        # First get the current admin status
+        cur.execute("SELECT is_admin FROM chefs WHERE chef_id = %s", (chef_id,))
+        user = cur.fetchone()
+        
+        if not user:
+            return jsonify({'success': False, 'error': 'Gebruiker niet gevonden'})
+        
+        # Toggle the admin status
+        new_status = not user['is_admin']
+        
+        cur.execute("UPDATE chefs SET is_admin = %s WHERE chef_id = %s", 
+                   (new_status, chef_id))
+        
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error toggling admin status: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+    finally:
+        cur.close()
+        conn.close()
+
+@bp.route('/chef-suppliers')
+@admin_required
+def get_chef_suppliers():
+    """Get suppliers for a specific chef"""
+    chef_id = request.args.get('chef_id')
+    if not chef_id:
+        return jsonify({'success': False, 'error': 'Chef ID is required'}), 400
+    
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({'success': False, 'error': 'Database connection error'}), 500
+    
+    cur = conn.cursor(dictionary=True)
+    
+    try:
+        # Get all suppliers for this chef
         cur.execute("""
-            SELECT * FROM leveranciers 
-            WHERE leverancier_id = %s AND is_admin_created = TRUE
-        """, (supplier_id,))
-        supplier = cur.fetchone()
+            SELECT l.*, 
+                   (SELECT COUNT(*) FROM ingredients i WHERE i.leverancier_id = l.leverancier_id) AS ingredient_count
+            FROM leveranciers l
+            WHERE l.chef_id = %s AND l.is_admin_created = FALSE
+            ORDER BY l.naam
+        """, (chef_id,))
         
-        if not supplier:
-            logger.warning(f"Supplier {supplier_id} not found")
-            if is_ajax:
-                return jsonify({"success": False, "error": "Leverancier niet gevonden"}), 404
-            else:
-                flash("Leverancier niet gevonden", "danger")
-                return redirect(url_for('admin.manage_suppliers'))
-        
-        if not supplier['csv_file_path']:
-            logger.warning(f"Supplier {supplier_id} has no CSV file path")
-            if is_ajax:
-                return jsonify({"success": False, "error": "Deze leverancier heeft geen CSV bestand"}), 400
-            else:
-                flash("Deze leverancier heeft geen CSV bestand", "warning")
-                return redirect(url_for('admin.edit_supplier', supplier_id=supplier_id))
-        
-        # Log the CSV file path we're trying to delete
-        csv_path = supplier['csv_file_path']
-        
-        # Normalize the path to ensure consistent format
-        csv_path = csv_path.strip().replace('\\', '/')
-        if csv_path.startswith('/'):
-            csv_path = csv_path[1:]
-            
-        logger.info(f"Normalized CSV file path: {csv_path}")
-        
-        # Initialize deletion status
-        file_deleted = False
-        
-        # ALWAYS try direct S3 deletion first regardless of storage mode setting
-        # This ensures we handle S3 files correctly even if config is inconsistent
-        try:
-            s3_bucket = current_app.config.get('S3_BUCKET')
-            s3_key = current_app.config.get('S3_KEY')
-            s3_secret = current_app.config.get('S3_SECRET')
-            
-            if s3_bucket and s3_key and s3_secret:
-                logger.info(f"Attempting direct S3 deletion with bucket: {s3_bucket}")
-                
-                # Create direct S3 client
-                s3_client = boto3.client(
-                    's3',
-                    region_name='eu-west-1',
-                    aws_access_key_id=s3_key,
-                    aws_secret_access_key=s3_secret,
-                    config=boto3.session.Config(signature_version='s3v4')
-                )
-                
-                # Check if the file exists first
-                try:
-                    s3_client.head_object(Bucket=s3_bucket, Key=csv_path)
-                    logger.info(f"File exists in S3, proceeding with deletion")
-                    
-                    # Delete the file
-                    s3_client.delete_object(
-                        Bucket=s3_bucket,
-                        Key=csv_path
-                    )
-                    
-                    # Verify the deletion worked
-                    try:
-                        s3_client.head_object(Bucket=s3_bucket, Key=csv_path)
-                        logger.error("File still exists after deletion attempt!")
-                        file_deleted = False
-                    except ClientError as e:
-                        if e.response['Error']['Code'] == '404':
-                            logger.info("Verified file is deleted from S3")
-                            file_deleted = True
-                        else:
-                            logger.error(f"Error verifying deletion: {str(e)}")
-                            file_deleted = False
-                            
-                except ClientError as e:
-                    if e.response['Error']['Code'] == '404':
-                        logger.warning(f"File not found in S3: {csv_path}")
-                        # Still proceed with database update
-                        file_deleted = True
-                    else:
-                        logger.error(f"Error checking if file exists: {str(e)}")
-            else:
-                logger.warning("S3 credentials not found in config")
-        except Exception as e:
-            logger.error(f"Direct S3 deletion attempt failed: {str(e)}")
-        
-        # As a fallback, try using the storage utility
-        if not file_deleted:
-            logger.info("Trying deletion via storage utility as fallback")
-            file_deleted = current_app.storage.delete_file(csv_path)
-            logger.info(f"Storage utility deletion result: {file_deleted}")
-        
-        # Update database regardless of file deletion success
-        # This ensures the UI is consistent even if file deletion has issues
+        suppliers = cur.fetchall()
+        return jsonify({'success': True, 'suppliers': suppliers})
+    except Exception as e:
+        logger.error(f"Error fetching chef suppliers: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+@bp.route('/supplier-ingredients')
+@admin_required
+def get_supplier_ingredients():
+    """Get ingredients for a specific supplier"""
+    supplier_id = request.args.get('supplier_id')
+    if not supplier_id:
+        return jsonify({'success': False, 'error': 'Supplier ID is required'}), 400
+    
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({'success': False, 'error': 'Database connection error'}), 500
+    
+    cur = conn.cursor(dictionary=True)
+    
+    try:
+        # Check if this is a chef's supplier or system supplier
         cur.execute("""
-            UPDATE leveranciers 
-            SET csv_file_path = NULL, csv_last_updated = NULL
+            SELECT is_admin_created FROM leveranciers 
             WHERE leverancier_id = %s
         """, (supplier_id,))
         
-        conn.commit()
-        logger.info("Database updated successfully")
+        supplier = cur.fetchone()
+        if not supplier:
+            return jsonify({'success': False, 'error': 'Supplier not found'})
         
-        success_message = "CSV bestand succesvol verwijderd"
-        warning_message = "CSV verwijzing verwijderd uit database, maar er was een fout bij het verwijderen van het bestand zelf. Dit wordt automatisch opgelost bij de volgende systeem opschoning."
-        
-        if is_ajax:
-            return jsonify({
-                "success": True,
-                "message": success_message if file_deleted else warning_message,
-                "file_deleted": file_deleted
-            })
+        if supplier['is_admin_created']:
+            # Get system ingredients
+            cur.execute("""
+                SELECT * FROM system_ingredients
+                WHERE leverancier_id = %s
+            """, (supplier_id,))
         else:
-            if file_deleted:
-                flash(success_message, "success")
-            else:
-                flash(warning_message, "warning")
+            # Get chef's ingredients
+            cur.execute("""
+                SELECT * FROM ingredients
+                WHERE leverancier_id = %s
+            """, (supplier_id,))
         
+        ingredients = cur.fetchall()
+        return jsonify({'success': True, 'ingredients': ingredients})
     except Exception as e:
-        conn.rollback()
-        logger.error(f"Error in delete_supplier_csv: {str(e)}", exc_info=True)
-        if is_ajax:
-            return jsonify({"success": False, "error": f"Er is een fout opgetreden: {str(e)}"}), 500
-        else:
-            flash(f"Er is een fout opgetreden bij het verwijderen van het CSV bestand: {str(e)}", "danger")
+        logger.error(f"Error fetching supplier ingredients: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         cur.close()
         conn.close()
-    
-    if not is_ajax:
-        return redirect(url_for('admin.edit_supplier', supplier_id=supplier_id))
 
-@bp.route('/suppliers/<int:supplier_id>/download-csv', methods=['GET'])
+@bp.route('/promote-supplier', methods=['POST'])
 @admin_required
-def download_supplier_csv(supplier_id):
-    """Download the CSV file from a supplier"""
+def promote_supplier_to_system():
+    """Promote a regular supplier to a system supplier"""
+    data = request.json
+    supplier_id = data.get('leverancier_id')
+    
+    if not supplier_id:
+        return jsonify({'success': False, 'error': 'Supplier ID is required'}), 400
+    
     conn = get_db_connection()
-    if not conn:
-        flash("Database verbinding mislukt", "danger")
-        return redirect(url_for('admin.manage_suppliers'))
+    if conn is None:
+        return jsonify({'success': False, 'error': 'Database connection error'}), 500
+    
+    cur = conn.cursor(dictionary=True)
+    
+    try:
+        # Start transaction
+        conn.start_transaction()
+        
+        # Get the supplier info
+        cur.execute("""
+            SELECT * FROM leveranciers
+            WHERE leverancier_id = %s
+        """, (supplier_id,))
+        
+        supplier = cur.fetchone()
+        if not supplier:
+            return jsonify({'success': False, 'error': 'Supplier not found'}), 404
+        
+        # Create a new system supplier
+        cur.execute("""
+            INSERT INTO leveranciers (naam, contact, telefoon, email, is_admin_created)
+            VALUES (%s, %s, %s, %s, TRUE)
+        """, (supplier['naam'], supplier['contact'], supplier['telefoon'], supplier['email']))
+        
+        new_supplier_id = cur.lastrowid
+        
+        # Get all ingredients for this supplier
+        cur.execute("""
+            SELECT * FROM ingredients
+            WHERE leverancier_id = %s
+        """, (supplier_id,))
+        
+        ingredients = cur.fetchall()
+        
+        # Create system ingredients - these won't be tied to a chef
+        # They will be imported by chefs when importing the supplier
+        system_ingredients_count = 0
+        for ingredient in ingredients:
+            cur.execute("""
+                INSERT INTO system_ingredients (
+                    leverancier_id, naam, eenheid, 
+                    prijs_per_eenheid, categorie
+                ) VALUES (%s, %s, %s, %s, %s)
+            """, (
+                new_supplier_id,
+                ingredient['naam'],
+                ingredient['eenheid'],
+                ingredient['prijs_per_eenheid'],
+                ingredient['categorie']
+            ))
+            system_ingredients_count += 1
+        
+        conn.commit()
+        return jsonify({
+            'success': True, 
+            'message': f'Supplier promoted successfully with {system_ingredients_count} ingredients',
+            'ingredient_count': system_ingredients_count
+        })
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error promoting supplier: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+@bp.route('/suppliers/<int:supplier_id>/ingredients', methods=['GET', 'POST'])
+@admin_required
+def manage_system_ingredients(supplier_id):
+    """Beheer ingrediënten van een systeemleverancier"""
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('admin.manage_system_suppliers'))
+    
+    cur = conn.cursor(dictionary=True)
+    
+    try:
+        # Check if this is a system supplier
+        cur.execute("""
+            SELECT * FROM leveranciers
+            WHERE leverancier_id = %s AND is_admin_created = TRUE
+        """, (supplier_id,))
+        
+        supplier = cur.fetchone()
+        if not supplier:
+            flash("Alleen systeemleveranciers kunnen hier worden bewerkt.", "danger")
+            return redirect(url_for('admin.manage_system_suppliers'))
+        
+        # Handle form submission for adding new ingredient
+        if request.method == 'POST':
+            naam = request.form.get('naam')
+            categorie = request.form.get('categorie', '')
+            eenheid = request.form.get('eenheid', '')
+            prijs_per_eenheid = request.form.get('prijs_per_eenheid', 0)
+            
+            # Basic validation
+            if not naam:
+                flash("Naam is verplicht.", "danger")
+            else:
+                # Add the ingredient
+                try:
+                    cur.execute("""
+                        INSERT INTO system_ingredients 
+                        (leverancier_id, naam, categorie, eenheid, prijs_per_eenheid)
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, (supplier_id, naam, categorie, eenheid, prijs_per_eenheid))
+                    
+                    conn.commit()
+                    flash(f"Ingredient '{naam}' succesvol toegevoegd!", "success")
+                except Exception as e:
+                    conn.rollback()
+                    logger.error(f"Error adding system ingredient: {str(e)}")
+                    flash(f"Fout bij toevoegen ingredient: {str(e)}", "danger")
+        
+        # Get all ingredients for this supplier
+        cur.execute("""
+            SELECT * FROM system_ingredients
+            WHERE leverancier_id = %s
+            ORDER BY naam
+        """, (supplier_id,))
+        
+        ingredients = cur.fetchall()
+        
+        return render_template('admin/system_ingredients.html', 
+                               supplier=supplier,
+                               ingredients=ingredients)
+    except Exception as e:
+        logger.error(f"Error managing system ingredients: {str(e)}")
+        flash(f"Error: {str(e)}", "danger")
+        return redirect(url_for('admin.manage_system_suppliers'))
+    finally:
+        cur.close()
+        conn.close()
+
+@bp.route('/suppliers/<int:supplier_id>/ingredients/<int:ingredient_id>/delete', methods=['POST'])
+@admin_required
+def delete_system_ingredient(supplier_id, ingredient_id):
+    """Verwijder een ingredient van een systeemleverancier"""
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({'success': False, 'error': 'Database connection error'}), 500
+    
+    cur = conn.cursor()
+    
+    try:
+        # Verify this is a system supplier
+        cur.execute("""
+            SELECT is_admin_created FROM leveranciers 
+            WHERE leverancier_id = %s
+        """, (supplier_id,))
+        
+        supplier = cur.fetchone()
+        if not supplier or not supplier[0]:
+            return jsonify({'success': False, 'error': 'Alleen ingrediënten van systeemleveranciers kunnen hier worden verwijderd'}), 403
+        
+        # Delete the ingredient
+        cur.execute("""
+            DELETE FROM system_ingredients
+            WHERE system_ingredient_id = %s AND leverancier_id = %s
+        """, (ingredient_id, supplier_id))
+        
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error deleting system ingredient: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+@bp.route('/suppliers/<int:supplier_id>/process-excel', methods=['POST'])
+@admin_required
+def process_supplier_excel(supplier_id):
+    """Process the Excel file for a system supplier and add ingredients"""
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('admin.manage_system_suppliers'))
     
     cur = conn.cursor(dictionary=True)
     
     try:
         # Get supplier information
-        cur.execute("""
-            SELECT * FROM leveranciers 
-            WHERE leverancier_id = %s AND is_admin_created = TRUE
-        """, (supplier_id,))
+        cur.execute("SELECT * FROM leveranciers WHERE leverancier_id = %s AND is_admin_created = TRUE", (supplier_id,))
         supplier = cur.fetchone()
         
         if not supplier:
-            flash("Leverancier niet gevonden", "danger")
-            return redirect(url_for('admin.manage_suppliers'))
+            flash("Systeemleverancier niet gevonden.", "danger")
+            return redirect(url_for('admin.manage_system_suppliers'))
         
-        if not supplier['csv_file_path']:
-            flash("Deze leverancier heeft geen CSV bestand", "warning")
-            return redirect(url_for('admin.edit_supplier', supplier_id=supplier_id))
+        if not supplier.get('excel_file_path'):
+            flash("Deze leverancier heeft geen Excel bestand.", "danger")
+            return redirect(url_for('admin.manage_system_suppliers'))
         
-        # For S3 storage in production
-        if current_app.config.get('USE_S3'):
-            try:
-                # Generate a pre-signed URL for temporary access
-                url = current_app.storage.s3_client.generate_presigned_url(
-                    'get_object',
-                    Params={
-                        'Bucket': current_app.config['S3_BUCKET'],
-                        'Key': supplier['csv_file_path']
-                    },
-                    ExpiresIn=60  # URL expires in 60 seconds
+        # Log the file path for debugging
+        file_path = supplier.get('excel_file_path')
+        logger.info(f"Attempting to retrieve Excel file from path: {file_path}")
+        
+        # Get the Excel file from S3 or local storage
+        try:
+            import pandas as pd
+            import io
+            import boto3
+            from botocore.exceptions import ClientError
+            
+            if current_app.config.get('USE_S3'):
+                # Get file from S3
+                s3_client = boto3.client(
+                    's3',
+                    region_name='eu-central-1',
+                    aws_access_key_id=current_app.config.get('S3_KEY'),
+                    aws_secret_access_key=current_app.config.get('S3_SECRET')
                 )
-                return redirect(url)
-            except Exception as e:
-                logger.error(f"Error generating S3 download URL: {str(e)}")
-                flash(f"Er is een fout opgetreden bij het downloaden van het CSV bestand", "danger")
-                return redirect(url_for('admin.edit_supplier', supplier_id=supplier_id))
-        else:
-            # Local file handling (existing code)
-            csv_path = os.path.join(current_app.root_path, 'static', supplier['csv_file_path'])
-            if not os.path.exists(csv_path):
-                flash("CSV bestand niet gevonden op de server", "danger")
-                return redirect(url_for('admin.edit_supplier', supplier_id=supplier_id))
+                
+                try:
+                    logger.debug(f"Retrieving file from S3: {file_path}")
+                    
+                    # Log S3 configuration for debugging
+                    bucket = current_app.config.get('S3_BUCKET')
+                    logger.info(f"Using S3 bucket: {bucket}")
+                    
+                    try:
+                        # First check if the file exists in S3
+                        s3_client.head_object(Bucket=bucket, Key=file_path)
+                        logger.info(f"File exists in S3: {file_path}")
+                    except ClientError as e:
+                        if e.response['Error']['Code'] == '404':
+                            # REDIRECT TO THE RECOVERY PAGE instead of showing an error
+                            return redirect(url_for('admin.recover_missing_excel', supplier_id=supplier_id, 
+                                                    file_path=file_path))
+                        else:
+                            raise
+                            
+                    # Now try to get the file content
+                    response = s3_client.get_object(
+                        Bucket=bucket,
+                        Key=file_path
+                    )
+                    
+                    # Read content to a buffer pandas can read
+                    content = response['Body'].read()
+                    excel_buffer = io.BytesIO(content)
+                    
+                    # Read Excel file with pandas
+                    df = pd.read_excel(excel_buffer)
+                    
+                except ClientError as e:
+                    error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+                    error_msg = e.response.get('Error', {}).get('Message', str(e))
+                    
+                    logger.error(f"S3 Error ({error_code}): {error_msg}")
+                    logger.error(f"S3 Configuration - Bucket: {current_app.config.get('S3_BUCKET')}, Has Key: {bool(current_app.config.get('S3_KEY'))}, Has Secret: {bool(current_app.config.get('S3_SECRET'))}")
+                    
+                    # REDIRECT TO THE RECOVERY PAGE for any other S3 errors
+                    return redirect(url_for('admin.recover_missing_excel', supplier_id=supplier_id, 
+                                           file_path=file_path))
+            else:
+                # Get file from local storage
+                local_path = os.path.join(current_app.root_path, 'static', file_path)
+                if not os.path.exists(local_path):
+                    flash(f"Excel bestand niet gevonden op de server. Pad: {local_path}", "danger")
+                    return redirect(url_for('admin.manage_system_suppliers'))
+                
+                # Read Excel file with pandas
+                df = pd.read_excel(local_path)
             
-            # Get filename from path
-            filename = os.path.basename(csv_path)
+            # Process the Excel data
+            if df is None or df.empty:
+                flash("Excel bestand is leeg of kon niet worden gelezen.", "danger")
+                return redirect(url_for('admin.manage_system_suppliers'))
             
-            return send_file(
-                csv_path,
-                mimetype='text/csv',
-                as_attachment=True,
-                download_name=filename
-            )
-        
+            # Check required columns: naam, categorie, eenheid, prijs_per_eenheid
+            required_columns = ['naam', 'categorie', 'eenheid', 'prijs_per_eenheid']
+            if not all(col in df.columns for col in required_columns):
+                missing_cols = [col for col in required_columns if col not in df.columns]
+                flash(f"Excel bestand mist verplichte kolommen: {', '.join(missing_cols)}", "danger")
+                return redirect(url_for('admin.manage_system_suppliers'))
+            
+            # First, delete existing ingredients for this supplier
+            cur.execute("DELETE FROM system_ingredients WHERE leverancier_id = %s", (supplier_id,))
+            
+            # Process each row and create system_ingredients
+            successful_count = 0
+            failed_rows = []
+            
+            for _, row in df.iterrows():
+                try:
+                    # Extract values with error handling for missing or invalid data
+                    naam = str(row['naam']) if not pd.isna(row['naam']) else None
+                    if not naam:
+                        failed_rows.append(f"Rij {_ + 2}: Naam is verplicht")
+                        continue
+                        
+                    categorie = str(row['categorie']) if not pd.isna(row['categorie']) else ''
+                    eenheid = str(row['eenheid']) if not pd.isna(row['eenheid']) else ''
+                    
+                    # Handle price as float
+                    try:
+                        prijs = float(row['prijs_per_eenheid']) if not pd.isna(row['prijs_per_eenheid']) else 0.0
+                    except (ValueError, TypeError):
+                        prijs = 0.0
+                    
+                    # Insert into system_ingredients with only needed columns
+                    cur.execute("""
+                        INSERT INTO system_ingredients (
+                            leverancier_id, naam, categorie, eenheid, prijs_per_eenheid
+                        ) VALUES (%s, %s, %s, %s, %s)
+                    """, (
+                        supplier_id, naam, categorie, eenheid, prijs
+                    ))
+                    
+                    successful_count += 1
+                    
+                except Exception as e:
+                    failed_rows.append(f"Rij {_ + 2}: {str(e)}")
+            
+            conn.commit()
+            
+            if failed_rows:
+                flash_message = f"{successful_count} ingrediënten succesvol toegevoegd. {len(failed_rows)} rijen overgeslagen."
+                flash(flash_message, "warning")
+                for err in failed_rows[:5]:  # Show only first 5 errors
+                    flash(err, "warning")
+                if len(failed_rows) > 5:
+                    flash(f"... en {len(failed_rows) - 5} meer fouten.", "warning")
+            else:
+                flash(f"{successful_count} ingrediënten succesvol toegevoegd aan systeemleverancier '{supplier['naam']}'.", "success")
+                
+            return redirect(url_for('admin.manage_system_ingredients', supplier_id=supplier_id))
+            
+        except Exception as e:
+            logger.error(f"Error processing Excel: {str(e)}", exc_info=True)
+            flash(f"Fout bij verwerken Excel bestand: {str(e)}", "danger")
+            return redirect(url_for('admin.manage_system_suppliers'))
+            
     except Exception as e:
-        logger.error(f"Download supplier CSV error: {str(e)}")
-        flash(f"Er is een fout opgetreden bij het downloaden van het CSV bestand: {str(e)}", "danger")
-        return redirect(url_for('admin.edit_supplier', supplier_id=supplier_id))
+        if conn:
+            conn.rollback()
+        logger.error(f"Error processing supplier Excel: {str(e)}")
+        flash(f"Fout bij verwerken van Excel bestand: {str(e)}", "danger")
+        return redirect(url_for('admin.manage_system_suppliers'))
     finally:
         cur.close()
         conn.close()
 
-@bp.route('/debug/files')
+@bp.route('/suppliers/<int:supplier_id>/recover-excel', methods=['GET', 'POST'])
 @admin_required
-def debug_files():
-    """Debug endpoint to display file URLs"""
+def recover_missing_excel(supplier_id):
+    """Recovery page for missing Excel files"""
+    file_path = request.args.get('file_path', '')
+    
     conn = get_db_connection()
-    if not conn:
-        flash("Database verbinding mislukt", "danger")
-        return redirect(url_for('admin.dashboard'))
-        
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('admin.manage_system_suppliers'))
+    
     cur = conn.cursor(dictionary=True)
+    
     try:
-        # Get all suppliers with files
-        cur.execute("""
-            SELECT leverancier_id, naam, banner_image, csv_file_path 
-            FROM leveranciers 
-            WHERE banner_image IS NOT NULL OR csv_file_path IS NOT NULL
-        """)
-        suppliers = cur.fetchall()
+        # Get supplier information
+        cur.execute("SELECT * FROM leveranciers WHERE leverancier_id = %s AND is_admin_created = TRUE", (supplier_id,))
+        supplier = cur.fetchone()
         
-        # Add URLs for debugging
-        for supplier in suppliers:
-            if supplier['banner_image']:
-                supplier['banner_url'] = current_app.storage.get_file_url(supplier['banner_image'])
-            if supplier['csv_file_path']:
-                supplier['csv_url'] = current_app.storage.get_file_url(supplier['csv_file_path'])
+        if not supplier:
+            flash("Systeemleverancier niet gevonden.", "danger")
+            return redirect(url_for('admin.manage_system_suppliers'))
         
-        return render_template('admin/debug_files.html', suppliers=suppliers)
+        if request.method == 'POST':
+            # Handle the uploaded Excel file
+            if 'excel_file' not in request.files:
+                flash("Geen bestand geüpload.", "danger")
+                return redirect(request.url)
+            
+            excel_file = request.files['excel_file']
+            
+            if excel_file.filename == '':
+                flash("Geen bestand geselecteerd.", "danger")
+                return redirect(request.url)
+            
+            if excel_file and excel_file.filename.lower().endswith(('.xlsx', '.xls')):
+                try:
+                    # Use either the original path or create a new one
+                    if file_path and supplier['excel_file_path'] == file_path:
+                        path = file_path
+                    else:
+                        # Generate a safe filename
+                        filename = secure_filename(f"{supplier['naam'].replace(' ', '_')}_ingredienten.xlsx")
+                        path = f"supplier_excel/{filename}"
+                    
+                    # Save the file to S3 or local storage
+                    current_app.storage.save_file(excel_file, path)
+                    
+                    # Update the supplier's excel_file_path if it's different
+                    if path != supplier.get('excel_file_path'):
+                        cur.execute("""
+                            UPDATE leveranciers 
+                            SET excel_file_path = %s, has_standard_list = TRUE
+                            WHERE leverancier_id = %s
+                        """, (path, supplier_id))
+                        conn.commit()
+                    
+                    flash("Excel bestand succesvol hersteld! Je kunt nu het bestand verwerken.", "success")
+                    return redirect(url_for('admin.manage_system_ingredients', supplier_id=supplier_id))
+                    
+                except Exception as e:
+                    logger.error(f"Error uploading Excel file: {str(e)}")
+                    flash(f"Fout bij uploaden Excel bestand: {str(e)}", "danger")
+            else:
+                flash("Alleen Excel bestanden (xlsx, xls) zijn toegestaan.", "danger")
+        
+        return render_template('admin/recover_excel.html', 
+                              supplier=supplier,
+                              file_path=file_path)
     except Exception as e:
-        logger.error(f"Debug files error: {str(e)}")
+        logger.error(f"Error in recover_missing_excel: {str(e)}")
         flash(f"Error: {str(e)}", "danger")
-        return redirect(url_for('admin.dashboard'))
+        return redirect(url_for('admin.manage_system_suppliers'))
     finally:
         cur.close()
         conn.close()

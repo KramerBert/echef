@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Gebruikersbeheer - E-chef{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="navigation-buttons mb-4">
+        <a href="{{ url_for('admin.admin_dashboard') }}" class="btn-action">
+            <i class="fas fa-arrow-left"></i> Admin Dashboard
+        </a>
+    </div>
+
+    <h1>Gebruikersbeheer</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="alert-container mb-4">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
+                        {{ message|safe }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-body">
+            <h2>Gebruikers</h2>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Naam</th>
+                            <th>Email</th>
+                            <th>Admin</th>
+                            <th>Acties</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user.chef_id }}</td>
+                            <td>{{ user.naam }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>{% if user.is_admin %}<span class="badge bg-success">Admin</span>{% else %}<span class="badge bg-secondary">Gebruiker</span>{% endif %}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="toggleAdminStatus('{{ user.chef_id }}', {{ user.is_admin|tojson|safe }})">
+                                    {% if user.is_admin %}Admin rol verwijderen{% else %}Admin maken{% endif %}
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleAdminStatus(chefId, isAdmin) {
+    // Create confirmation message using proper string concatenation
+    var confirmMessage = "Weet je zeker dat je de admin status wilt ";
+    confirmMessage += isAdmin ? "verwijderen van" : "toekennen aan";
+    confirmMessage += " deze gebruiker?";
+    
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    // Create the URL using standard string concatenation instead of template literals
+    var url = "{{ url_for('admin.toggle_admin_status', chef_id=0) }}".replace("0", chefId);
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': "{{ csrf_token() }}"
+        },
+        credentials: 'same-origin'
+    })
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(data) {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Er is een fout opgetreden bij het wijzigen van admin status.');
+        }
+    })
+    .catch(function(error) {
+        console.error('Error:', error);
+        alert('Er is een fout opgetreden bij het wijzigen van admin status.');
+    });
+}
+</script>
+
+<style>
+    .table {
+        color: var(--text-light);
+    }
+    .badge {
+        font-size: 0.8rem;
+        padding: 0.35em 0.65em;
+    }
+    .bg-success {
+        background-color: #28a745;
+    }
+    .bg-secondary {
+        background-color: #6c757d;
+    }
+</style>
+{% endblock %}

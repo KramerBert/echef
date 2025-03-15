@@ -97,10 +97,6 @@ def create_app():
     app.register_blueprint(haccp_bp, url_prefix='/haccp')
     app.register_blueprint(inventory_bp)
     
-    # Importeer en registreer de admin blueprint
-    from blueprints.admin import bp as admin_bp
-    app.register_blueprint(admin_bp)
-    
     # Import and register the ingredients_import blueprint
     from blueprints.ingredients_import import bp as ingredients_import_bp
     app.register_blueprint(ingredients_import_bp)
@@ -117,6 +113,10 @@ def create_app():
     from blueprints.ingredients import bp as ingredients_bp
     app.register_blueprint(ingredients_bp)
 
+    # Import and register the admin blueprint
+    from blueprints.admin import bp as admin_bp
+    app.register_blueprint(admin_bp)
+    
     # Register template filters and helper functions inside create_app
     def nl2br(value):
         return value.replace('\n', '<br>')

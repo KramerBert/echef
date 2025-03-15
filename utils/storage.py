@@ -1,194 +1,131 @@
 import os
 import boto3
 from botocore.exceptions import ClientError
-import logging
 from flask import current_app
-from werkzeug.utils import secure_filename
+import logging
 
 logger = logging.getLogger(__name__)
 
 class FileStorage:
-    """
-    Abstraction for file storage that can use either local filesystem 
-    or Amazon S3 based on configuration
-    """
+    """Handle file storage operations (local or S3)"""
     
     def __init__(self, app=None):
         self.app = app
-        if app:
+        
+        if app is not None:
             self.init_app(app)
     
     def init_app(self, app):
         """Initialize with Flask app configuration"""
         self.app = app
-        # Get settings from app config
         self.use_s3 = app.config.get('USE_S3', False)
         
         if self.use_s3:
             self.s3_bucket = app.config.get('S3_BUCKET')
             self.s3_location = app.config.get('S3_LOCATION')
-            self.s3_client = boto3.client(
-                's3',
-                region_name='eu-west-1',  # Add explicit region - use the region where your bucket is located
-                aws_access_key_id=app.config.get('S3_KEY'),
-                aws_secret_access_key=app.config.get('S3_SECRET'),
-                config=boto3.session.Config(signature_version='s3v4')  # Use the latest signature version
-            )
-            logger.info(f"Initialized S3 storage with bucket: {self.s3_bucket}")
-        else:
-            logger.info("Using local file storage")
+            self.s3_key = app.config.get('S3_KEY')
+            self.s3_secret = app.config.get('S3_SECRET')
+            
+            if not all([self.s3_bucket, self.s3_location, self.s3_key, self.s3_secret]):
+                logger.warning("S3 configuration is incomplete. Check S3_BUCKET, S3_LOCATION, S3_KEY, S3_SECRET")
     
-    def save_file(self, file, directory, filename=None):
-        """
-        Save a file to storage (local or S3)
-        
-        Args:
-            file: FileStorage object from request.files
-            directory: Directory path/prefix where file should be saved
-            filename: Optional filename, if None, uses the original secure filename
-            
-        Returns:
-            Relative path to the saved file (for database storage)
-        """
-        if not filename:
-            filename = secure_filename(file.filename)
-            
-        # Full path to store in database
-        relative_path = os.path.join(directory, filename).replace('\\', '/')
-            
+    def save_file(self, file_obj, path):
+        """Save a file to storage (S3 or local)"""
         if self.use_s3:
             try:
-                # For S3, we need to reset the file pointer and read content
-                file.seek(0)
-                self.s3_client.upload_fileobj(
-                    file,
+                # Create S3 client
+                s3_client = boto3.client(
+                    "s3",
+                    aws_access_key_id=self.s3_key,
+                    aws_secret_access_key=self.s3_secret
+                )
+                
+                # Fix for the double filename issue - ensure the path doesn't already include the filename
+                # Check if the file_obj has a filename attribute and if it's part of the path
+                if hasattr(file_obj, 'filename') and file_obj.filename:
+                    # Ensure we don't append the filename if it's already in the path
+                    if path.endswith(file_obj.filename) or '/' + file_obj.filename in path:
+                        s3_path = path
+                    else:
+                        # If path is a directory (ends with /), append the filename
+                        if path.endswith('/'):
+                            s3_path = path + file_obj.filename
+                        else:
+                            # Otherwise, use the path as is (it should already include the filename)
+                            s3_path = path
+                else:
+                    s3_path = path
+                
+                logger.debug(f"Uploading file to S3 path: {s3_path}")
+                
+                # Upload the file
+                s3_client.upload_fileobj(
+                    file_obj,
                     self.s3_bucket,
-                    relative_path,
+                    s3_path,
                     ExtraArgs={
-                        'ContentType': file.content_type
+                        "ContentType": file_obj.content_type if hasattr(file_obj, 'content_type') else 'application/octet-stream'
                     }
                 )
                 
-                # Return the S3 URL or just the path if we'll construct URLs separately
-                return relative_path
-                
-            except ClientError as e:
-                logger.error(f"Error uploading to S3: {str(e)}")
-                return None
+                return s3_path
+            except Exception as e:
+                logger.error(f"Error uploading file to S3: {str(e)}")
+                raise e
         else:
-            # For local storage, create directory if needed
-            full_path = os.path.join(current_app.root_path, 'static', relative_path)
-            os.makedirs(os.path.dirname(full_path), exist_ok=True)
-            
-            # Save file locally
-            file.save(full_path)
-            return relative_path
+            try:
+                # Ensure directories exist
+                os.makedirs(os.path.join(self.app.root_path, 'static', os.path.dirname(path)), exist_ok=True)
+                
+                # Save file locally
+                local_path = os.path.join(self.app.root_path, 'static', path)
+                file_obj.save(local_path)
+                
+                return path
+            except Exception as e:
+                logger.error(f"Error saving file locally: {str(e)}")
+                raise e
     
-    def delete_file(self, file_path):
-        """
-        Delete a file from storage
-        
-        Args:
-            file_path: Relative path to the file (as stored in database)
-            
-        Returns:
-            True if successful, False otherwise
-        """
-        if not file_path:
-            logger.warning("Attempted to delete a file with empty path")
+    def delete_file(self, path):
+        """Delete a file from storage"""
+        if not path:
             return False
-            
-        # Normalize the file path by removing any leading/trailing whitespace
-        # and ensuring consistent slash direction
-        file_path = file_path.strip().replace('\\', '/')
-        
-        # Remove any leading slash which would cause issues with S3 keys
-        if file_path.startswith('/'):
-            file_path = file_path[1:]
-            
-        logger.info(f"Attempting to delete normalized file path: {file_path}")
-        logger.info(f"Storage mode: {'S3' if self.use_s3 else 'Local'}")
             
         if self.use_s3:
             try:
-                logger.info(f"Deleting from S3 bucket '{self.s3_bucket}', key: '{file_path}'")
+                s3_client = boto3.client(
+                    "s3",
+                    aws_access_key_id=self.s3_key,
+                    aws_secret_access_key=self.s3_secret
+                )
                 
-                # First check if the file exists with explicit error handling
-                try:
-                    response = self.s3_client.head_object(Bucket=self.s3_bucket, Key=file_path)
-                    logger.info(f"File exists in S3, proceeding with deletion. Response: {response}")
-                except ClientError as e:
-                    error_code = e.response.get('Error', {}).get('Code')
-                    if error_code == '404':
-                        logger.warning(f"File not found in S3 (404): {file_path}")
-                        return False
-                    else:
-                        logger.error(f"Error checking file existence in S3: {str(e)}")
-                        logger.error(f"Error code: {error_code}")
-                        logger.error(f"Full error response: {e.response}")
-                        return False
-                        
-                # Now delete the file with better error info
-                try:
-                    response = self.s3_client.delete_object(
-                        Bucket=self.s3_bucket,
-                        Key=file_path
-                    )
-                    logger.info(f"S3 deletion successful. Response: {response}")
-                    return True
-                except ClientError as e:
-                    error_code = e.response.get('Error', {}).get('Code')
-                    logger.error(f"Error deleting from S3: {str(e)}")
-                    logger.error(f"Error code: {error_code}")
-                    logger.error(f"Full error response: {e.response}")
-                    return False
-                    
+                s3_client.delete_object(
+                    Bucket=self.s3_bucket,
+                    Key=path
+                )
+                
+                return True
             except Exception as e:
-                logger.error(f"Unexpected error in S3 delete operation: {str(e)}")
-                if hasattr(e, 'response'):
-                    logger.error(f"Error response details: {e.response}")
+                logger.error(f"Error deleting file from S3: {str(e)}")
                 return False
         else:
-            # Delete from local filesystem
-            full_path = os.path.join(current_app.root_path, 'static', file_path)
-            logger.info(f"Deleting from local filesystem: {full_path}")
-            
-            if os.path.exists(full_path):
-                try:
-                    os.remove(full_path)
-                    logger.info(f"Local file deleted successfully")
+            try:
+                local_path = os.path.join(self.app.root_path, 'static', path)
+                if os.path.exists(local_path):
+                    os.remove(local_path)
                     return True
-                except PermissionError as e:
-                    logger.error(f"Permission error deleting local file: {str(e)}")
-                    return False
-                except OSError as e:
-                    logger.error(f"OS error deleting local file: {str(e)}")
-                    return False
-                except Exception as e:
-                    logger.error(f"Unexpected error deleting local file: {str(e)}")
-                    return False
-            else:
-                logger.warning(f"File not found for deletion: {full_path}")
+                return False
+            except Exception as e:
+                logger.error(f"Error deleting local file: {str(e)}")
                 return False
     
-    def get_file_url(self, file_path):
-        """
-        Get public URL for a file
-        
-        Args:
-            file_path: Relative path to the file (as stored in database)
-            
-        Returns:
-            Full URL to the file
-        """
-        if not file_path:
+    def get_file_url(self, path):
+        """Get URL for a file"""
+        if not path:
             return None
             
         if self.use_s3:
-            # Generate direct S3 URL with proper format
-            # Remove any leading slashes to avoid double slashes in the URL
-            clean_path = file_path.lstrip('/')
-            return f"{self.s3_location}/{clean_path}"
+            return f"{self.s3_location}/{path}"
         else:
-            # For local files, return the static URL
-            return f"/static/{file_path}"
+            # For local files, return a relative URL
+            return f"/static/{path}"
