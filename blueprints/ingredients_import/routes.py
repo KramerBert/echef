@@ -17,6 +17,7 @@ from tasks import import_ingredients_from_supplier
 from rq_config import enqueue_job
 from rq.job import Job
 from redis import Redis
+from blueprints.suppliers.routes import get_or_create_supplier
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -318,31 +319,34 @@ def import_from_system_supplier(supplier_id):
             flash("Leverancier niet gevonden of geen systeemsjabloon.", "danger")
             return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
         
+        # Store the original system supplier ID before creating the chef's copy
+        original_supplier_id = system_supplier['leverancier_id']
+        
         # Create a copy of the supplier for the chef
-        cur.execute("""
-            INSERT INTO leveranciers (naam, contact, telefoon, email, chef_id)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (system_supplier['naam'], system_supplier['contact'], 
-              system_supplier['telefoon'], system_supplier['email'], 
-              session['chef_id']))
+        chef_supplier_id, created = get_or_create_supplier(
+            session['chef_id'], 
+            system_supplier['naam'],
+            system_supplier['contact'],
+            system_supplier['telefoon'],
+            system_supplier['email'],
+            is_admin_created=False
+        )
         
-        new_supplier_id = cur.lastrowid
-        
-        # Get all system ingredients for this supplier
+        # Get all system ingredients for this supplier - USE THE ORIGINAL SUPPLIER ID HERE
         cur.execute("""
             SELECT * FROM system_ingredients
             WHERE leverancier_id = %s
-        """, (supplier_id,))
+        """, (original_supplier_id,))
         
         system_ingredients = cur.fetchall()
         
         # Log the number of ingredients found for debugging
-        logger.info(f"Found {len(system_ingredients)} system ingredients for supplier {supplier_id}")
+        logger.info(f"Found {len(system_ingredients)} system ingredients for supplier {original_supplier_id}")
         
         imported_count = 0
         skipped_ingredients = []
         
-        # Process each ingredient
+        # Process each ingredient - USE THE CHEF'S SUPPLIER ID HERE
         for ingredient in system_ingredients:
             try:
                 # Check if ingredient with same name already exists
@@ -370,7 +374,7 @@ def import_from_system_supplier(supplier_id):
                             categorie = %s
                         WHERE ingredient_id = %s AND chef_id = %s
                     """, (
-                        new_supplier_id,
+                        chef_supplier_id,  # Use chef's supplier ID here
                         ingredient['eenheid'],
                         ingredient['prijs_per_eenheid'],
                         ingredient['categorie'],
@@ -387,7 +391,7 @@ def import_from_system_supplier(supplier_id):
                         ) VALUES (%s, %s, %s, %s, %s, %s)
                     """, (
                         session['chef_id'],
-                        new_supplier_id,
+                        chef_supplier_id,  # Use chef's supplier ID here
                         ingredient['naam'],
                         ingredient['eenheid'],
                         ingredient['prijs_per_eenheid'],
