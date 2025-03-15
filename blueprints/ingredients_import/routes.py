@@ -267,22 +267,42 @@ def import_from_system_supplier(supplier_id):
     """Import ingredients from a system supplier"""
     chef_naam = session.get('chef_naam')
     
+    # Track request info for debugging
+    request_info = {
+        'url': request.url,
+        'method': request.method,
+        'headers': {k: v for k, v in request.headers.items() if k.lower() not in ('cookie', 'authorization')},
+        'form_data': {k: v for k, v in request.form.items() if k.lower() != 'csrf_token'}
+    }
+    
     # Add additional logging to help diagnose the issue
     logger.info(f"Processing import request for supplier_id={supplier_id}, chef_naam={chef_naam}")
+    logger.debug(f"Request details: {request_info}")
     
     if not chef_naam:
         logger.warning(f"No chef_naam in session during import request for supplier {supplier_id}")
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('auth.login'))
     
-    # Stronger validation for supplier_id
+    # Even stronger validation for supplier_id
     if supplier_id is None or supplier_id <= 0:
         logger.warning(f"Invalid supplier_id: {supplier_id} for chef {chef_naam}")
         flash("Geen leverancier geselecteerd.", "danger")
         return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
-
-    update_existing = request.form.get('update_existing') == 'on'
     
+    # Check if this is a duplicate request within a short time window
+    import_key = f"import_supplier_{supplier_id}_{chef_naam}"
+    if import_key in session:
+        last_import_time = session[import_key]
+        now = datetime.now().timestamp()
+        if now - last_import_time < 5:  # Within 5 seconds
+            logger.warning(f"Duplicate import request detected for supplier {supplier_id}")
+            return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
+    
+    # Mark this import in session to prevent duplicates
+    session[import_key] = datetime.now().timestamp()
+    
+    # Start transaction
     conn = get_db_connection()
     if conn is None:
         flash("Database connection error.", "danger")
@@ -291,7 +311,6 @@ def import_from_system_supplier(supplier_id):
     cur = conn.cursor(dictionary=True)
     
     try:
-        # Start transaction
         conn.start_transaction()
         
         # First, check if the supplier exists
