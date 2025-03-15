@@ -259,6 +259,11 @@ def import_from_system_supplier(supplier_id):
     if not chef_naam:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('auth.login'))
+    
+    # Add validation for supplier_id to prevent "null" issue
+    if supplier_id is None:
+        flash("Geen leverancier geselecteerd.", "danger")
+        return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
 
     update_existing = request.form.get('update_existing') == 'on'
     

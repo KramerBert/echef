@@ -1,0 +1,5 @@
+<!-- Look for a form similar to this and ensure the supplier_id is properly set -->
+<form method="post" action="{{ url_for('ingredients_import.import_from_system_supplier', supplier_id=supplier.leverancier_id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-primary">Importeer</button>
+</form>
