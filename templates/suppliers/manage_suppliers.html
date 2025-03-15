@@ -1,42 +1,47 @@
-<!-- Change the form to use onsubmit for validation instead of onclick -->
-<form method="post" action="{{ url_for('ingredients_import.import_from_system_supplier', supplier_id=supplier.leverancier_id) }}"
-      onsubmit="return validateAndDisableSubmit(this)">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <input type="hidden" name="supplier_id_value" value="{{ supplier.leverancier_id|default('null') }}">
-    <button type="submit" class="btn btn-primary" id="import-button-{{ supplier.leverancier_id }}">Importeer</button>
-</form>
+<!-- More aggressive fix for the form to prevent double submissions -->
+<div id="import-container-{{ supplier.leverancier_id }}">
+    <form id="import-form-{{ supplier.leverancier_id }}" method="post" 
+          action="{{ url_for('ingredients_import.import_from_system_supplier', supplier_id=supplier.leverancier_id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="supplier_id_value" value="{{ supplier.leverancier_id|default('null') }}">
+        <button type="button" class="btn btn-primary" 
+                onclick="submitImportFormSafely('{{ supplier.leverancier_id }}')">
+            Importeer
+        </button>
+    </form>
+</div>
 
 <script>
-// Track which forms have been submitted to prevent double submission
-var submittedForms = {};
+// Global tracking of form submissions
+var processingImports = {};
 
-function validateAndDisableSubmit(form) {
-    // Get supplier ID from hidden field
-    var supplierId = form.querySelector('input[name="supplier_id_value"]').value;
+function submitImportFormSafely(supplierId) {
+    // Check if form is already being processed
+    if (processingImports[supplierId]) {
+        console.log('Import already in progress for supplier ' + supplierId);
+        return;
+    }
     
-    // Check if supplier ID is valid
-    if (!supplierId || supplierId === "null") {
+    // Get the form
+    var form = document.getElementById('import-form-' + supplierId);
+    
+    // Validate supplier ID
+    var supplierIdInput = form.querySelector('input[name="supplier_id_value"]');
+    if (!supplierIdInput || !supplierIdInput.value || supplierIdInput.value === "null") {
         alert("Geen geldige leverancier geselecteerd.");
-        return false;
+        return;
     }
     
-    // Check if this form was already submitted
-    var formId = 'supplier-' + supplierId;
-    if (submittedForms[formId]) {
-        console.log('Preventing duplicate submission for supplier ' + supplierId);
-        return false;
-    }
+    // Mark as processing
+    processingImports[supplierId] = true;
     
-    // Mark form as submitted
-    submittedForms[formId] = true;
+    // Change button text
+    var container = document.getElementById('import-container-' + supplierId);
+    container.innerHTML = '<div class="alert alert-info">Bezig met importeren...</div>';
     
-    // Disable the submit button to prevent double clicks
-    var submitButton = form.querySelector('button[type="submit"]');
-    if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.innerHTML = 'Bezig met importeren...';
-    }
-    
-    return true;
+    // Submit the form after a slight delay to allow UI to update
+    setTimeout(function() {
+        form.submit();
+    }, 100);
 }
 </script>

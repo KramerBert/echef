@@ -267,28 +267,22 @@ def import_from_system_supplier(supplier_id):
     """Import ingredients from a system supplier"""
     chef_naam = session.get('chef_naam')
     
-    # Track request info for debugging
-    request_info = {
-        'url': request.url,
-        'method': request.method,
-        'headers': {k: v for k, v in request.headers.items() if k.lower() not in ('cookie', 'authorization')},
-        'form_data': {k: v for k, v in request.form.items() if k.lower() != 'csrf_token'}
-    }
-    
     # Add additional logging to help diagnose the issue
     logger.info(f"Processing import request for supplier_id={supplier_id}, chef_naam={chef_naam}")
-    logger.debug(f"Request details: {request_info}")
     
     if not chef_naam:
         logger.warning(f"No chef_naam in session during import request for supplier {supplier_id}")
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('auth.login'))
     
-    # Even stronger validation for supplier_id
+    # Stronger validation for supplier_id
     if supplier_id is None or supplier_id <= 0:
         logger.warning(f"Invalid supplier_id: {supplier_id} for chef {chef_naam}")
         flash("Geen leverancier geselecteerd.", "danger")
         return redirect(url_for('suppliers.manage_suppliers', chef_naam=chef_naam))
+
+    # THIS LINE WAS MISSING - Define update_existing before using it
+    update_existing = request.form.get('update_existing') == 'on'
     
     # Check if this is a duplicate request within a short time window
     import_key = f"import_supplier_{supplier_id}_{chef_naam}"
