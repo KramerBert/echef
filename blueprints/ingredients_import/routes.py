@@ -251,7 +251,7 @@ def import_from_standard_list(supplier_id):
         if conn:
             conn.close()
 
-@bp.route('/import-from-supplier/<int:supplier_id>', methods=['POST'])
+@bp.route('/import-from-system-supplier/<int:supplier_id>', methods=['POST'])
 @login_required
 def import_from_system_supplier(supplier_id):
     """Import ingredients from a system supplier"""
@@ -598,6 +598,11 @@ def import_from_supplier(supplier_id):
     if 'chef_id' not in session:
         flash("Geen toegang. Log opnieuw in.", "danger")
         return redirect(url_for('auth.login'))
+    
+    # Add validation for supplier_id
+    if supplier_id is None:
+        flash("Geen leverancier geselecteerd.", "danger")
+        return redirect(url_for('suppliers.manage_suppliers', chef_naam=session.get('chef_naam')))
     
     chef_id = session['chef_id']
     chef_naam = session['chef_naam']
