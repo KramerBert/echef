@@ -13,6 +13,10 @@ from datetime import datetime
 from mysql.connector import Error
 from markupsafe import Markup
 import pandas as pd  # Make sure pandas is imported for Excel handling
+from tasks import import_ingredients_from_supplier
+from rq_config import enqueue_job
+from rq.job import Job
+from redis import Redis
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -586,3 +590,108 @@ def process_excel_data(df, chef_id, default_supplier=None, update_existing=False
         result['error'] = str(e)
         
     return result
+
+@bp.route('/import-from-supplier/<int:supplier_id>', methods=['GET', 'POST'])
+@login_required
+def import_from_supplier(supplier_id):
+    """Import ingredients from a supplier using RQ background task"""
+    if 'chef_id' not in session:
+        flash("Geen toegang. Log opnieuw in.", "danger")
+        return redirect(url_for('auth.login'))
+    
+    chef_id = session['chef_id']
+    chef_naam = session['chef_naam']
+    
+    if request.method == 'POST':
+        try:
+            # Get data from request
+            data = request.get_json()
+            if not data:
+                return jsonify({'success': False, 'error': 'No data provided'}), 400
+            
+            # Start background task using RQ
+            job_id = enqueue_job(import_ingredients_from_supplier, chef_id, supplier_id, data)
+            
+            # Return job ID for status checking
+            return jsonify({
+                'success': True, 
+                'message': 'Import gestart als achtergrondtaak',
+                'job_id': job_id
+            })
+            
+        except Exception as e:
+            logger.error(f"Error starting import task: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    conn = get_db_connection()
+    if conn is None:
+        flash("Database connection error.", "danger")
+        return redirect(url_for('dashboard', chef_naam=chef_naam))
+    
+    cur = conn.cursor(dictionary=True)
+    
+    try:
+        # Get supplier info
+        cur.execute("""
+            SELECT * FROM leveranciers
+            WHERE leverancier_id = %s AND chef_id = %s
+        """, (supplier_id, chef_id))
+        supplier = cur.fetchone()
+        
+        if not supplier:
+            flash("Leverancier niet gevonden.", "danger")
+            return redirect(url_for('manage_suppliers', chef_naam=chef_naam))
+        
+        # Render your import form
+        return render_template(
+            'ingredients_import/import_form.html',
+            supplier=supplier,
+            chef_naam=chef_naam,
+            form=FlaskForm()
+        )
+        
+    except Exception as e:
+        flash(f"Error: {str(e)}", "danger")
+        return redirect(url_for('dashboard', chef_naam=chef_naam))
+    
+    finally:
+        cur.close()
+        conn.close()
+
+@bp.route('/task-status/<task_id>')
+@login_required
+def task_status(task_id):
+    """Check the status of a running import task"""
+    try:
+        redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+        redis_conn = Redis.from_url(redis_url)
+        job = Job.fetch(task_id, connection=redis_conn)
+        
+        if job.is_finished:
+            result = job.result
+            return jsonify({
+                'state': 'SUCCESS',
+                'processed': result.get('processed', 0),
+                'skipped': result.get('skipped', 0),
+                'total': result.get('total', 0),
+                'status': result.get('status', 'Complete')
+            })
+        elif job.is_failed:
+            return jsonify({
+                'state': 'FAILURE',
+                'status': 'Error: Job failed'
+            })
+        else:
+            # Job is still running
+            # Get job metadata if available (progress information)
+            meta = job.meta
+            return jsonify({
+                'state': 'PROGRESS',
+                'status': meta.get('status', 'Processing...'),
+                'current': meta.get('current', 0),
+                'total': meta.get('total', 1),
+                'processed': meta.get('processed', 0),
+                'skipped': meta.get('skipped', 0)
+            })
+    except Exception as e:
+        return jsonify({'state': 'ERROR', 'status': str(e)})

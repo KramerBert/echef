@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}Import Ingredients{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Import Ingredients from {{ supplier.naam }}</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <div id="upload-panel">
+                <p>Selecteer een CSV of JSON bestand met ingrediënten om te importeren.</p>
+                <form id="import-form" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label for="fileInput">Select file</label>
+                        <input type="file" class="form-control-file" id="fileInput" name="file" accept=".csv,.json">
+                    </div>
+                    <button type="button" id="process-button" class="btn btn-primary mt-3">
+                        <i class="fas fa-upload"></i> Import
+                    </button>
+                </form>
+            </div>
+            
+            <div id="progress-panel" style="display: none;">
+                <h4>Import in progress...</h4>
+                <div class="progress mb-3">
+                    <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%" 
+                         aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                </div>
+                <div id="status-message">Starting import...</div>
+                <div id="stats-container" class="mt-3">
+                    <span id="processed-count">0</span> processed, 
+                    <span id="skipped-count">0</span> skipped
+                </div>
+            </div>
+            
+            <div id="complete-panel" style="display: none;">
+                <div class="alert alert-success">
+                    <h4>Import Complete</h4>
+                    <p>Successfully imported <span id="final-processed">0</span> ingredients.</p>
+                    <p><span id="final-skipped">0</span> ingredients were skipped.</p>
+                </div>
+                <a href="{{ url_for('ingredients.list_ingredients') }}" class="btn btn-primary">
+                    View All Ingredients
+                </a>
+            </div>
+            
+            <div id="error-panel" style="display: none;">
+                <div class="alert alert-danger">
+                    <h4>Error</h4>
+                    <p id="error-message">An error occurred during import.</p>
+                </div>
+                <button type="button" id="retry-button" class="btn btn-primary">
+                    Try Again
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let taskId = null;
+    const uploadPanel = document.getElementById('upload-panel');
+    const progressPanel = document.getElementById('progress-panel');
+    const completePanel = document.getElementById('complete-panel');
+    const errorPanel = document.getElementById('error-panel');
+    const progressBar = document.getElementById('progress-bar');
+    const statusMessage = document.getElementById('status-message');
+    const processedCount = document.getElementById('processed-count');
+    const skippedCount = document.getElementById('skipped-count');
+    const finalProcessed = document.getElementById('final-processed');
+    const finalSkipped = document.getElementById('final-skipped');
+    const errorMessage = document.getElementById('error-message');
+    
+    document.getElementById('process-button').addEventListener('click', function() {
+        const fileInput = document.getElementById('fileInput');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            alert('Please select a file to import');
+            return;
+        }
+        
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            let data;
+            try {
+                if (file.name.endsWith('.csv')) {
+                    // Convert CSV to JSON data structure
+                    // This is a placeholder, implement according to your CSV format
+                    const csvContent = e.target.result;
+                    data = processCSV(csvContent);
+                } else {
+                    // Parse JSON directly
+                    data = JSON.parse(e.target.result);
+                }
+                
+                // Start the import process
+                startImport(data);
+            } catch (error) {
+                console.error("Error processing file:", error);
+                showError("Could not process file: " + error.message);
+            }
+        };
+        
+        reader.onerror = function() {
+            showError("Error reading file");
+        };
+        
+        if (file.name.endsWith('.csv')) {
+            reader.readAsText(file);
+        } else {
+            reader.readAsText(file);
+        }
+    });
+    
+    document.getElementById('retry-button').addEventListener('click', function() {
+        errorPanel.style.display = 'none';
+        uploadPanel.style.display = 'block';
+    });
+    
+    function processCSV(csvContent) {
+        // Implement CSV parsing according to your needs
+        // This is a placeholder implementation
+        const lines = csvContent.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim());
+        const results = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+            if (lines[i].trim() === '') continue;
+            
+            const values = lines[i].split(',').map(v => v.trim());
+            const row = {};
+            
+            headers.forEach((header, index) => {
+                row[header] = values[index];
+            });
+            
+            results.push(row);
+        }
+        
+        return results;
+    }
+    
+    function startImport(data) {
+        uploadPanel.style.display = 'none';
+        progressPanel.style.display = 'block';
+        
+        fetch('{{ request.path }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update - gebruik job_id in plaats van task_id
+                taskId = data.job_id;  
+                pollTaskStatus();
+            } else {
+                showError(data.error || "Unknown error starting import");
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            showError("Network error: " + error.message);
+        });
+    }
+    
+    function pollTaskStatus() {
+        if (!taskId) return;
+        
+        fetch(`/ingredients/import/task-status/${taskId}`)
+            .then(response => response.json())
+            .then(data => {
+                updateProgress(data);
+                
+                if (data.state === 'PROGRESS' || data.state === 'PENDING') {
+                    setTimeout(pollTaskStatus, 1000); // Poll every second
+                }
+            })
+            .catch(error => {
+                console.error("Error polling task status:", error);
+                showError("Error checking import status: " + error.message);
+            });
+    }
+    
+    function updateProgress(data) {
+        if (data.state === 'PROGRESS') {
+            const percentComplete = data.total ? Math.round((data.current / data.total) * 100) : 0;
+            progressBar.style.width = `${percentComplete}%`;
+            progressBar.textContent = `${percentComplete}%`;
+            
+            statusMessage.textContent = data.status || "Processing...";
+            processedCount.textContent = data.processed || 0;
+            skippedCount.textContent = data.skipped || 0;
+        } else if (data.state === 'SUCCESS') {
+            progressPanel.style.display = 'none';
+            completePanel.style.display = 'block';
+            
+            finalProcessed.textContent = data.processed || 0;
+            finalSkipped.textContent = data.skipped || 0;
+        } else if (data.state === 'FAILURE' || data.state === 'ERROR') {
+            showError(data.status || "Import failed");
+        }
+    }
+    
+    function showError(message) {
+        uploadPanel.style.display = 'none';
+        progressPanel.style.display = 'none';
+        completePanel.style.display = 'none';
+        errorPanel.style.display = 'block';
+        errorMessage.textContent = message;
+    }
+});
+</script>
+{% endblock %}

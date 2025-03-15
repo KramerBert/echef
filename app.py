@@ -48,6 +48,8 @@ from decimal import Decimal  # Add this import at the top
 from routes.inventory import bp as inventory_bp
 import boto3  # Add this for AWS S3 operations
 from botocore.exceptions import ClientError  # Also add this for better error handling
+import redis
+from rq import Queue
 
 load_dotenv()  # Load the values from .env
 
@@ -62,6 +64,10 @@ def create_app():
     app.config['RECAPTCHA_PUBLIC_KEY'] = os.getenv('RECAPTCHA_SITE_KEY')
     app.config['RECAPTCHA_PRIVATE_KEY'] = os.getenv('RECAPTCHA_SECRET_KEY')
     app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB 
+    
+    # RQ configuration (vervangt Celery configuratie)
+    app.config['REDIS_URL'] = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+    
     app.config.update(
         SESSION_COOKIE_SECURE=True,
         SESSION_COOKIE_HTTPONLY=True,
